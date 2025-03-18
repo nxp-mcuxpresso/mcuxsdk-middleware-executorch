@@ -43,6 +43,7 @@ namespace executor {
 typedef struct {
     int numInputs = 0;
     int numOutputs = 0;
+    uint32_t scratchSize = 0;
     NeutronModelConfig mcfg;
     NeutronDataConfig dcfg;
     NeutronModelHandle nmh = NULL;
@@ -172,6 +173,7 @@ class NeutronBackend final : public PyTorchBackendInterface {
     }
     uint32_t microcodeSize = buffer[6];
     uint32_t weightsSize = buffer[7];
+    cfg->scratchSize = buffer[9];
     cfg->numInputs = buffer[11];
     cfg->numOutputs = buffer[12];
     if (cfg->numInputs != numInputs) {
@@ -214,7 +216,7 @@ class NeutronBackend final : public PyTorchBackendInterface {
     // Allocate place for input and output pointers.
     cfg->dcfg.inputs = static_cast<const void**>(context.allocate(cfg->numInputs * sizeof(void*)));
     cfg->dcfg.outputs = static_cast<void**>(context.allocate(cfg->numOutputs * sizeof(void*)));
-    cfg->dcfg.outputs[cfg->numOutputs] = static_cast<void**>(context.allocate(1 * sizeof(void*)));
+    cfg->dcfg.outputs[cfg->numOutputs] = static_cast<void*>(context.allocate(cfg->scratchSize, 16));
 
     // Set inputs and outputs from args.    
     for (int i = 0; i < cfg->numInputs; i++) {
@@ -232,7 +234,7 @@ class NeutronBackend final : public PyTorchBackendInterface {
           return Error::InvalidProgram;
         }
         // Allocate buffer, the allocator is reset after each PTE instruction.
-        void* buffer = context.allocate(args[i]->toTensor().nbytes());
+        void* buffer = context.allocate(args[i]->toTensor().nbytes(), 16);
         transposeInput(args[i]->toTensor().const_data_ptr(), buffer, args[i]->toTensor().sizes(), args[i]->toTensor().element_size());
         cfg->dcfg.inputs[i] = buffer;
       }
@@ -241,7 +243,7 @@ class NeutronBackend final : public PyTorchBackendInterface {
     for (int i = 0; i < cfg->numOutputs; i++) {
       if (cfg->outputTranspositionFlags[i]) {
         // Allocate buffer, the allocator is reset after each PTE instruction.
-        void* buffer = context.allocate(args[cfg->numInputs + i]->toTensor().nbytes());
+        void* buffer = context.allocate(args[cfg->numInputs + i]->toTensor().nbytes(), 16);
         cfg->dcfg.outputs[i] = buffer;
       }
     }
