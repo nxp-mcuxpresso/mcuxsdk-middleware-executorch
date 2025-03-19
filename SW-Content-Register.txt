@@ -1,0 +1,22 @@
+--------------------------------------------
+NXP Software Content Register
+
+Name:                   ExecuTorch
+Version:                v0.5.0
+Outgoing License:       BSD-3-Clause
+License File:           LICENSE
+Format:                 source code
+Description:            Software library for running machine
+                        learning models on embedded devices
+Release Location:       https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-executorch
+Origin:                 NXP (BSD-3-Clause)
+                        ExecuTorch v0.5.0 (BSD-3-Clause) - https://github.com/pytorch/executorch
+
+Name:                   FlatBuffers
+Version:                24.3.25
+Outgoing License:       Apache-2.0
+License File:           third-party/flatbuffers/LICENSE
+Format:                 source code
+Description:            Cross platform serialization library
+Release Location:       https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-executorch/third-party/flatbuffers
+Origin:                 FlatBuffers v24.3.25 (Apache-2.0) - https://github.com/google/flatbuffers
