@@ -1,18 +1,24 @@
-# Copyright 2023-2024 NXP
+# Copyright 2023-2025 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, Union
+import warnings
+from typing import Dict, Union, Callable
 
 import numpy
 import numpy as np
 import torch
 from torch.export import ExportedProgram
+from torch.fx import Node
+from torch.fx.graph import Graph
 
 from executorch.backends.nxp.backend.edge_program_converter import EdgeProgramToIRConverter
 from executorch.backends.nxp.backend.ir import logger
 from executorch.backends.nxp.backend.ir.conversion_config import ConversionConfig
+from executorch.backends.nxp.backend.ir.converter.conversion.translator import \
+    create_channels_first_to_channels_last_permutation, create_channels_last_to_channels_first_permutation
+from executorch.backends.nxp.backend.ir.converter.node_converter import NodeConverter, Target
 
 # If executed on i.MX platform, there is no tensorflow module. And typically the intention is to use the tflite python
 # interpreter available in tflite_runtime
@@ -21,26 +27,32 @@ try:
 except ModuleNotFoundError:
     import tflite_runtime.interpreter as tflite
 
+
 class EdgeProgramExecutor:
 
     def __init__(self, edge_program: ExportedProgram):
         self.edge_program = edge_program
 
-    def inference(self, input_data: Union[numpy.ndarray, Dict[int, numpy.ndarray]]) \
-            -> Union[numpy.ndarray, Dict[str, numpy.ndarray]]:
+    def inference(self, input_data: Union[numpy.ndarray, Dict[int, numpy.ndarray]]
+                  ) -> Union[numpy.ndarray, Dict[str, numpy.ndarray]]:
 
-        if not isinstance(input_data, numpy.ndarray):
-            raise RuntimeError("Edge program inference with multiple inputs not implemented")
+        if isinstance(input_data, numpy.ndarray):
+            program_inputs = [torch.from_numpy(input_data)]
+        else:
+            program_inputs = [torch.from_numpy(in_data) for in_data in input_data.values()]
 
-        output = self.edge_program.module()(torch.from_numpy(input_data))
+        output = self.edge_program.module()(*program_inputs)
 
         if isinstance(output, torch.Tensor):
             return output.detach().numpy()
         elif isinstance(output, tuple) and len(output) == 1:
             return output[0].detach().numpy()
+        elif isinstance(output, tuple):
+            output_names = self.edge_program.graph_signature.user_outputs
+
+            return {name: tensor.detach().numpy() for (name, tensor) in zip(output_names, output)}
 
         raise RuntimeError("Edge program inference with multiple outputs not implemented")
-
 
 
 class TFLiteExecutor:
@@ -90,8 +102,8 @@ class TFLiteExecutor:
 
         self._interpreter.allocate_tensors()
 
-    def inference(self, input_data: Union[numpy.ndarray, Dict[int, numpy.ndarray]]) \
-            -> Union[numpy.ndarray, Dict[str, numpy.ndarray]]:
+    def inference(self, input_data: Union[numpy.ndarray, Dict[int, numpy.ndarray]]
+                  ) -> Union[numpy.ndarray, Dict[str, numpy.ndarray]]:
         input_details = self._interpreter.get_input_details()
         output_details = self._interpreter.get_output_details()
 
@@ -148,22 +160,76 @@ def compare_output_arrays(tfl_output: np.ndarray, edge_output: np.ndarray, outpu
 
 class TFLiteIOPreprocess:
 
-    def preprocess(self, data: np.ndarray):
+    def preprocess(self, data: np.ndarray | dict[int, numpy.ndarray]):
         return data
+
+
+class ToChannelFirstPreprocess(TFLiteIOPreprocess):
+    def __init__(self, dim_0_reduced: bool | dict[int, bool] = False):
+        self.dim_0_reduced = dim_0_reduced
+
+    def preprocess(self, data: np.ndarray | dict[int, np.ndarray]):
+        def get_channel_first_permutation(tensor, dim_0_reduced):
+            tensor_rank = len(tensor.shape)
+            perm = create_channels_last_to_channels_first_permutation(tensor_rank)
+            if dim_0_reduced and tensor_rank > 1:
+                perm[0], perm[1] = perm[1], perm[0]
+            return perm
+
+        transpose_fn = lambda x, rank: np.transpose(x, get_channel_first_permutation(x, rank))
+        if isinstance(data, np.ndarray) and isinstance(self.dim_0_reduced, bool):
+            preprocessed_data = transpose_fn(data, self.dim_0_reduced)
+
+        elif isinstance(data, dict) and isinstance(self.dim_0_reduced, bool):
+            preprocessed_data = {k: transpose_fn(v, self.dim_0_reduced) for k, v in data.items()}
+
+        elif isinstance(data, dict) and isinstance(self.dim_0_reduced, dict):
+            preprocessed_data = {k: transpose_fn(v, self.dim_0_reduced[k]) for k, v in data.items()}
+
+        else:
+            raise ValueError("Invalid combination of inputs. Data can be either np.ndarray or dict. If original number "
+                             "of dimension is used, it can be only int for np.ndarray data or dict of ints for dict "
+                             "data with same keys.")
+        return preprocessed_data
+
+
+class ToChannelLastPreprocess(TFLiteIOPreprocess):
+    def preprocess(self, data: np.ndarray | dict[int, np.ndarray]):
+        def get_channel_last_permutation(tensor):
+            return create_channels_first_to_channels_last_permutation(len(tensor.shape))
+
+        transpose_fn = lambda x: np.transpose(x, get_channel_last_permutation(x))
+        if isinstance(data, np.ndarray):
+            preprocessed_data = transpose_fn(data)
+        else:
+            preprocessed_data = {k: transpose_fn(v) for k, v in data.items()}
+        return preprocessed_data
 
 
 class ToNHWCPreprocess(TFLiteIOPreprocess):
 
-    def preprocess(self, data: np.ndarray):
-        assert isinstance(data, np.ndarray), "Only single Numpy array preprocessing is currently supported"
-        return np.transpose(data, [0, 2, 3, 1])
+    def preprocess(self, data: np.ndarray | dict[int, numpy.ndarray]):
+        warnings.warn("Method is deprecated. Use ToChannelFirstPreprocess/ToChannelLastPreprocess instead.",
+                      DeprecationWarning)
+        transpose_fn = lambda x: np.transpose(x, [0, 2, 3, 1])
+        if isinstance(data, np.ndarray):
+            preprocessed_data = transpose_fn(data)
+        else:
+            preprocessed_data = {k: transpose_fn(v) for k, v in data.items()}
+        return preprocessed_data
+
 
 class ToNCHWPreprocess(TFLiteIOPreprocess):
 
-    def preprocess(self, data: np.ndarray):
-        assert isinstance(data, np.ndarray), "Only single Numpy array preprocessing is currently supported"
-        return np.transpose(data, [0, 3, 1, 2])
-
+    def preprocess(self, data: np.ndarray | dict[int, numpy.ndarray]):
+        warnings.warn("Method is deprecated. Use ToChannelFirstPreprocess/ToChannelLastPreprocess instead.",
+                      DeprecationWarning)
+        transpose_fn = lambda x: np.transpose(x, [0, 3, 1, 2])
+        if isinstance(data, np.ndarray):
+            preprocessed_data = transpose_fn(data)
+        else:
+            preprocessed_data = {k: transpose_fn(v) for k, v in data.items()}
+        return preprocessed_data
 
 
 def convert_run_compare(edge_program: ExportedProgram, input_data, rtol=1.e-5, atol=1.e-8,
@@ -172,8 +238,8 @@ def convert_run_compare(edge_program: ExportedProgram, input_data, rtol=1.e-5, a
                         tflite_input_preprocess: TFLiteIOPreprocess = TFLiteIOPreprocess(),
                         tflite_output_preprocess: TFLiteIOPreprocess = TFLiteIOPreprocess(),
                         conversion_config: ConversionConfig = ConversionConfig(),
-                        tflite_op_resolver_type=tflite.experimental.OpResolverType.AUTO) -> (TFLiteExecutor, EdgeProgramExecutor):
-
+                        tflite_op_resolver_type=tflite.experimental.OpResolverType.AUTO
+                        ) -> (TFLiteExecutor, EdgeProgramExecutor):
     if tfl_model is None:
         tfl_model, _ = EdgeProgramToIRConverter().convert_program(edge_program, conversion_config)
 
@@ -206,16 +272,23 @@ def convert_run_compare(edge_program: ExportedProgram, input_data, rtol=1.e-5, a
     return tflite_executor, edge_program_executor
 
 
-class OverrideSupportedTargets:
+def graph_contains_any_of_ops(graph: Graph, ops: list) -> bool:
+    return any(map(lambda node: node.target in ops, graph.nodes))
 
-    def __init__(self, converter_class, *, new_targets):
+
+target_support_check_function = Callable[[Node, Target], bool]
+
+
+class OverrideTargetSupportCheck:
+
+    def __init__(self, converter_class: type[NodeConverter], *,
+                 new_target_support_check: target_support_check_function):
         self._converter_class = converter_class
-        self._new_targets = new_targets
-
-        self._old_targets = self._converter_class.supported_targets
+        self.new_target_support_check = new_target_support_check
+        self.old_target_support_check = converter_class._is_supported_on_target
 
     def __enter__(self):
-        self._converter_class.supported_targets = self._new_targets
+        self._converter_class._is_supported_on_target = self.new_target_support_check
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._converter_class.supported_targets = self._old_targets
+        self._converter_class._is_supported_on_target = self.old_target_support_check

@@ -1,16 +1,16 @@
-# Copyright 2024 NXP
+# Copyright 2024-2025 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Collection
 
 import torch
 from torch.fx import Node
 from torch.nn import Parameter
 
+from executorch.backends.nxp.backend.custom_delegation_options import CustomDelegationOptions
 from executorch.backends.nxp.backend.ir.conversion_context import ConversionContext
 from executorch.backends.nxp.backend.ir.converter.builder.aten_model_builder_director import AtenModelBuilderDirector
 from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
@@ -50,7 +50,6 @@ class NodeConverter(ABC):
          'convert()' method.
     """
     context: ConversionContext
-    supported_targets: Collection
 
     def __init__(self, context: ConversionContext):
         self.context = context
@@ -68,37 +67,56 @@ class NodeConverter(ABC):
     # noinspection PyPep8Naming
     @staticmethod
     @abstractmethod
-    def _is_supported_in_IR(node: Node, parameters_mapping: dict[str, Parameter]) -> bool:
+    def _is_supported_in_IR(
+        node: Node,
+        parameters_mapping: dict[str, Parameter],
+        custom_delegation_options: CustomDelegationOptions
+    ) -> bool:
         """ Check if the `node` can be converted to the intermediate representation.
             Classes which implement conversion for individual operators must overwrite this method.
 
         :param node: torch.Node to check.
+        :param parameters_mapping: Dictionary mapping tensor names to their static data (if they have it).
+        :param custom_delegation_options: Custom options which affect delegation.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def _is_supported_on_target(
+        node: Node,
+        target: Target,
+        parameters_mapping: dict[str, Parameter],
+        custom_delegation_options: CustomDelegationOptions
+    ) -> bool:
+        """ Check if the node is supported on the target platform.
+
+        :param node: The node (edge operator) to check.
+        :param target: Value of the `Target` enum representing the target platform to check for.
+        :param parameters_mapping: Dictionary mapping tensor names to their static data (if they have it).
+        :param custom_delegation_options: Custom options which affect delegation.
         """
         pass
 
     @classmethod
-    def _is_supported_on_target(cls, target: Target) -> bool:
-        """ Check if the node is supported on the target platform. It uses the 'supported_platform' attribute, which is
-             a list of supported target platforms, and it must be defined by the specific `NodeConverter`.
-
-        :param target: Value of the `Target` enum representing the target platform to check for.
-        """
-        if not (hasattr(cls, 'supported_targets') and isinstance(cls.supported_targets, Collection)):
-            raise NotImplementedError(
-                f'The NodeConverter `{cls}` does not define its `supported_targets` collection.'
-            )
-
-        return target == Target.IGNORE or target in cls.supported_targets
-
-    @classmethod
-    def is_supported(cls, node: Node, target: Target, parameters_mapping: dict[str, Parameter]) -> bool:
+    def is_supported(
+        cls,
+        node: Node,
+        target: Target,
+        parameters_mapping: dict[str, Parameter],
+        custom_delegation_options: CustomDelegationOptions
+    ) -> bool:
         """ Check if the given `node` is supported in the IR and on the given `target` platform.
 
         :param node: torch.Node to check.
         :param target: Value of the `Target` enum representing the target platform to check for.
         :param parameters_mapping: Dict mapping tensor names to their data.
+        :param custom_delegation_options: Custom user options which affect node delegation.
         """
-        return cls._is_supported_in_IR(node, parameters_mapping) and cls._is_supported_on_target(target)
+        return (
+            cls._is_supported_in_IR(node, parameters_mapping, custom_delegation_options) and
+            cls._is_supported_on_target(node, target, parameters_mapping, custom_delegation_options)
+        )
 
     @staticmethod
     def _has_shared_q_params_if_quantized(node: Node) -> bool:
@@ -133,7 +151,9 @@ class NodeConverter(ABC):
         """ Assert that the call `_is_supported_in_IR()` returns `True`. Otherwise, raise an exception and print an
              error message.
         """
-        assert self._is_supported_in_IR(node, self.context.parameters_mapping), (
+        assert self._is_supported_in_IR(
+            node, self.context.parameters_mapping, self.context.custom_delegation_options
+        ), (
             f'Node `{node}` is not convertible to the intermediate representation. '
             'There is an error in the partitioner.'
         )
@@ -157,7 +177,16 @@ class NodeConverter(ABC):
 
         # Initialize node's inputs
         t_operator.inputs = tflite_model.OperatorInputs()
-        for ancestor_node in node.all_input_nodes:
+
+        input_nodes = []
+        for arg in node.args:
+            match arg:
+                case Node():
+                    input_nodes.append(arg)
+                case list() if all(isinstance(node_, Node) for node_ in arg):
+                    input_nodes.extend(arg)
+
+        for ancestor_node in input_nodes:
             assert self.context.tflite_builder.tensor_exists(ancestor_node.name)
             t_operator.tmp_inputs.append(self.context.tflite_builder.tensor_for_name(ancestor_node.name))
 
