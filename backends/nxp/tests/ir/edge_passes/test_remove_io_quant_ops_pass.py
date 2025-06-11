@@ -68,9 +68,9 @@ def test_remove_io_quant_ops_pass__cifarnet():
     )
 
     nodes = list(exec_prog.exported_program().graph.nodes)
-    assert len(nodes) == 17
+    assert len(nodes) == 11
     assert nodes[0].meta["val"].dtype == torch.int8, "Input tensor doesn't have type INT8."
-    assert nodes[16].meta["val"][0].dtype == torch.int8, "Output tensor doesn't have type INT8."
+    assert nodes[10].meta["val"][0].dtype == torch.int8, "Output tensor doesn't have type INT8."
 
     assert get_config_method_name(None, "input", 0, "scale") in exec_prog._config_methods
     assert get_config_method_name(None, "input", 0, "zp") in exec_prog._config_methods
