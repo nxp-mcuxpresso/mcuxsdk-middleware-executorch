@@ -293,7 +293,6 @@ if __name__ == "__main__":
 
 
     logging.debug(f"Executorch program (short):\n{executorch_program_to_str(exec_prog)}")
-    logging.debug(f"Executorch program (complete):\n{executorch_program_to_str(exec_prog, verbose=True)}")
 
     # 7. Serialize to *.pte
     model_name = f"{args.model_name}" + (
