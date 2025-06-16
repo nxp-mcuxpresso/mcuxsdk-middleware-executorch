@@ -30,7 +30,7 @@ The ExecuTorch enables to deploy PyTorch models on edge devices. For this purpos
 #### Installation
 Prerequisities:
 * x86 Linux Machine with GLIBC-2.29 or higher (e.g. Ubuntu 20.04 or higher)
-* Python 3.10 or 3.11
+* Python 3.10, 3.11 or 3.12
 
 To build and install the ExecuTorch follow these steps:
 
@@ -70,9 +70,9 @@ The eIQ Neutron Backend uses the Neutron Converter to convert the ExecuTorch pro
 #### Installation
 The Neutron Converter is available as a Python package and can be installed by the `pip` command from eiq.nxp.com/repository:
 ```commandline
-pip install --extra-index-url eiq.nxp.com/repository neutron_converter_sdk_25_03
+pip install --extra-index-url eiq.nxp.com/repository neutron_converter_SDK_25_06==1.0.0
 ```
-The Neutron Converter is used internally by the ExecuTorch, and it is tight with the particular BSP you are using - the suffix of the python package name. In the code snippet above the flavor is the `SDK_25_03`.
+The Neutron Converter is used internally by the ExecuTorch, and it is tight to the particular BSP you are using - the suffix of the python package name. In the code snippet above the flavor is the `SDK_25_06`.
 In the [aot_neutron_convert.py](../../../examples/nxp/aot_neutron_compile.py) example script by the `--neutron_converter_flavor` parameter. 
 
 ### MCUXpresso SDK
