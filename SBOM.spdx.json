@@ -1,0 +1,91 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "creationInfo": {
+    "created": "2025-06-19T05:53:25Z",
+    "creators": [
+      "Organization: NXP"
+    ],
+    "licenseListVersion": "3.20"
+  },
+  "name": "mcuxsdk-middleware-executorch-v25.06.00",
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://nxp.com/spdx/2d296b59-87ba-433a-be9c-496f2f8f4742",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742",
+      "name": "mcuxsdk-middleware-executorch",
+      "versionInfo": "v25.06.00",
+      "licenseConcluded": "(BSD-3-Clause)",
+      "licenseDeclared": "(BSD-3-Clause)",
+      "downloadLocation": "https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-executorch ",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-ac3a8e01-281d-4d6f-8653-6f3859583e30",
+      "name": "executorch",
+      "versionInfo": "0.5.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "NOASSERTION",
+      "downloadLocation": "https://pypi.org/project/executorch/0.5.0",
+      "originator": "Organization: executorch",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-ea42da12-a79c-4daf-a2fd-3290fee26c5c",
+      "name": "FlatBuffers",
+      "versionInfo": "24.3.25",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "http://google.github.io/flatbuffers/",
+      "downloadLocation": "https://bodhi.fedoraproject.org/updates/mingw64-flatbuffers-24.3.25-4.fc41",
+      "originator": "Organization: fedora",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:crates_package:flatbuffers:24.3.25:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceLocator": "b531bc4c-b24f-45af-8d67-4c5f70ff7da0",
+          "referenceType": "BlackDuck-ComponentOrigin"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:google:flatbuffers:24.3.25:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:rpm/fedora/flatbuffers-devel@24.3.25-8.fc42?arch=x86_64",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-ea42da12-a79c-4daf-a2fd-3290fee26c5c"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-ac3a8e01-281d-4d6f-8653-6f3859583e30"
+    }
+  ]
+}
