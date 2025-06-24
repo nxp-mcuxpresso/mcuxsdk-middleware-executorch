@@ -1,4 +1,4 @@
-# Copyright (c) 2024-2025 NXP
+# Copyright 2024-2025 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -16,6 +16,7 @@ from torch.fx.passes.infra.partitioner import CapabilityBasedPartitioner
 from torch.fx.passes.operator_support import OperatorSupportBase
 from torch.nn import Parameter
 
+from executorch.backends.nxp.backend.custom_delegation_options import CustomDelegationOptions
 from executorch.backends.nxp.backend.edge_program_converter import EdgeProgramToIRConverter
 from executorch.backends.nxp.backend.ir.converter.node_converter import Target
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters import *
@@ -187,19 +188,34 @@ supported_ops = {
     exir_ops.edge.aten.max_pool2d_with_indices.default: MaxPool2dConverter,
     exir_ops.edge.aten.mm.default: MMConverter,
     exir_ops.edge.aten.relu.default: ReLUConverter,
+    exir_ops.edge.aten.hardtanh.default: HardTanhConverter,
     exir_ops.edge.aten._softmax.default: SoftmaxConverter,
     exir_ops.edge.aten.view_copy.default: ViewCopyConverter,
+    exir_ops.edge.aten.add.Tensor: AddTensorConverter,
+    exir_ops.edge.aten.mean.dim: MeanDimConverter,
+    exir_ops.edge.aten._adaptive_avg_pool2d.default: AdaptiveAvgPool2dConverter,
+    exir_ops.edge.aten.clone.default: CloneConverter,
+    exir_ops.edge.aten.abs.default: AbsConverter,
+    exir_ops.edge.aten.cat.default: CatConverter,
+    exir_ops.edge.aten.sigmoid.default: SigmoidConverter,
 }
 
 
 class NeutronSupportedOperators(OperatorSupportBase):
 
-    def __init__(self, qdq_clusters: Dict[str, QDQClusterRecognizer.QDQCluster], target: Target,
-                 operators_not_to_delegate: List[str], parameters_mapping: dict[str, Parameter]):
+    def __init__(
+        self,
+        qdq_clusters: Dict[str, QDQClusterRecognizer.QDQCluster],
+        target: Target,
+        operators_not_to_delegate: List[str],
+        parameters_mapping: dict[str, Parameter],
+        custom_delegation_options: CustomDelegationOptions
+    ):
         self.qdq_clusters = qdq_clusters
         self.target = target
         self.operators_not_to_delegate = operators_not_to_delegate
         self.parameters_mapping = parameters_mapping
+        self.custom_delegation_options = custom_delegation_options
 
     def _is_node_quantized(self, node: torch.fx.node.Node):
         return "cluster" in node.meta
@@ -229,7 +245,7 @@ class NeutronSupportedOperators(OperatorSupportBase):
             self._is_node_quantized(node) and
 
             # TODO: `view_copy` node should be delegated only if it's not the only operator in the cluster.
-            node_converter.is_supported(node, self.target, self.parameters_mapping)
+            node_converter.is_supported(node, self.target, self.parameters_mapping, self.custom_delegation_options)
         )
 
     def _is_node_supported_non_compute(self, node: torch.fx.node.Node) -> bool:
@@ -255,8 +271,13 @@ class NeutronSupportedOperators(OperatorSupportBase):
 
 @final
 class NeutronPartitioner(Partitioner):
-    def __init__(self, compile_spec: List[CompileSpec]) -> None:
+    def __init__(
+        self,
+        compile_spec: List[CompileSpec],
+        custom_delegation_options: CustomDelegationOptions | None = None
+    ) -> None:
         self.delegation_spec = DelegationSpec(NeutronBackend.__name__, compile_spec)
+        self.custom_delegation_options = custom_delegation_options or CustomDelegationOptions()
 
     def partition(self, exported_program: ExportedProgram) -> PartitionResult:
         # Run the CapabilityBasedPartitioner to return the largest possible
@@ -275,13 +296,19 @@ class NeutronPartitioner(Partitioner):
         target = self.delegation_spec[1][2].value
         target = Target(target.decode())
 
-        operators_not_to_delegate = self.delegation_spec[1][3].value.decode().split(',')
+        operators_not_to_delegate = self.delegation_spec[1][4].value.decode().split(',')
         logging.info(f"Operators not to delegate: {operators_not_to_delegate}")
 
         parameters_mapping = EdgeProgramToIRConverter.map_inputs_to_parameters(exported_program)
         capability_partitioner = CapabilityBasedPartitioner(
             exported_program.graph_module,
-            NeutronSupportedOperators(qdq_clusterer.cluster_map, target, operators_not_to_delegate, parameters_mapping),
+            NeutronSupportedOperators(
+                qdq_clusterer.cluster_map,
+                target,
+                operators_not_to_delegate,
+                parameters_mapping,
+                self.custom_delegation_options
+            ),
             allows_single_node_partition=True,
         )
 

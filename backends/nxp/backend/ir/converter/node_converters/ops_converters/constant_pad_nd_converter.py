@@ -1,4 +1,4 @@
-# Copyright 2024 NXP
+# Copyright 2024-2025 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -11,21 +11,41 @@ from torch.fx import Node
 from torch.nn import Parameter
 
 from executorch.backends.nxp.backend.edge_helper import input_rank
-from executorch.backends.nxp.backend.ir.converter.conversion.common import OpsList
 from executorch.backends.nxp.backend.ir.converter.conversion.translator import tf_lite_type_to_numpy, \
     create_channels_first_to_channels_last_permutation, apply_permutation_to
 from executorch.backends.nxp.backend.ir.converter.node_converter import NodeConverter
-from executorch.backends.nxp.backend.ir.converter.node_converter import Target
+from executorch.backends.nxp.backend.ir.converter.node_converter import Target, CustomDelegationOptions
 from executorch.backends.nxp.backend.ir.converter.quantization_utils import quantize_int8
 from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
-from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import pad_v2_options
+from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import pad_v2_options, pad_options
 
 
 class ConstantPadNDConverter(NodeConverter):
-    supported_targets = [Target.RT700]
+    @staticmethod
+    def _is_supported_on_target(
+        node: Node,
+        target: Target,
+        parameters_mapping: dict[str, Parameter],
+        custom_delegation_options: CustomDelegationOptions
+    ) -> bool:
+        match target:
+            case Target.RT700:
+                paddings = node.args[1]
+                if len(paddings) > 4 and paddings[4:6] != [0, 0]:
+                    # Attempt to Pad channels dimension, which is not supported on Neutron.
+                    return False
+
+                return True
+
+            case _:
+                return False
 
     @staticmethod
-    def _is_supported_in_IR(node: Node, parameters_mapping: dict[str, Parameter]) -> bool:
+    def _is_supported_in_IR(
+        node: Node,
+        parameters_mapping: dict[str, Parameter],
+        custom_delegation_options: CustomDelegationOptions
+    ) -> bool:
         paddings = node.args[1]
 
         # https://github.com/pytorch/pytorch/blob/v2.4.0/aten/src/ATen/native/PadNd.cpp#L38-L40
@@ -84,6 +104,15 @@ class ConstantPadNDConverter(NodeConverter):
         paddings = self._convert_paddings_to_tflite(paddings, x)
         paddings_tensor = self.builder.create_tensor_for_data(np.asarray(paddings, 'int32'), 'paddings')
 
+        if constant == 0.0:
+            # We're padding with zeros, we can use traditional Pad op
+            t_op.tmp_inputs = [x, paddings_tensor]
+            t_op.tmp_outputs = [y]
+            t_op.builtin_options = pad_options.Pad()
+
+            self.builder.append_operators([t_op])
+            return
+
         if x.quantization is None:
             constant_tensor = self.builder.create_tensor_for_data(
                 np.array([constant], tf_lite_type_to_numpy(x.type)),
@@ -104,6 +133,4 @@ class ConstantPadNDConverter(NodeConverter):
         t_op.tmp_outputs = [y]
         t_op.builtin_options = pad_v2_options.PadV2()
 
-        ops_to_add = OpsList(middle_op=t_op)
-
-        self.builder.append_operators(ops_to_add.flatten())
+        self.builder.append_operators([t_op])

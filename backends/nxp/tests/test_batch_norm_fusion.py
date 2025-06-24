@@ -8,6 +8,8 @@ from copy import deepcopy
 import numpy as np
 import pytest
 import torch
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.view_copy_converter import \
+    ViewCopyConverter
 from torch import nn
 from torch.export import ExportedProgram
 
@@ -16,7 +18,7 @@ from executorch.backends.nxp.pytorch_passes.fuse_batch_norm_with_conv_pass impor
 from executorch.backends.nxp.pytorch_passes.fuse_batch_norm_with_linear_pass import FuseBatchNormWithLinearPass
 from executorch.backends.nxp.pytorch_passes.nxp_pytorch_pass_manager import NXPPyTorchPassManager
 from executorch.backends.nxp.tests.executorch_pipeline import to_quantized_edge_program
-from executorch.backends.nxp.tests.executors import OverrideSupportedTargets
+from executorch.backends.nxp.tests.executors import OverrideTargetSupportCheck
 
 
 @pytest.fixture(autouse=True)
@@ -139,7 +141,7 @@ def test_batch_norm_conv_fusing__full_pipeline__1d(bias: bool):
 
 @pytest.mark.parametrize('bias', [True, False], ids=lambda x: 'Bias' if x else 'No bias')
 def test_batch_norm_conv_fusing__full_pipeline__2d(bias: bool):
-    input_shape = [2, 4, 6, 8]
+    input_shape = [1, 4, 6, 8]
     module = ConvBatchNormModule(bias, len(input_shape), 4)
 
     edge_program = to_quantized_edge_program(module, tuple(input_shape)).exported_program()
@@ -156,10 +158,11 @@ def test_batch_norm_linear_fusing__full_pipeline(bias: bool):
 
     # Don't delegate the Linear node, because there seems to be a bug with the NeutronConverter/NeutronPartitioner.
     #  But that doesn't affect the validity of this test.
-    with OverrideSupportedTargets(AddMMConverter, new_targets=[]):
-        with OverrideSupportedTargets(MMConverter, new_targets=[]):
-            edge_program = to_quantized_edge_program(module, tuple(input_shape)).exported_program()
-            nodes = list(edge_program.graph.nodes)
+    with OverrideTargetSupportCheck(AddMMConverter, new_target_support_check=lambda *_: False):
+        with OverrideTargetSupportCheck(MMConverter, new_target_support_check=lambda *_: False):
+            with OverrideTargetSupportCheck(ViewCopyConverter, new_target_support_check=lambda *_: False):
+                edge_program = to_quantized_edge_program(module, tuple(input_shape)).exported_program()
+                nodes = list(edge_program.graph.nodes)
 
-    assert len(nodes) == 14
+    assert len(nodes) == 18
     assert not any(node.op == 'call_function' and 'batch_norm' in node.target.__name__ for node in nodes)

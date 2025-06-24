@@ -14,6 +14,7 @@ from typing import Iterator
 import torch
 from torch.ao.quantization.quantize_pt2e import prepare_pt2e, convert_pt2e
 
+from executorch.backends.nxp.backend.ir.edge_passes.remove_io_quant_ops_pass import RemoveIOQuantOpsPass
 from executorch.backends.nxp.neutron_partitioner import NeutronPartitioner
 from executorch.backends.nxp.nxp_backend import generate_neutron_compile_spec
 from executorch.backends.nxp.pytorch_passes.nxp_pytorch_pass_manager import NXPPyTorchPassManager
@@ -22,6 +23,7 @@ from executorch.examples.models import MODEL_NAME_TO_MODEL
 from executorch.examples.models.model_factory import EagerModelFactory
 from executorch.examples.nxp.cifar_net.cifar_net import CifarNet
 from executorch.examples.nxp.cifar_net.cifar_net import test_cifarnet_model
+from executorch.examples.nxp.models.mobilenet_v2 import MobilenetV2
 from executorch.exir import ExecutorchBackendConfig
 from executorch.extension.export_util import export_to_edge, save_pte_program
 
@@ -72,7 +74,7 @@ def get_model_and_inputs_from_name(model_name: str):
         logging.warning(
             "Using a model from examples/models not all of these are currently supported"
         )
-        model, example_inputs, _ = EagerModelFactory.create_model(*MODEL_NAME_TO_MODEL[model_name])
+        model, example_inputs, _, _ = EagerModelFactory.create_model(*MODEL_NAME_TO_MODEL[model_name])
     else:
         raise RuntimeError(
             f"Model '{model_name}' is not a valid name. Use --help for a list of available models."
@@ -83,6 +85,7 @@ def get_model_and_inputs_from_name(model_name: str):
 
 models = {
     "cifar10": CifarNet,
+    "mobilenetv2": MobilenetV2,
 }
 
 
@@ -120,7 +123,7 @@ if __name__ == "__main__":
         "-m",
         "--model_name",
         required=True,
-        help=f"Provide model name. Valid ones: {set(list(models.keys()) + list(MODEL_NAME_TO_MODEL.keys()))}",
+        help=f"Provide model name. Valid ones: {set(list(models.keys()))}",
     )
     parser.add_argument(
         "-d",
@@ -170,6 +173,15 @@ if __name__ == "__main__":
         required=False,
         default=False,
         help="Test the selected model and print the accuracy between 0 and 1.",
+    )
+    parser.add_argument(
+        "-r",
+        "--remove-quant-io-ops",
+        action="store_true",
+        required=False,
+        default=False,
+        help="Remove I/O De/Quantize nodes. Model will start to accept quantized "
+             "inputs and produce quantized outputs.",
     )
     parser.add_argument(
         "--operators_not_to_delegate",
@@ -239,6 +251,11 @@ if __name__ == "__main__":
                                   verbose=args.debug)  # TODO for now reusing the default for edge_compile_config
     # (compared to Arm)
     logging.debug(f"Exported graph:\n{edge_program.exported_program().graph}")
+
+    if args.remove_quant_io_ops:
+        edge_program = edge_program.transform(
+            [RemoveIOQuantOpsPass(edge_program_manager=edge_program)]
+        )
 
     # 6. Delegate to Neutron
     if args.delegate is True:
