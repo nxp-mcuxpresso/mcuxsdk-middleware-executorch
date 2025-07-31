@@ -65,7 +65,8 @@ class NXPEdgePassManager:
                     new_programs[name] = new_program
 
         return EdgeProgramManager(
-            new_programs, copy.deepcopy(self.edge_program_manager._config_methods),
+            new_programs if len(new_programs) != 0 else self.edge_program_manager._edge_programs,
+            copy.deepcopy(self.edge_program_manager._config_methods),
             self.edge_program_manager.compile_config
         ), overall_modified
 

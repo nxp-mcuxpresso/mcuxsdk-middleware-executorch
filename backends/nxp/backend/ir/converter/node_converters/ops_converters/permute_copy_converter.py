@@ -4,13 +4,32 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
-from torch.fx import Node
-from torch.nn import Parameter
+import torch
 
 from executorch.backends.nxp.backend.ir.converter import quantization_utils
 from executorch.backends.nxp.backend.ir.converter.conversion.common import OpsList
-from executorch.backends.nxp.backend.ir.converter.node_converter import NodeConverter, Target, CustomDelegationOptions
-from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import transpose_options
+from executorch.backends.nxp.backend.ir.converter.node_converter import (
+    CustomDelegationOptions,
+    NodeConverter,
+    Target,
+)
+from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import (
+    transpose_options,
+)
+from torch.fx import Node
+from torch.fx.immutable_collections import immutable_list
+from torch.nn import Parameter
+
+
+def _get_shape(node: torch.fx.Node) -> list[int]:
+    return node.meta["val"].shape
+
+
+def _is_tensor_invariant_permutation(
+    permutation: immutable_list[int], shape: list[int]
+) -> bool:
+    new_permutation = [perm_idx for perm_idx in permutation if shape[perm_idx] > 1]
+    return new_permutation == sorted(new_permutation)
 
 
 class PermuteCopyConverter(NodeConverter):
@@ -19,11 +38,36 @@ class PermuteCopyConverter(NodeConverter):
         node: Node,
         target: Target,
         parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
+        custom_delegation_options: CustomDelegationOptions,
     ) -> bool:
         match target:
             case Target.RT700:
-                return True
+                num_macs = 8  # TODO: change to constant / getter from Neutron Converter in future
+                permutation = node.args[1]
+                rank = len(_get_shape(node))
+
+                # Allow if permutation is identity
+                identity_permutation = list(range(rank))
+                if permutation == identity_permutation:
+                    return True
+
+                # Allow if permutation is invariant, Transpose is done by Reshapes in Neutron converter
+                if _is_tensor_invariant_permutation(permutation, _get_shape(node)):
+                    return True
+
+                # Permutation is NCHW (channel first) or NHWC (channel last)
+                if permutation in [[0, 3, 1, 2], [0, 2, 3, 1]]:
+                    inp_channels_channel_first = node.args[0].meta["val"].shape[1]
+                    inp_channels_channel_last = node.args[0].meta["val"].shape[3]
+
+                    # TODO: remove condition for inp_channels after Slice is supported on Neutron
+                    if (
+                            inp_channels_channel_first % num_macs == 0
+                            and inp_channels_channel_last % num_macs == 0
+                    ):
+                        return True
+
+                return False
 
             case _:
                 return False
@@ -32,12 +76,15 @@ class PermuteCopyConverter(NodeConverter):
     def _is_supported_in_IR(
         node: Node,
         parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
+        custom_delegation_options: CustomDelegationOptions,
     ) -> bool:
+        if not NodeConverter._has_shared_q_params_if_quantized(node):
+            return False
+
         return True
 
     def convert(self, node: Node):
-        """ Convert the `aten.permute_copy` operator to TFLite `Transpose`. """
+        """Convert the `aten.permute_copy` operator to TFLite `Transpose`."""
         self.assert_convertible(node)
 
         t_op = self._create_tflite_op_with_io_tensors(node)
@@ -46,17 +93,23 @@ class PermuteCopyConverter(NodeConverter):
         x = t_op.tmp_inputs[0]
         y = t_op.tmp_outputs[0]
 
-        if x.quantization is not None and y.quantization is None and "cluster" in node.meta:
+        if (
+            x.quantization is not None
+            and y.quantization is None
+            and "cluster" in node.meta
+        ):
             # We know this node is part of QDQ cluster, so we can propagate quantization to inputs of "call_function"
             # node of this cluster.
             quantization_utils.propagate_quantization(x, y)
 
             y.type = x.type
-            assert x.quantization == y.quantization, ("PermuteCopyConverter: Q-params of input and output doesn't "
-                                                      "match. This indicates error in quantizer.")
+            assert x.quantization == y.quantization, (
+                "PermuteCopyConverter: Q-params of input and output doesn't "
+                "match. This indicates error in quantizer."
+            )
 
-        perm = np.array(node.args[1], 'int32')
-        perm_tensor = self.builder.create_tensor_for_data(perm, 'perm')
+        perm = np.array(node.args[1], "int32")
+        perm_tensor = self.builder.create_tensor_for_data(perm, "perm")
 
         # Assign the operator its TFLite inputs and outputs
         t_op.tmp_inputs = [x, perm_tensor]

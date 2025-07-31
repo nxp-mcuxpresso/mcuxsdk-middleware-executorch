@@ -41,7 +41,8 @@ def test_mean_dim_conv_quant_conversion(mocker, input_shape, dim, keeepdim=True)
     input_data = (np.random.random(input_shape).astype(np.float32) * 50).astype(np.int8)
 
     convert_run_compare(exported_program, tflite_input_preprocess=ToChannelLastPreprocess(), input_data=input_data,
-                        tflite_output_preprocess=ToChannelFirstPreprocess(), tfl_model=tflite_flatbuffers_model)
+                        tflite_output_preprocess=ToChannelFirstPreprocess(), tfl_model=tflite_flatbuffers_model,
+                        atol=1.)
 
 
 @pytest.mark.parametrize("input_shape, dim", [

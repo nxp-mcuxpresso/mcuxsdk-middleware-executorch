@@ -9,7 +9,6 @@ import pathlib
 import torch
 
 from executorch.backends.nxp.tests.executorch_pipeline import to_quantized_edge_program
-from executorch.backends.nxp.tests.exported_program_vizualize import exported_program_to_dot
 from executorch.backends.nxp.tests.models import Conv2dReLUModule
 from executorch.examples.nxp.cifar_net.cifar_net import CifarNet
 from executorch.exir import ExecutorchBackendConfig
@@ -42,8 +41,6 @@ def test_remove_io_quant_ops_pass__conv_relu():
     exec_prog = edge_program_manager.to_executorch(
         config=ExecutorchBackendConfig(extract_delegate_segments=False)
     )
-
-    exported_program_to_dot(exec_prog.exported_program(), "conv_relu.dot")
 
     nodes = list(exec_prog.exported_program().graph.nodes)
     assert nodes[0].meta["val"].dtype == torch.int8, "Input tensor doesn't have type INT8."

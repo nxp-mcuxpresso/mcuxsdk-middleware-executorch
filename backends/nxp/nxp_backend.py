@@ -1,4 +1,4 @@
-# Copyright 2024 NXP
+# Copyright 2024-2025 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -153,7 +153,10 @@ class NeutronBackend(BackendDetails):
             # Otherwise, we get violation that this op is not part of ATen Core ops.
             edge_program._verifiers = [EXIREdgeDialectVerifier(
                 class_only=True,
-                exception_list=[torch.ops.aten.max_pool2d.default]
+                exception_list=[
+                    torch.ops.aten.max_pool2d.default,
+                    torch.ops.aten.gru.input,
+                ]
             )]
 
             # Remove MaxPool-related "getitem" nodes from graph

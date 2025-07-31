@@ -11,14 +11,6 @@ from torch.export import ExportedProgram
 from torch.fx import Graph, GraphModule
 
 
-def exported_program_to_dot(exported_program_or_graph: ExportedProgram | Graph | GraphModule,
-                            dot_file_name="graph.dot", show_tags=True, show_arguments=False):
-    warnings.warn("This function is now deprecated. Use program_or_graph_to_dot() instead.",
-                  DeprecationWarning)
-    program_or_graph_to_dot(exported_program_or_graph, dot_file_name=dot_file_name,
-                            show_tags=show_tags, show_arguments=show_arguments)
-
-
 def program_or_graph_to_dot(exported_program_or_graph: ExportedProgram | Graph | GraphModule,
                             dot_file_name="graph.dot", show_tags=True, show_arguments=False):
     """
@@ -108,8 +100,11 @@ def program_or_graph_to_dot(exported_program_or_graph: ExportedProgram | Graph |
             if "val" in node.meta:
                 tensor = node.meta["val"]
                 if isinstance(tensor, tuple) or isinstance(tensor, list):
-                    tensor = tensor[0]  # Fake tensor
-                label = f"  ({list(tensor.shape)} | {tensor.dtype})"
+                    # Tensor is a tuple of Fake tensors.
+                    label = '(  ' + ", ".join([f"({list(t.shape)} | {t.dtype})" for t in tensor]) + '  )'
+                else:
+                    # Single Fake Tensor
+                    label = f"  ({list(tensor.shape)} | {tensor.dtype})"
 
             graph.propertyAppend(link, "label", label)
 

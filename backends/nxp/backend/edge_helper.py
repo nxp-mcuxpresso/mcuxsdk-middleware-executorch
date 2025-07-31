@@ -1,4 +1,4 @@
-# Copyright 2024 NXP
+# Copyright 2024-2025 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -6,6 +6,8 @@
 import torch
 from torch.fx import Node
 from torch.nn import Parameter
+
+from executorch.exir.dialects._ops import ops as exir_ops
 
 
 def input_tensor(node: Node, input_index: int) -> torch.Tensor:
@@ -67,3 +69,48 @@ def node_is_effectively_static_tensor(node: Node, parameters_mapping: dict[str, 
         }
 
     return _is_dequantize(node) and node_is_static_tensor(node.args[0], parameters_mapping)
+
+
+Scale = list[float] | float
+ZeroPoint = list[int] | int
+
+
+def get_quantization_parameters_for(node: Node) -> tuple[Scale, ZeroPoint] | None:
+    if 'quantize' not in node.target.__name__ or len(node.args) < 3:
+        return None
+
+    return node.args[1], node.args[2]  # Scale and zero_point
+
+
+def get_quantization_parameters_for_output_on_index(
+    node: Node, index: int
+) -> tuple[Scale, ZeroPoint] | None:
+    for user in list(node.users.keys()):
+        if not (user.name.startswith('getitem') and user.args[1] == index):
+            continue
+
+        # The `user` is the `GetItem` node we want.
+        get_item_users = list(user.users.keys())
+        if len(get_item_users) != 1:
+            return None  # Not a qdq pattern.
+
+        dequantize_node = get_item_users[0]
+        return get_quantization_parameters_for(dequantize_node)
+
+    return None  # Unexpected pattern.
+
+
+def previous_non_qdq_node(node: Node, input_index: int) -> Node | None:
+    """ Return the first node which is not a `quantize` or `dequantize`, found by traversing the graph backwards
+         starting with the `node.args[input_index]`,
+    """
+    current_node = node.args[input_index]
+    while True:
+        match current_node.target:
+            case exir_ops.edge.quantized_decomposed.quantize_per_tensor.default | \
+                 exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default:
+                # Neutron QDQ clusters use only these operators for the main inputs and outputs.
+                # Per-channel quantization is only used for static weights.
+                current_node = current_node.args[0]
+            case _:
+                return current_node

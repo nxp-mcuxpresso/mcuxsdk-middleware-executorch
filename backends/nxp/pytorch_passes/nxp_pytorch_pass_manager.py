@@ -11,6 +11,10 @@ from torch.fx import GraphModule
 from executorch.backends.nxp.pytorch_passes.fuse_batch_norm_with_conv_pass import FuseBatchNormWithConvPass
 from executorch.backends.nxp.pytorch_passes.fuse_batch_norm_with_linear_pass import FuseBatchNormWithLinearPass
 from executorch.backends.nxp.pytorch_passes.nxp_pytorch_pass import NXPPyTorchPass
+from executorch.backends.nxp.pytorch_passes.remove_nodes_with_known_outputs import RemoveNodesWithKnownOutputs
+from executorch.backends.nxp.pytorch_passes.replace_zeros_with_zeros_like import ReplaceZerosWithZerosLikePass
+from executorch.backends.nxp.pytorch_passes.split_gru_based_on_num_layers import SplitGRUBasedOnNumLayers
+from executorch.backends.nxp.pytorch_passes.turn_batch_first_gru_to_time_major import TurnBatchFirstGRUToTimeMajor
 
 
 class NXPPyTorchPassManager:
@@ -20,7 +24,11 @@ class NXPPyTorchPassManager:
         self.module = module
         self.passes = passes or [  # New passes should be added here.
             FuseBatchNormWithConvPass,
-            FuseBatchNormWithLinearPass
+            FuseBatchNormWithLinearPass,
+            ReplaceZerosWithZerosLikePass,
+            TurnBatchFirstGRUToTimeMajor,  # Must go before `SplitGRUBasedOnNumLayers`!
+            SplitGRUBasedOnNumLayers,
+            RemoveNodesWithKnownOutputs,
         ]
 
     def _clean_up_graph_module(self):
@@ -30,12 +38,12 @@ class NXPPyTorchPassManager:
     def run(self) -> GraphModule:
         """ Iteratively apply all available passes for as long as they are changing the graph. """
         graph_module = self.module
-        hard_limit = 10  # Empirical value.
-        overall_made_changes = False
+        hard_limit = 100  # Empirical value.
 
         self._clean_up_graph_module()
 
         for _ in range(hard_limit):
+            overall_made_changes = False
             for pass_class in self.passes:
                 try:
                     pass_ = pass_class(graph_module)
