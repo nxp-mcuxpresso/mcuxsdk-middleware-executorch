@@ -200,7 +200,7 @@ void neutronMemFree(void *ptr);
 
 /// - Allocates size bytes large buffer in DDR to be used for specialized kernels (e.g. batch matmul)
 ///   Uses Linux CMA allocator
-NeutronError allocateBuffer(uint64_t size, void **pBuffer, _Bool userspace);
+NeutronError allocateBuffer(uint64_t size, void **pBuffer, bool userspace);
 
 /// - Frees buffer allocated via allocateBuffer function
 NeutronError releaseBuffer(void *buffer);
