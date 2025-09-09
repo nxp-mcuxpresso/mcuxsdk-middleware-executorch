@@ -16,7 +16,7 @@ $ find ./pip-out -name 'libquantized_ops_aot_lib.so'
 ```commandline
 $ python examples/nxp/aot_neutron_compile.py \
     --quantize --so_library ./pip-out/lib.linux-x86_64-cpython-310/executorch/kernels/quantized/libquantized_ops_aot_lib.so \
-    --delegate --neutron_converter_flavor SDK_25_06 -m cifar10
+    --delegate --neutron_converter_flavor SDK_25_09 -m cifar10
 ```
 
 3. It will generate you `cifar10_nxp_delegate.pte` file which can be used with the MXUXpresso SDK `cifarnet_example` project. 
