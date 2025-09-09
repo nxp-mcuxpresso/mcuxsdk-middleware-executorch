@@ -70,9 +70,9 @@ The eIQ Neutron Backend uses the Neutron Converter to convert the ExecuTorch pro
 #### Installation
 The Neutron Converter is available as a Python package and can be installed by the `pip` command from eiq.nxp.com/repository:
 ```commandline
-pip install --extra-index-url eiq.nxp.com/repository neutron_converter_SDK_25_06==1.0.0
+pip install --index-url https://eiq.nxp.com/repository neutron_converter_SDK_25_09==1.0.0
 ```
-The Neutron Converter is used internally by the ExecuTorch, and it is tight to the particular BSP you are using - the suffix of the python package name. In the code snippet above the flavor is the `SDK_25_06`.
+The Neutron Converter is used internally by the ExecuTorch, and it is tied to the particular BSP you are using - the suffix of the python package name. In the code snippet above the flavor is the `SDK_25_09`.
 In the [aot_neutron_convert.py](../../../examples/nxp/aot_neutron_compile.py) example script by the `--neutron_converter_flavor` parameter. 
 
 ### MCUXpresso SDK
@@ -81,7 +81,7 @@ The MCUXpresso SDK is used to build, debug and deploy the application using the 
 You can obtain the MCUXpresso SDK from [MCUXpresso SDK Builder](https://mcuxpresso.nxp.com/en) including the IDE. 
 See the [getting_mcuxpress](getting_mcuxpresso.md) for details. 
 
-In the MCUXpresso SDK, there are 2 project available related to ExecuTorch: 
+In the MCUXpresso SDK, there are 2 projects available related to ExecuTorch: 
 * executorch_lib
 * executorch_cifarnet
 
