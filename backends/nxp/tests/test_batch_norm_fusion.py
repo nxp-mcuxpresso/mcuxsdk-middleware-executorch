@@ -135,7 +135,7 @@ def test_batch_norm_conv_fusing__full_pipeline__1d(bias: bool):
     edge_program = to_quantized_edge_program(module, tuple(input_shape)).exported_program()
     nodes = list(edge_program.graph.nodes)
 
-    assert len(nodes) == 13  # 1D Conv currently isn't delegated, because it doesn't get quantized.
+    assert len(nodes) == 17  # 1D Conv currently isn't delegated, because it doesn't get quantized.
     assert not any(node.op == 'call_function' and 'batch_norm' in node.target.__name__ for node in nodes)
 
 

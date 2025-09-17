@@ -20,6 +20,10 @@ from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters
     ConstantPadNDConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.convolution_converter import \
     ConvolutionConverter
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.get_item_converter import \
+    GetItemConverter
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.gru_converter import \
+    GRUConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.hardtanh_converter import \
     HardTanhConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.max_pool_2d_converter import \
@@ -30,7 +34,9 @@ from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.permute_copy_converter import \
     PermuteCopyConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.qdq_dequantize_converter import \
-    QDQDequantizeConverter
+    QDQPerChannelDequantizeConverter
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.qdq_dequantize_converter import \
+    QDQPerTensorDequantizeConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.qdq_quantize_converter import \
     QDQQuantizeConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.relu_converter import \
@@ -39,12 +45,15 @@ from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters
     SigmoidConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.softmax_converter import \
     SoftmaxConverter
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.tanh_converter import \
+    TanhConverter
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.view_copy_converter import \
     ViewCopyConverter
 
 __all__ = [
     "AddMMConverter", "ConvolutionConverter", "MMConverter", "PermuteCopyConverter", "SoftmaxConverter",
-    "ViewCopyConverter", "QDQDequantizeConverter", "QDQQuantizeConverter", "ConstantPadNDConverter", "ReLUConverter",
-    "MaxPool2dConverter", "AvgPool2dConverter", "AddTensorConverter", "MeanDimConverter", "AdaptiveAvgPool2dConverter",
-    "CloneConverter", "AbsConverter", "HardTanhConverter", "CatConverter", "SigmoidConverter"
+    "ViewCopyConverter", "QDQPerTensorDequantizeConverter", "QDQPerChannelDequantizeConverter", "QDQQuantizeConverter",
+    "ConstantPadNDConverter", "ReLUConverter", "MaxPool2dConverter", "AvgPool2dConverter", "AddTensorConverter",
+    "MeanDimConverter", "AdaptiveAvgPool2dConverter", "CloneConverter", "AbsConverter", "HardTanhConverter",
+    "CatConverter", "SigmoidConverter", "TanhConverter", "GRUConverter", "GetItemConverter"
 ]

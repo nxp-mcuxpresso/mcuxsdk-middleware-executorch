@@ -3,6 +3,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import operator
 from abc import ABC, abstractmethod
 from enum import Enum
 
@@ -13,6 +14,7 @@ from torch.nn import Parameter
 from executorch.backends.nxp.backend.custom_delegation_options import CustomDelegationOptions
 from executorch.backends.nxp.backend.ir.conversion_context import ConversionContext
 from executorch.backends.nxp.backend.ir.converter.builder.aten_model_builder_director import AtenModelBuilderDirector
+from executorch.backends.nxp.backend.ir.converter.tensor_utils import get_name_of_node_output
 from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
 from executorch.exir.dialects._ops import ops as exir_ops
 
@@ -125,11 +127,8 @@ class NodeConverter(ABC):
             # Some exotic operator (only consumer or only produces)
             return True
 
-        pre_node = node.prev
-        post_node = node.next
-
-        if pre_node.name == node.all_input_nodes[0] and post_node.name == node.users[0]:
-            raise RuntimeError("Prev & next nodes are not the same as inputs and outputs.")
+        pre_node = node.all_input_nodes[0]
+        post_node = list(node.users.keys())[0]
 
         if _is_dequant_node(pre_node) and _is_quant_node(post_node):
             # Node is quantized
@@ -177,22 +176,41 @@ class NodeConverter(ABC):
 
         # Initialize node's inputs
         t_operator.inputs = tflite_model.OperatorInputs()
+        if node.target == operator.getitem:
+            # Special case of a builtin function, which can extract a specific output tensor from the previous node.
+            previous_node = node.args[0]
+            output_index = node.args[1]
+            input_name = get_name_of_node_output(previous_node, output_index)
+            assert self.builder.tensor_exists(input_name)
+            t_operator.tmp_inputs.append(self.builder.tensor_for_name(input_name))
 
-        input_nodes = []
-        for arg in node.args:
-            match arg:
-                case Node():
-                    input_nodes.append(arg)
-                case list() if all(isinstance(node_, Node) for node_ in arg):
-                    input_nodes.extend(arg)
+        else:
+            # Regular operator
+            input_nodes = []
+            for arg in node.args:
+                match arg:
+                    case Node():
+                        input_nodes.append(arg)
+                    case list() if all(isinstance(node_, Node) for node_ in arg):
+                        input_nodes.extend(arg)
 
-        for ancestor_node in input_nodes:
-            assert self.context.tflite_builder.tensor_exists(ancestor_node.name)
-            t_operator.tmp_inputs.append(self.context.tflite_builder.tensor_for_name(ancestor_node.name))
+            for ancestor_node in input_nodes:
+                assert self.builder.tensor_exists(ancestor_node.name)
+                t_operator.tmp_inputs.append(self.builder.tensor_for_name(ancestor_node.name))
 
-        # Add node's output as a new tensor
-        assert self.context.tflite_builder.tensor_exists(node.name)
-        t_operator.outputs = tflite_model.OperatorOutputs()
-        t_operator.tmp_outputs.append(self.context.tflite_builder.tensor_for_name(node.name))
+        # Add node's outputs as a new tensors
+        num_outputs = len(node.meta['val']) if isinstance(node.meta['val'], tuple) else 1
+        if num_outputs == 1:
+            # Single output node.
+            assert self.context.tflite_builder.tensor_exists(node.name)
+            t_operator.outputs = tflite_model.OperatorOutputs()
+            t_operator.tmp_outputs.append(self.builder.tensor_for_name(node.name))
+        else:
+            # The node has multiple outputs.
+            t_operator.outputs = tflite_model.OperatorOutputs()
+            for output_index in range(num_outputs):
+                tensor_name = get_name_of_node_output(node, output_index)
+                assert self.builder.tensor_exists(tensor_name)
+                t_operator.tmp_outputs.append(self.builder.tensor_for_name(tensor_name))
 
         return t_operator

@@ -11,6 +11,12 @@ from executorch.backends.nxp.edge_passes.nxp_edge_pass import NXPEdgePass
 from executorch.backends.nxp.neutron_partitioner import QDQClusterRecognizer
 from executorch.exir.dialects._ops import ops as exir_ops
 
+# Operator aliases for better readability.
+AddMM = exir_ops.edge.aten.addmm.default
+ViewCopy = exir_ops.edge.aten.view_copy.default
+MM = exir_ops.edge.aten.mm.default
+Clone = exir_ops.edge.aten.clone.default
+
 
 def insert_qdq_pair_after_node(graph: torch.fx.Graph, anchor: torch.fx.Node, q_params: tuple):
     # Insert a Quantize node.
@@ -38,11 +44,13 @@ def insert_qdq_pair_after_node(graph: torch.fx.Graph, anchor: torch.fx.Node, q_p
 
 
 def _is_dequantize(node_: Node) -> bool:
-    return node_.op == 'call_function' and node_.target.__name__ == 'quantized_decomposed.dequantize_per_tensor.default'
+    return (hasattr(node_, 'op') and node_.op == 'call_function' and
+            node_.target.__name__ == 'quantized_decomposed.dequantize_per_tensor.default')
 
 
 def _is_quantize(node_: Node) -> bool:
-    return node_.op == 'call_function' and node_.target.__name__ == 'quantized_decomposed.quantize_per_tensor.default'
+    return (hasattr(node_, 'op') and node_.op == 'call_function' and
+            node_.target.__name__ == 'quantized_decomposed.quantize_per_tensor.default')
 
 
 class MoveLeadingAuxiliaryOperatorIntoSeparateQDQClusterPass(NXPEdgePass):
@@ -57,12 +65,12 @@ class MoveLeadingAuxiliaryOperatorIntoSeparateQDQClusterPass(NXPEdgePass):
                 │ <aux_node> │                              ┌────▼─────┐            ┐
                 └─────┬──────┘                              │ quantize │            │
            ┌──────────▼──────────┐       replaced with      └────┬─────┘            │
-          ⋯┤ <main_cluster_node> ├⋯     ──────────────►          │                  │ newly added nodes
+        ...┤ <main_cluster_node> ├...   ──────────────►          │                  │ newly added nodes
            └──────────┬──────────┘                         ┌─────▼──────┐           │
                       ▼                                    │ dequantize │           │
                       ⋮                                    └─────┬──────┘           ┘
                  ┌────▼─────┐                         ┌──────────▼──────────┐
-                 │ quantize │                        ⋯┤ <main_cluster_node> ├⋯
+                 │ quantize │                      ...┤ <main_cluster_node> ├...
                  └────┬─────┘                         └──────────┬──────────┘
                       ▼                                          ▼
                                                                  ⋮
@@ -72,20 +80,23 @@ class MoveLeadingAuxiliaryOperatorIntoSeparateQDQClusterPass(NXPEdgePass):
                                                                  ▼
     """
 
-    allowed_auxiliary_nodes = [
-        exir_ops.edge.aten.view_copy.default
-    ]
-
-    # List of approved nodes to which the <aux_node> can be connected in order for the pass to make the modification.
-    allowed_main_cluster_nodes = [
-        exir_ops.edge.aten.addmm.default,
-        exir_ops.edge.aten.mm.default,
-    ]
+    # Dictionary mapping main cluster nodes to auxiliary nodes, for which this optimization will be applied.
+    main_cluster_node_to_auxiliary_nodes = {
+        AddMM: [
+            ViewCopy,
+        ],
+        MM: [
+            ViewCopy,
+        ],
+        ViewCopy: [
+            Clone,
+        ],
+    }
 
     def run(self, graph_module: torch.fx.GraphModule) -> PassResult:
 
         for aux_node in graph_module.graph.nodes:
-            if aux_node.op != 'call_function' or aux_node.target not in self.allowed_auxiliary_nodes:
+            if aux_node.op != 'call_function':
                 continue
 
             dequantize_node = aux_node.args[0]
@@ -99,8 +110,11 @@ class MoveLeadingAuxiliaryOperatorIntoSeparateQDQClusterPass(NXPEdgePass):
                 continue
 
             main_cluster_node = users[0]
-            if main_cluster_node.op != 'call_function' or main_cluster_node.target not in self.allowed_main_cluster_nodes:
-                # Unsupported `main_cluster_node`.
+            if main_cluster_node.op != 'call_function':
+                continue
+
+            if aux_node.target not in self.main_cluster_node_to_auxiliary_nodes.get(main_cluster_node.target, []):
+                # Unsupported main cluster node and auxiliary node pair.
                 continue
 
             # Make sure the nodes are part of the same QDQ cluster.
@@ -149,25 +163,31 @@ class MoveTrailingAuxiliaryOperatorIntoSeparateQDQClusterPass(NXPEdgePass):
                                                                   ▼
     """
 
-    allowed_auxiliary_nodes = [
-        exir_ops.edge.aten.view_copy.default
-    ]
-
-    # List of approved nodes to which the `<aux_node>` can be connected in order for the pass to make the modification.
-    allowed_main_cluster_nodes = [
-        exir_ops.edge.aten.addmm.default,
-        exir_ops.edge.aten.mm.default,
-    ]
+    # Dictionary mapping main cluster nodes to auxiliary nodes, for which this optimization will be applied.
+    main_cluster_node_to_auxiliary_nodes = {
+        AddMM: [
+            ViewCopy,
+        ],
+        MM: [
+            ViewCopy,
+        ],
+        ViewCopy: [
+            Clone,
+        ],
+    }
 
     def run(self, graph_module: torch.fx.GraphModule) -> PassResult:
 
         for aux_node in graph_module.graph.nodes:
-            if aux_node.op != 'call_function' or aux_node.target not in self.allowed_auxiliary_nodes:
+            if aux_node.op != 'call_function':
                 continue
 
             main_cluster_node = aux_node.args[0]
-            if main_cluster_node.op != 'call_function' or main_cluster_node.target not in self.allowed_main_cluster_nodes:
-                # Unsupported `main_cluster_node`.
+            if not (hasattr(main_cluster_node, 'op') and main_cluster_node.op == 'call_function'):
+                continue
+
+            if aux_node.target not in self.main_cluster_node_to_auxiliary_nodes.get(main_cluster_node.target, []):
+                # Unsupported main cluster node and auxiliary node pair.
                 continue
 
             users = list(aux_node.users.keys())

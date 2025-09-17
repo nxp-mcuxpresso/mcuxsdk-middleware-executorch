@@ -3,6 +3,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+import operator
+
 import flatbuffers
 from torch.export import ExportedProgram
 from torch.export.graph_signature import InputKind
@@ -30,6 +32,7 @@ functions_converters = {
     exir_ops.edge.aten.permute_copy.default: PermuteCopyConverter,
     exir_ops.edge.aten.relu.default: ReLUConverter,
     exir_ops.edge.aten.hardtanh.default: HardTanhConverter,
+    exir_ops.edge.aten.tanh.default: TanhConverter,
     exir_ops.edge.aten._softmax.default: SoftmaxConverter,
     exir_ops.edge.aten.view_copy.default: ViewCopyConverter,
     exir_ops.edge.aten.add.Tensor: AddTensorConverter,
@@ -38,6 +41,7 @@ functions_converters = {
     exir_ops.edge.aten.abs.default: AbsConverter,
     exir_ops.edge.aten.cat.default: CatConverter,
     exir_ops.edge.aten.sigmoid.default: SigmoidConverter,
+    exir_ops.edge.aten.gru.input: GRUConverter,
 }
 
 
@@ -50,7 +54,7 @@ class EdgeProgramToIRConverter:
         self,
         edge_program: ExportedProgram,
         conversion_config=ConversionConfig(),
-        custom_delegation_options: CustomDelegationOptions=CustomDelegationOptions()
+        custom_delegation_options: CustomDelegationOptions = CustomDelegationOptions()
     ) -> (bytes, dict):
         """
         Convert ExportedProgram in Edge dialect to IR (TFLite flatbuffers) as bytes.
@@ -115,6 +119,7 @@ class EdgeProgramToIRConverter:
 
         qdq_related_functions = [
             exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default,
+            exir_ops.edge.quantized_decomposed.dequantize_per_channel.default,
             exir_ops.edge.quantized_decomposed.quantize_per_tensor.default
         ]
 
@@ -122,6 +127,9 @@ class EdgeProgramToIRConverter:
             if node.op == "call_function":
                 if node.target in qdq_related_functions and "cluster" in node.meta:
                     # Skip (De)Quantize nodes that were already processed
+                    pass
+                elif node.target == operator.getitem and node.meta.get('processed', False):
+                    # The node was already processed alongside the Q/DQ ops.
                     pass
                 elif node.target in functions_converters:
                     functions_converters[node.target](conversion_context).convert(node)
@@ -164,14 +172,15 @@ class EdgeProgramToIRConverter:
 
     def _convert_qdq_cluster_q_dq_nodes(self, nodes: list[Node], conversion_context: ConversionContext):
         """
-        Go through program and convert De(Quantize) nodes that are part of the QDQ cluster into
-        tensors.
+        Go through program and convert De(Quantize) nodes that are part of the QDQ cluster into tensors.
+        Also convert related `GetItem` nodes to NO-OPs, which just propagate the quantization.
 
         :param nodes: Program's nodes.
         :param conversion_context: ConversionContext instance.
         """
         qdq_q_ops_converters = {
-            exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default: QDQDequantizeConverter,
+            exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default: QDQPerTensorDequantizeConverter,
+            exir_ops.edge.quantized_decomposed.dequantize_per_channel.default: QDQPerChannelDequantizeConverter,
             exir_ops.edge.quantized_decomposed.quantize_per_tensor.default: QDQQuantizeConverter,
         }
 
@@ -179,3 +188,14 @@ class EdgeProgramToIRConverter:
             part_of_qdq_cluster = "cluster" in node.meta
             if node.op == "call_function" and node.target in qdq_q_ops_converters and part_of_qdq_cluster:
                 qdq_q_ops_converters[node.target](conversion_context).convert(node)
+
+        # It is possible (and common) for `GetItem` nodes to be a part of a QDQ cluster. In these cases, they consume
+        #  an output of the main compute operator, and they are followed by a `Quantize` operator, which specifies the
+        #  output quantization parameters of the cluster. So the input of the `GetItem` is float32, and the output is
+        #  quantized. Therefore, the quantization must be propagated from the output to the input.
+        for node in nodes:
+            if node.target == operator.getitem:
+                # Convert the builtin function into a "NO-OP" in the IR, and propagate the quantization parameters in
+                #  reverse.
+                GetItemConverter(conversion_context).convert(node)
+                node.meta['processed'] = True
