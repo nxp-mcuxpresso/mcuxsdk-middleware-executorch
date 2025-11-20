@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloConcatenateOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloConcatenateOptions(object):
     def GetRootAsStablehloConcatenateOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloConcatenateOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloConcatenateOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloConcatenateOptions
     def Init(self, buf, pos):
@@ -35,20 +42,26 @@ class StablehloConcatenateOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int64Flags, o + self._tab.Pos)
         return 0
 
+
 def StablehloConcatenateOptionsStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     StablehloConcatenateOptionsStart(builder)
 
+
 def StablehloConcatenateOptionsAddDimension(builder, dimension):
     builder.PrependInt64Slot(0, dimension, 0)
+
 
 def AddDimension(builder, dimension):
     StablehloConcatenateOptionsAddDimension(builder, dimension)
 
+
 def StablehloConcatenateOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloConcatenateOptionsEnd(builder)

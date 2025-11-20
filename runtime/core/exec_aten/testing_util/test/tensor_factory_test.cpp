@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <c10/util/irange.h>
 #include <executorch/runtime/core/error.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_factory.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_util.h>
@@ -20,14 +21,14 @@
 #endif // USE_ATEN_LIB
 
 using namespace ::testing;
-using exec_aten::ArrayRef;
-using exec_aten::ScalarType;
-using exec_aten::SizesType;
-using exec_aten::StridesType;
-using exec_aten::Tensor;
-using exec_aten::TensorList;
+using executorch::aten::ArrayRef;
+using executorch::aten::ScalarType;
+using executorch::aten::SizesType;
+using executorch::aten::StridesType;
+using executorch::aten::Tensor;
+using executorch::aten::TensorList;
+using executorch::ET_RUNTIME_NAMESPACE::resize_tensor;
 using executorch::runtime::Error;
-using executorch::runtime::resize_tensor;
 using executorch::runtime::TensorShapeDynamism;
 using executorch::runtime::testing::TensorFactory;
 using executorch::runtime::testing::TensorListFactory;
@@ -76,7 +77,7 @@ void resize_tensor_to_assert_dynamic_unbound(Tensor&& t) {
 }
 
 #ifndef USE_ATEN_LIB
-using exec_aten::DimOrderType;
+using executorch::aten::DimOrderType;
 using torch::executor::TensorImpl;
 #endif // !USE_ATEN_LIB
 
@@ -86,7 +87,7 @@ using torch::executor::TensorImpl;
       "Arrays are not equal size." #a1 " size:%zu," #a2 " size:%zu", \
       a1.size(),                                                     \
       a2.size());                                                    \
-  for (size_t i = 0; i < a1.size(); ++i) {                           \
+  for (const auto i : c10::irange(a1.size())) {                      \
     ET_CHECK_MSG(                                                    \
         a1[i] == a2[i],                                              \
         "Value mismatch at index %zu, " #a1                          \
@@ -449,7 +450,7 @@ TEST_F(TensorFactoryTest, MakeStridedDataIsCopied) {
 
   // Create two tensors using the same input data and strided vector.
   std::vector<int32_t> data = {1, 2, 3, 4};
-  std::vector<exec_aten::StridesType> strides = {1, 2};
+  std::vector<executorch::aten::StridesType> strides = {1, 2};
   Tensor t1 = tf.make(/*sizes=*/{2, 2}, data, strides);
   Tensor t2 = tf.make(/*sizes=*/{2, 2}, data, strides);
 
@@ -784,7 +785,7 @@ void run_zeros_like_test(Tensor input) {
 
   // A Tensor created manually, that should be identical to `actual`.
   std::vector<int32_t> expected_data;
-  for (int i = 0; i < input.numel(); i++) {
+  for (const auto i : c10::irange(input.numel())) {
     expected_data.push_back(0);
   }
 #ifdef USE_ATEN_LIB
@@ -842,7 +843,7 @@ void run_ones_like_test(Tensor input) {
 
   // A Tensor created manually, that should be identical to `actual`.
   std::vector<int32_t> expected_data;
-  for (int i = 0; i < input.numel(); i++) {
+  for (const auto i : c10::irange(input.numel())) {
     expected_data.push_back(1);
   }
 #ifdef USE_ATEN_LIB
@@ -1154,7 +1155,7 @@ TEST_F(TensorFactoryTest, DimOrderToStrideTest) {
   dim_order.resize(2);
   dim_order[0] = 0;
   dim_order[1] = 1;
-  exec_aten::ArrayRef<DimOrderType> dim_order_ref(
+  executorch::aten::ArrayRef<DimOrderType> dim_order_ref(
       dim_order.data(), dim_order.size());
 
   CHECK_ARRAY_REF_EQUAL(dim_order_ref, out.dim_order());
@@ -1164,8 +1165,8 @@ TEST_F(TensorFactoryTest, DimOrderToStrideTest) {
   dim_order[0] = 0;
   dim_order[1] = 1;
   dim_order[2] = 2;
-  dim_order_ref =
-      exec_aten::ArrayRef<DimOrderType>(dim_order.data(), dim_order.size());
+  dim_order_ref = executorch::aten::ArrayRef<DimOrderType>(
+      dim_order.data(), dim_order.size());
 
   CHECK_ARRAY_REF_EQUAL(dim_order_ref, out.dim_order());
 
@@ -1175,8 +1176,8 @@ TEST_F(TensorFactoryTest, DimOrderToStrideTest) {
   dim_order[0] = 0;
   dim_order[1] = 2;
   dim_order[2] = 1;
-  dim_order_ref =
-      exec_aten::ArrayRef<DimOrderType>(dim_order.data(), dim_order.size());
+  dim_order_ref = executorch::aten::ArrayRef<DimOrderType>(
+      dim_order.data(), dim_order.size());
 
   CHECK_ARRAY_REF_EQUAL(dim_order_ref, strided_out.dim_order());
 
@@ -1186,8 +1187,8 @@ TEST_F(TensorFactoryTest, DimOrderToStrideTest) {
   dim_order[0] = 1;
   dim_order[1] = 2;
   dim_order[2] = 0;
-  dim_order_ref =
-      exec_aten::ArrayRef<DimOrderType>(dim_order.data(), dim_order.size());
+  dim_order_ref = executorch::aten::ArrayRef<DimOrderType>(
+      dim_order.data(), dim_order.size());
 
   CHECK_ARRAY_REF_EQUAL(dim_order_ref, strided_out.dim_order());
 }
@@ -1210,8 +1211,8 @@ TEST_F(TensorFactoryTest, AmbgiuousDimOrderToStrideTest) {
   // boundary from strides land to dim order land, we have to resolve
   // such ambiguity in a deterministic way.
   // In dim order land, it is less ambiguous
-  auto dim_order_ref =
-      exec_aten::ArrayRef<DimOrderType>(dim_order.data(), dim_order.size());
+  auto dim_order_ref = executorch::aten::ArrayRef<DimOrderType>(
+      dim_order.data(), dim_order.size());
 
   CHECK_ARRAY_REF_EQUAL(dim_order_ref, strided_out.dim_order());
 
@@ -1220,8 +1221,8 @@ TEST_F(TensorFactoryTest, AmbgiuousDimOrderToStrideTest) {
   dim_order[0] = 2;
   dim_order[1] = 0;
   dim_order[2] = 1;
-  dim_order_ref =
-      exec_aten::ArrayRef<DimOrderType>(dim_order.data(), dim_order.size());
+  dim_order_ref = executorch::aten::ArrayRef<DimOrderType>(
+      dim_order.data(), dim_order.size());
 
   CHECK_ARRAY_REF_EQUAL(dim_order_ref, strided_out.dim_order());
 }

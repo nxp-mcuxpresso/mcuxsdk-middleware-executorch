@@ -9,19 +9,20 @@
 #include <executorch/runtime/core/exec_aten/util/tensor_util.h>
 
 #include <ATen/Tensor.h> // @manual
+#include <c10/util/irange.h>
 #include <executorch/runtime/platform/assert.h>
 
 namespace executorch {
-namespace runtime {
+namespace ET_RUNTIME_NAMESPACE {
 /**
  * Implementation for ATen tensor util, should only be included in
  * `<target>_aten` target and only be used in ATen mode. Explicitly taking
- * at::Tensor (instead of exec_aten::Tensor) to make sure it fails at compile
- * time if built incorrectly.
+ * at::Tensor (instead of executorch::aten::Tensor) to make sure it fails at
+ * compile time if built incorrectly.
  */
 Error get_dim_order(
     const at::Tensor& tensor,
-    exec_aten::DimOrderType* out_dim_order,
+    executorch::aten::DimOrderType* out_dim_order,
     size_t out_dim_order_size) {
   ET_CHECK_OR_RETURN_ERROR(
       out_dim_order_size == tensor.dim(),
@@ -34,14 +35,14 @@ Error get_dim_order(
 }
 
 bool tensor_has_valid_dim_order(at::Tensor t) {
-  exec_aten::DimOrderType dim_order[kTensorDimensionLimit];
-  ET_LOG_MSG_AND_RETURN_IF_FALSE(
+  executorch::aten::DimOrderType dim_order[kTensorDimensionLimit];
+  ET_CHECK_OR_RETURN_FALSE(
       get_dim_order(t, dim_order, t.dim()) == Error::Ok,
       "Failed to retrieve dim order from tensor!");
 
   if (!validate_dim_order(dim_order, t.dim())) {
     ET_LOG(Error, "Tensor dim order is not valid:");
-    for (size_t d = 0; d < t.dim(); ++d) {
+    for (const auto d : c10::irange(t.dim())) {
       ET_LOG(
           Error,
           "    dim_order(%zu): %zu",
@@ -54,8 +55,8 @@ bool tensor_has_valid_dim_order(at::Tensor t) {
 }
 
 inline bool tensor_is_default_or_channels_last_dim_order(at::Tensor t) {
-  exec_aten::DimOrderType dim_order[kTensorDimensionLimit];
-  ET_LOG_MSG_AND_RETURN_IF_FALSE(
+  executorch::aten::DimOrderType dim_order[kTensorDimensionLimit];
+  ET_CHECK_OR_RETURN_FALSE(
       get_dim_order(t, dim_order, t.dim()) == Error::Ok,
       "Failed to retrieve dim order from tensor!");
 
@@ -66,7 +67,7 @@ inline bool tensor_is_default_or_channels_last_dim_order(at::Tensor t) {
     ET_LOG(
         Error,
         "Expected tensor to have default or channels last dim order, but got");
-    for (size_t d = 0; d < t.dim(); ++d) {
+    for (const auto d : c10::irange(t.dim())) {
       ET_LOG(
           Error,
           "    dim_order(%zu): %zu",
@@ -78,15 +79,15 @@ inline bool tensor_is_default_or_channels_last_dim_order(at::Tensor t) {
 }
 
 bool tensors_have_same_dim_order(
-    const exec_aten::ArrayRef<exec_aten::Tensor> tensor_list) {
+    const executorch::aten::ArrayRef<executorch::aten::Tensor> tensor_list) {
   if (tensor_list.size() < 2) {
     return true;
   }
 
-  exec_aten::DimOrderType first_dim_order[kTensorDimensionLimit];
-  exec_aten::DimOrderType other_dim_order[kTensorDimensionLimit];
+  executorch::aten::DimOrderType first_dim_order[kTensorDimensionLimit];
+  executorch::aten::DimOrderType other_dim_order[kTensorDimensionLimit];
 
-  ET_LOG_MSG_AND_RETURN_IF_FALSE(
+  ET_CHECK_OR_RETURN_FALSE(
       get_dim_order(tensor_list[0], first_dim_order, tensor_list[0].dim()) ==
           Error::Ok,
       "Failed to retrieve dim order from 1st input tensor!");
@@ -96,8 +97,8 @@ bool tensors_have_same_dim_order(
   bool all_channels_last =
       is_channels_last_dim_order(first_dim_order, tensor_list[0].dim());
 
-  for (size_t i = 1; i < tensor_list.size(); ++i) {
-    ET_LOG_MSG_AND_RETURN_IF_FALSE(
+  for (const auto i : c10::irange(1, tensor_list.size())) {
+    ET_CHECK_OR_RETURN_FALSE(
         get_dim_order(tensor_list[i], other_dim_order, tensor_list[i].dim()) ==
             Error::Ok,
         "Failed to retrieve dim order from %zd-th input tensor!",
@@ -109,7 +110,7 @@ bool tensors_have_same_dim_order(
         is_channels_last_dim_order(other_dim_order, tensor_list[i].dim());
   }
 
-  ET_LOG_MSG_AND_RETURN_IF_FALSE(
+  ET_CHECK_OR_RETURN_FALSE(
       all_contiguous || all_channels_last,
       "%zd input tensors have different dim orders",
       tensor_list.size());
@@ -196,7 +197,7 @@ void reset_data_ptr(const at::Tensor& tensor) {
 /// Most callers should use resize_tensor() instead.
 Error resize_tensor_impl(
     c10::TensorImpl* impl,
-    c10::ArrayRef<exec_aten::SizesType> new_sizes) {
+    c10::ArrayRef<executorch::aten::SizesType> new_sizes) {
   // The lean-mode Tensor will perform this check, but at::Tensor won't.
   // Although at::Tensor can be resized in this case, it's not allowed by the
   // higher-level constraints of the runtime.
@@ -214,6 +215,5 @@ Error resize_tensor_impl(
 }
 
 } // namespace internal
-
-} // namespace runtime
+} // namespace ET_RUNTIME_NAMESPACE
 } // namespace executorch

@@ -9,7 +9,7 @@
 #include <executorch/kernels/test/FunctionHeaderWrapper.h> // Declares the operator
 #include <executorch/kernels/test/TestUtil.h>
 #include <executorch/kernels/test/supported_features.h>
-#include <executorch/runtime/core/exec_aten/exec_aten.h>
+#include <executorch/runtime/core/error.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_factory.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_util.h>
 #include <executorch/runtime/core/exec_aten/util/scalar_type_util.h>
@@ -18,10 +18,11 @@
 #include <cmath>
 
 using namespace ::testing;
-using exec_aten::ArrayRef;
-using exec_aten::optional;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::ArrayRef;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
+using executorch::runtime::Error;
+using std::optional;
 using torch::executor::testing::TensorFactory;
 
 class OpMeanOutTest : public OperatorTest {
@@ -34,6 +35,13 @@ class OpMeanOutTest : public OperatorTest {
       Tensor& out) {
     return torch::executor::aten::mean_outf(
         context_, self, dim, keepdim, dtype, out);
+  }
+
+  Tensor& op_mean_dtype_out(
+      const Tensor& self,
+      optional<ScalarType> dtype,
+      Tensor& out) {
+    return torch::executor::aten::mean_outf(context_, self, dtype, out);
   }
 
   template <ScalarType IN_DTYPE, ScalarType OUT_DTYPE>
@@ -232,6 +240,18 @@ class OpMeanOutTest : public OperatorTest {
 
 template <>
 void OpMeanOutTest::
+    test_mean_dim_out_dtype<ScalarType::Bool, ScalarType::Half>() {
+  test_mean_dim_out_bool<ScalarType::Half>();
+}
+
+template <>
+void OpMeanOutTest::
+    test_mean_dim_out_dtype<ScalarType::Bool, ScalarType::BFloat16>() {
+  test_mean_dim_out_bool<ScalarType::BFloat16>();
+}
+
+template <>
+void OpMeanOutTest::
     test_mean_dim_out_dtype<ScalarType::Bool, ScalarType::Float>() {
   test_mean_dim_out_bool<ScalarType::Float>();
 }
@@ -323,9 +343,9 @@ TEST_F(OpMeanOutTest, AllRealInputFloatOutputPasses) {
   test_mean_dim_out_dtype<ScalarType::INPUT_DTYPE, ScalarType::OUTPUT_DTYPE>();
 
 #define TEST_ENTRY(INPUT_CTYPE, INPUT_DTYPE) \
-  ET_FORALL_FLOAT_TYPES_WITH2(INPUT_CTYPE, INPUT_DTYPE, TEST_KERNEL);
+  ET_FORALL_FLOATHBF16_TYPES_WITH2(INPUT_CTYPE, INPUT_DTYPE, TEST_KERNEL);
 
-  ET_FORALL_REAL_TYPES_AND(Bool, TEST_ENTRY);
+  ET_FORALL_REALHBBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 #undef TEST_KERNEL
 }
@@ -465,4 +485,96 @@ TEST_F(OpMeanOutTest, DynamicShapeUnbound) {
   Tensor ret =
       op_mean_out(x, ArrayRef<int64_t>{1}, false, ScalarType::Float, out);
   EXPECT_TENSOR_CLOSE(out, expected_result);
+}
+
+TEST_F(OpMeanOutTest, DTypeOutFloatValid) {
+  TensorFactory<ScalarType::Float> tf;
+
+  Tensor x = tf.make(
+      {10, 10},
+      {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+  Tensor expected_result = tf.make({}, {1.0});
+
+  Tensor out = tf.zeros({});
+  Tensor ret = op_mean_dtype_out(x, ScalarType::Float, out);
+  EXPECT_TENSOR_CLOSE(out, expected_result);
+}
+
+TEST_F(OpMeanOutTest, DTypeOutFloatToBoolInvalid) {
+  TensorFactory<ScalarType::Float> tf;
+
+  Tensor x = tf.make(
+      {10, 10},
+      {1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+       1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0});
+  Tensor expected_result = tf.make({}, {1.0});
+
+  Tensor out = tf.zeros({});
+
+  ET_EXPECT_KERNEL_FAILURE(
+      context_, op_mean_dtype_out(x, ScalarType::Bool, out));
+}
+
+TEST_F(OpMeanOutTest, DTypeOutFloatInfinity) {
+  TensorFactory<ScalarType::Float> tf;
+
+  Tensor x = tf.make({2, 1}, {INFINITY, INFINITY});
+  Tensor expected_result = tf.make({}, {INFINITY});
+
+  Tensor out = tf.zeros({});
+
+  Tensor ret = op_mean_dtype_out(x, ScalarType::Float, out);
+  EXPECT_TENSOR_CLOSE(out, expected_result);
+}
+
+TEST_F(OpMeanOutTest, DTypeOutFloatNAN) {
+  TensorFactory<ScalarType::Float> tf;
+
+  Tensor x = tf.make({2, 1}, {NAN, INFINITY});
+  Tensor expected_result = tf.make({}, {NAN});
+
+  Tensor out = tf.zeros({});
+
+  Tensor ret = op_mean_dtype_out(x, ScalarType::Float, out);
+  EXPECT_TENSOR_CLOSE(out, expected_result);
+}
+
+TEST_F(OpMeanOutTest, EmptyInput) {
+  TensorFactory<ScalarType::Float> tf;
+
+  Tensor x = tf.make({2, 0, 3}, {});
+  optional<ScalarType> dtype = ScalarType::Float;
+  optional<ArrayRef<int64_t>> dim_list = ArrayRef<int64_t>{};
+  Tensor out = tf.zeros({1, 1, 1});
+  op_mean_out(x, dim_list, /*keepdim=*/true, dtype, out);
+  EXPECT_TENSOR_CLOSE(out, tf.make({1, 1, 1}, {NAN}));
+
+  out = tf.zeros({});
+  op_mean_out(x, dim_list, /*keepdim=*/false, dtype, out);
+  EXPECT_TENSOR_CLOSE(out, tf.make({}, {NAN}));
+
+  int64_t dims1[1] = {1};
+  dim_list = ArrayRef<int64_t>{dims1, 1};
+  out = tf.zeros({2, 3});
+  op_mean_out(x, dim_list, /*keepdim=*/false, dtype, out);
+  EXPECT_TENSOR_CLOSE(out, tf.make({2, 3}, {NAN, NAN, NAN, NAN, NAN, NAN}));
+
+  int64_t dims2[1] = {2};
+  dim_list = ArrayRef<int64_t>{dims2, 1};
+  out = tf.make({2, 0, 1}, {});
+  op_mean_out(x, dim_list, /*keepdim=*/true, dtype, out);
+  EXPECT_TENSOR_CLOSE(out, tf.make({2, 0, 1}, {}));
 }

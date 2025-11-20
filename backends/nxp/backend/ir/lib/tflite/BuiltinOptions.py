@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class BuiltinOptions(object):
     NONE = 0
     Conv2DOptions = 1

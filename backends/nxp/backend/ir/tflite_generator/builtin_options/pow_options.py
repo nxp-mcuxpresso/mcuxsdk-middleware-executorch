@@ -6,7 +6,9 @@
 import flatbuffers
 
 from executorch.backends.nxp.backend.ir.lib.tflite import PowOptions
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 from executorch.backends.nxp.backend.ir.tflite_generator.meta import meta
 

@@ -6,10 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-#include <executorch/backends/qualcomm/aot/ir/qcir_utils.h>
-#include <executorch/backends/qualcomm/qc_binary_info_generated.h>
 #include <executorch/backends/qualcomm/runtime/backends/QnnBackendCache.h>
-
+#include <executorch/backends/qualcomm/runtime/backends/QnnCustomProtocol.h>
 namespace executorch {
 namespace backends {
 namespace qnn {
@@ -52,6 +50,11 @@ Error QnnBackendCache::GetQnnGraphInfoFromBinary(
   } else if (binaryinfo->version == QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_2) {
     num_graphs = binaryinfo->contextBinaryInfoV2.numGraphs;
     graphs = binaryinfo->contextBinaryInfoV2.graphs;
+#if (QNN_API_VERSION_MAJOR >= 2 && QNN_API_VERSION_MINOR >= 21)
+  } else if (binaryinfo->version == QNN_SYSTEM_CONTEXT_BINARY_INFO_VERSION_3) {
+    num_graphs = binaryinfo->contextBinaryInfoV3.numGraphs;
+    graphs = binaryinfo->contextBinaryInfoV3.graphs;
+#endif
   } else {
     QNN_EXECUTORCH_LOG_WARN(
         "Unknown QNN BinaryInfo version %d.", binaryinfo->version);
@@ -63,6 +66,10 @@ Error QnnBackendCache::GetQnnGraphInfoFromBinary(
       RetrieveGraphInfo<QnnSystemContext_GraphInfoV1_t>(graphs[i].graphInfoV1);
     } else if (graphs->version == QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_2) {
       RetrieveGraphInfo<QnnSystemContext_GraphInfoV2_t>(graphs[i].graphInfoV2);
+#if (QNN_API_VERSION_MAJOR >= 2 && QNN_API_VERSION_MINOR >= 21)
+    } else if (graphs->version == QNN_SYSTEM_CONTEXT_GRAPH_INFO_VERSION_3) {
+      RetrieveGraphInfo<QnnSystemContext_GraphInfoV3_t>(graphs[i].graphInfoV3);
+#endif
     } else {
       QNN_EXECUTORCH_LOG_WARN(
           "Unknown QNN GraphInfo version %d.", binaryinfo->version);
@@ -73,11 +80,10 @@ Error QnnBackendCache::GetQnnGraphInfoFromBinary(
   return Error::Ok;
 }
 
-Error QnnBackendCache::Configure() {
+Error QnnBackendCache::Configure(const std::vector<std::string>& graph_names) {
   if (qnn_context_blob_.buffer == nullptr) {
+    graph_names_ = graph_names;
     state_ = SERIALIZE;
-    // use aot_graph_name if we're lowering graph on host side
-    graph_names_.push_back(aot_graph_name_);
     QNN_EXECUTORCH_LOG_INFO("Caching: Caching is in SAVE MODE.");
     return Error::Ok;
   }
@@ -107,38 +113,22 @@ Error QnnBackendCache::Configure() {
   // DO DESERIALIZE
   state_ = DESERIALIZE;
   QNN_EXECUTORCH_LOG_INFO("Caching: Caching is in RESTORE MODE.");
-  flatbuffers::Verifier verifier_binary_info(
-      static_cast<const uint8_t* const>(qnn_context_blob_.buffer),
-      qnn_context_blob_.nbytes);
-  if (!qnn_delegate::VerifyBinaryInfoBuffer(verifier_binary_info)) {
-    QNN_EXECUTORCH_LOG_ERROR("Fail to verify binary info");
-    return Error::Internal;
+  auto [status, _, context_size, context_ptr] =
+      QnnContextCustomProtocol().DeserializeContextCustomBuffer(
+          qnn_context_blob_.buffer);
+  // For pre_gen_context.bin such as aihub
+  if (status == Error::Ok) {
+    qnn_context_blob_.buffer = context_ptr;
+    qnn_context_blob_.nbytes = context_size;
   }
 
-  auto binary_info = GetBinaryInfo(qnn_context_blob_.buffer);
-  Error status = GetQnnGraphInfoFromBinary(
-      const_cast<uint8_t*>(binary_info->data()->data()),
-      binary_info->data()->size());
+  status = GetQnnGraphInfoFromBinary(
+      static_cast<uint8_t*>(qnn_context_blob_.buffer),
+      qnn_context_blob_.nbytes);
 
   if (status == Error::Internal) {
-    // check if context binary came from flatbuffer
-    flatbuffers::Verifier verifier(
-        binary_info->data()->data(), binary_info->data()->size());
-
-    if (qcir::VerifyContextBuffer(verifier)) {
-      state_ = ONLINE_PREPARE;
-      auto context = qcir::GetContext(binary_info->data()->data());
-      for (const auto& graph : *context->graphs()) {
-        graph_names_.emplace_back(graph->name()->str());
-      }
-      return Error::Ok;
-    }
-
-    QNN_EXECUTORCH_LOG_ERROR(
-        "Failed to parse QNN Graph Info. The cache "
-        "might be broken. Please consider to re-generate the "
-        "cache.");
-    InvalidateCache();
+    // online prepare
+    state_ = ONLINE_PREPARE;
   }
   return Error::Ok;
 }

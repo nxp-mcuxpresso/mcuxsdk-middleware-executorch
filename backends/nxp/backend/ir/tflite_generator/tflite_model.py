@@ -10,9 +10,6 @@ import itertools
 import logging
 from typing import List, Optional
 
-import flatbuffers as fb
-import numpy as np
-
 import executorch.backends.nxp.backend.ir.lib.tflite.Buffer as libBuffer
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator as libBuiltinOperator
 import executorch.backends.nxp.backend.ir.lib.tflite.CustomOptionsFormat as libCustomOptionsFormat
@@ -25,6 +22,9 @@ import executorch.backends.nxp.backend.ir.lib.tflite.SubGraph as libSubGraphs
 import executorch.backends.nxp.backend.ir.lib.tflite.Tensor as libTensor
 import executorch.backends.nxp.backend.ir.lib.tflite.TensorType as libTensorType
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+
+import flatbuffers as fb
+import numpy as np
 from executorch.backends.nxp.backend.ir import tensor_formatting
 from executorch.backends.nxp.backend.ir.tflite_generator.meta import types
 from executorch.backends.nxp.backend.ir.tflite_generator.meta.types import name_for_type
@@ -37,7 +37,8 @@ def _exactly_one_is_none(obj1: Optional, obj2: Optional):
 
 
 class Buffer(meta.TFLiteObject):
-    """ 'data' is an array of any type, but MUST have the correct 'dtype' specified! """
+    """'data' is an array of any type, but MUST have the correct 'dtype' specified!"""
+
     data: np.ndarray
     type: libTensorType.TensorType
 
@@ -48,13 +49,16 @@ class Buffer(meta.TFLiteObject):
         Tensor, this buffer belongs to."""
     tmp_index: int
 
-    def __init__(self, data: np.ndarray = None,
-                 data_type: libTensorType.TensorType = libTensorType.TensorType.INT32) -> None:
+    def __init__(
+        self,
+        data: np.ndarray = None,
+        data_type: libTensorType.TensorType = libTensorType.TensorType.INT32,
+    ) -> None:
         self.data = data
         self.type = data_type
 
     def __data_is_empty(self):
-        """ Determine if the buffer data is empty. """
+        """Determine if the buffer data is empty."""
         return (self.data is None) or (self.data.size == 0)
 
     def get_prepend_function(self, builder: fb.Builder):
@@ -73,20 +77,24 @@ class Buffer(meta.TFLiteObject):
             # Arrays of bytes must also be flattened.
             self.data = self.data.flatten()
 
-        if self.data.dtype.kind in ['b', 'i', 'u', 'f']:  # flatbuffers.builder line 483
+        if self.data.dtype.kind in ["b", "i", "u", "f"]:  # flatbuffers.builder line 483
             tfl_data = builder.CreateNumpyVector(self.data)
             # In case of problems, see 'https://github.com/google/flatbuffers/issues/4668'.
 
-        elif self.data.dtype.kind == 'S':
+        elif self.data.dtype.kind == "S":
             # String tensor. Not sure how to handle this case. I've played around with 'builder.CreateString()' but I
             #  couldn't quite make it work. As it is not a priority right now, just exit with error.
-            logger.error("Generating a TFLite static string tensor is not yet supported.")
+            logger.error(
+                "Generating a TFLite static string tensor is not yet supported."
+            )
             raise RuntimeError()
 
         else:
             # Cannot use the 'CreateNumpyVector' method -> use specific prepend functions.
-            logger.warning(f"Creating a static TFLite tensor buffer for type '{name_for_type(self.type)}'. "
-                           "This is not a common case and it has not been tested!")
+            logger.warning(
+                f"Creating a static TFLite tensor buffer for type '{name_for_type(self.type)}'. "
+                "This is not a common case and it has not been tested!"
+            )
 
             prepend = self.get_prepend_function(builder)
 
@@ -114,16 +122,18 @@ class Buffers(meta.TFLiteVector):
 
 
 class OperatorCode(meta.TFLiteObject):
-    """ Represents an OperatorCode object, used in the vector 'operator_codes' in the model.
-    """
+    """Represents an OperatorCode object, used in the vector 'operator_codes' in the model."""
 
     builtin_code: libBuiltinOperator.BuiltinOperator
     version: int
     custom_code: str
 
-    def __init__(self, builtin_code: libBuiltinOperator.BuiltinOperator,
-                 version: int = 1,
-                 custom_code: str = None):
+    def __init__(
+        self,
+        builtin_code: libBuiltinOperator.BuiltinOperator,
+        version: int = 1,
+        custom_code: str = None,
+    ):
         """
         :param builtin_code: Operator code from the 'BuiltinOperator' enum.
         :param version: Operator version. Defaults to 1.
@@ -134,11 +144,16 @@ class OperatorCode(meta.TFLiteObject):
         self.builtin_code = builtin_code
         self.custom_code = custom_code
 
-        if self.custom_code is not None and builtin_code != libBuiltinOperator.BuiltinOperator.CUSTOM:
-            logger.error(f"Attempt to use custom code with non-CUSTOM builtin code ({builtin_code}).")
+        if (
+            self.custom_code is not None
+            and builtin_code != libBuiltinOperator.BuiltinOperator.CUSTOM
+        ):
+            logger.error(
+                f"Attempt to use custom code with non-CUSTOM builtin code ({builtin_code})."
+            )
 
     def gen_tflite(self, builder: fb.builder):
-        """ Generate TFLite representation for this OperatorCode """
+        """Generate TFLite representation for this OperatorCode"""
         if self.custom_code is not None:
             custom_code = builder.CreateString(self.custom_code)
         else:
@@ -182,8 +197,11 @@ class Scale(meta.FloatVector):
 
 class ZeroPoint(meta.IntVector):
     def __init__(self, zero_point: List[int] = None) -> None:
-        super().__init__(zero_point, libQuantizedParameters.StartZeroPointVector,
-                         lambda builder: builder.PrependInt64)
+        super().__init__(
+            zero_point,
+            libQuantizedParameters.StartZeroPointVector,
+            lambda builder: builder.PrependInt64,
+        )
 
 
 class Quantization(meta.TFLiteObject):
@@ -196,11 +214,15 @@ class Quantization(meta.TFLiteObject):
 
     # TODO details
 
-    def __init__(self, min: Min = Min(), max: Max = Max(),
-                 scale: Scale = None,
-                 zero_point: ZeroPoint = ZeroPoint([0]),
-                 quantized_dimension: int = 0,
-                 details_type: libQuantizedDetails.QuantizationDetails = libQuantizedDetails.QuantizationDetails.NONE) -> None:
+    def __init__(
+        self,
+        min: Min = Min(),  # noqa B008
+        max: Max = Max(),  # noqa B008
+        scale: Scale = None,
+        zero_point: ZeroPoint = ZeroPoint([0]),  # noqa B008
+        quantized_dimension: int = 0,
+        details_type: libQuantizedDetails.QuantizationDetails = libQuantizedDetails.QuantizationDetails.NONE,
+    ) -> None:
         self.min = min
         self.max = max
         self.scale = scale
@@ -232,15 +254,19 @@ class Quantization(meta.TFLiteObject):
         return True
 
     def is_per_channel(self) -> bool:
-        """ Determine if this quantization is per channel, instead of per tensor. """
-        if (self.scale is not None and self.zero_point is not None) and (self.scale.len() == self.zero_point.len()):
+        """Determine if this quantization is per channel, instead of per tensor."""
+        if (self.scale is not None and self.zero_point is not None) and (
+            self.scale.len() == self.zero_point.len()
+        ):
             return self.scale.len() > 1
 
         return False
 
     def is_per_tensor(self) -> bool:
-        """ Determine if this quantization is per tensor"""
-        if (self.scale is not None and self.zero_point is not None) and (self.scale.len() == self.zero_point.len()):
+        """Determine if this quantization is per tensor"""
+        if (self.scale is not None and self.zero_point is not None) and (
+            self.scale.len() == self.zero_point.len()
+        ):
             return self.scale.len() == 1
 
         return False
@@ -291,7 +317,7 @@ class Shape(meta.IntVector):
         return np.prod(self.vector).item()
 
     def is_symbolic(self) -> bool:
-        """ Determine if the shape uses symbolic dimensions
+        """Determine if the shape uses symbolic dimensions
 
         :return: True, if at least 1 dimension of the shape is not a positive integer.
         """
@@ -299,7 +325,7 @@ class Shape(meta.IntVector):
         return not all(isinstance(dim, int) and dim >= 0 for dim in self.vector)
 
     def is_well_defined(self) -> bool:
-        """ Determine if the shape is not empty and also is not symbolic.
+        """Determine if the shape is not empty and also is not symbolic.
 
         :return: True, if the shape contains just positive integers.
         """
@@ -310,8 +336,8 @@ class Shape(meta.IntVector):
         return not self.is_symbolic()
 
     def __check_dims(self):
-        """ Check if all dimensions are integers. If not, transform this
-            to 'shape_signature'. """
+        """Check if all dimensions are integers. If not, transform this
+        to 'shape_signature'."""
 
         self.__shape_signature_vector = []
 
@@ -326,7 +352,7 @@ class Shape(meta.IntVector):
             self.vector = [abs(val) for val in self.__shape_signature_vector]
 
     def gen_tflite(self, builder: fb.Builder, tensor):
-        """ Generates TFLite code for the Shape """
+        """Generates TFLite code for the Shape"""
         self.__check_dims()
 
         if self.__also_has_signature:
@@ -379,16 +405,19 @@ class Tensor(meta.TFLiteObject):
 
     @property
     def rank(self):
-        """ Get the number of dimensions of this `Tensor`. """
+        """Get the number of dimensions of this `Tensor`."""
         return self.shape.len()
 
-    def __init__(self, shape: Shape = None,
-                 name: str = None,
-                 buffer: int = None,
-                 data_type: libTensorType.TensorType = libTensorType.TensorType.FLOAT32,
-                 quantization: Quantization = None,
-                 is_variable: bool = False,
-                 has_rank: bool = False) -> None:
+    def __init__(
+        self,
+        shape: Shape = None,
+        name: str = None,
+        buffer: int = None,
+        data_type: libTensorType.TensorType = libTensorType.TensorType.FLOAT32,
+        quantization: Quantization = None,
+        is_variable: bool = False,
+        has_rank: bool = False,
+    ) -> None:
         self.is_variable = is_variable
         self.has_rank = has_rank
         self.type = data_type
@@ -458,12 +487,16 @@ class OperatorOutputs(meta.IntVector):
 
 class MutatingVariableInputs(meta.BoolVector):
     def __init__(self, mutating_variable_inputs: List[bool] = None) -> None:
-        super().__init__(mutating_variable_inputs, libOperator.StartMutatingVariableInputsVector)
+        super().__init__(
+            mutating_variable_inputs, libOperator.StartMutatingVariableInputsVector
+        )
 
 
 class Operator(meta.TFLiteObject):
     opcode_index: int
-    custom_options_format: libCustomOptionsFormat.CustomOptionsFormat  # Only default value is possible
+    custom_options_format: (
+        libCustomOptionsFormat.CustomOptionsFormat
+    )  # Only default value is possible
     mutating_variable_inputs: MutatingVariableInputs
     inputs: OperatorInputs
     outputs: OperatorOutputs
@@ -483,13 +516,16 @@ class Operator(meta.TFLiteObject):
     # If `True`, this is an extra operator added during conversion. It was not present in the original ONNX model.
     tmp_added_extra: bool
 
-    def __init__(self, inputs: OperatorInputs = None,
-                 outputs: OperatorOutputs = None,
-                 builtin_options: meta.BuiltinOptions = None,
-                 opcode_index: int = 0,
-                 mutating_variable_inputs: MutatingVariableInputs = MutatingVariableInputs(),
-                 custom_options_format: libCustomOptionsFormat.CustomOptionsFormat = libCustomOptionsFormat.CustomOptionsFormat.FLEXBUFFERS,
-                 custom_options: meta.CustomOptions = None) -> None:
+    def __init__(
+        self,
+        inputs: OperatorInputs = None,
+        outputs: OperatorOutputs = None,
+        builtin_options: meta.BuiltinOptions = None,
+        opcode_index: int = 0,
+        mutating_variable_inputs: MutatingVariableInputs = MutatingVariableInputs(),  # noqa B008
+        custom_options_format: libCustomOptionsFormat.CustomOptionsFormat = libCustomOptionsFormat.CustomOptionsFormat.FLEXBUFFERS,
+        custom_options: meta.CustomOptions = None,
+    ) -> None:
         self.opcode_index = opcode_index
         self.custom_options_format = custom_options_format
         self.mutating_variable_inputs = mutating_variable_inputs
@@ -508,7 +544,7 @@ class Operator(meta.TFLiteObject):
         self.tmp_added_extra = False
 
     def uses_per_channel_quantization(self) -> bool:
-        """ Determine if this operator uses per-channel quantization. """
+        """Determine if this operator uses per-channel quantization."""
         for tensor in itertools.chain(self.tmp_inputs, self.tmp_outputs):
             if tensor.quantization is None:
                 continue
@@ -519,13 +555,16 @@ class Operator(meta.TFLiteObject):
         return False
 
     def is_quantized_without_qdq(self) -> bool:
-        """ Determine if the Operator was quantized but not using the QDQ schema.
+        """Determine if the Operator was quantized but not using the QDQ schema.
 
-            ! This only works before quantization parameters are propagated !
+        ! This only works before quantization parameters are propagated !
         """
         y = self.tmp_outputs[0]
 
-        if y.type not in {libTensorType.TensorType.INT8, libTensorType.TensorType.UINT8}:
+        if y.type not in {
+            libTensorType.TensorType.INT8,
+            libTensorType.TensorType.UINT8,
+        }:
             return False
 
         inputs_quantized = any(x.quantization is not None for x in self.tmp_inputs)
@@ -534,13 +573,16 @@ class Operator(meta.TFLiteObject):
         return inputs_quantized and y.quantization is None
 
     def is_qdq_quantized(self) -> bool:
-        """ Determine if the Operator was quantized using the QDQ schema.
+        """Determine if the Operator was quantized using the QDQ schema.
 
-            ! This only works before quantization parameters are propagated !
+        ! This only works before quantization parameters are propagated !
         """
         y = self.tmp_outputs[0]
         output_quantized = y.quantization is not None
-        output_8b_int = y.type in {libTensorType.TensorType.INT8, libTensorType.TensorType.UINT8}
+        output_8b_int = y.type in {
+            libTensorType.TensorType.INT8,
+            libTensorType.TensorType.UINT8,
+        }
 
         if not output_quantized and output_8b_int:
             # (U)INT8 but not quantized -> not QDQ
@@ -576,7 +618,9 @@ class Operator(meta.TFLiteObject):
             tfl_builtin_options = None
 
         if self.mutating_variable_inputs is not None:
-            tfl_mutating_variable_inputs = self.mutating_variable_inputs.gen_tflite(builder)
+            tfl_mutating_variable_inputs = self.mutating_variable_inputs.gen_tflite(
+                builder
+            )
         else:
             tfl_mutating_variable_inputs = None
 
@@ -592,7 +636,9 @@ class Operator(meta.TFLiteObject):
 
         if tfl_builtin_options is not None:
             libOperator.AddBuiltinOptions(builder, tfl_builtin_options)
-            libOperator.AddBuiltinOptionsType(builder, self.builtin_options.builtin_options_type)
+            libOperator.AddBuiltinOptionsType(
+                builder, self.builtin_options.builtin_options_type
+            )
 
         if tfl_custom_options is not None:
             libOperator.AddBuiltinOptionsType(builder, 0)
@@ -613,21 +659,23 @@ class Operators(meta.TFLiteVector):
 
 
 class SubGraphInputs(meta.IntVector):
-    """ List of 'Tensor' objects. Easier to use while converting. """
+    """List of 'Tensor' objects. Easier to use while converting."""
+
     tmp_inputs: List[Tensor]
 
     def __init__(self, inputs: List[int] = None):
-        """ 'inputs' is a list of indices into the 'tensors' vector. """
+        """'inputs' is a list of indices into the 'tensors' vector."""
         super().__init__(inputs, libSubGraphs.StartInputsVector)
         self.tmp_inputs = []
 
 
 class SubGraphOutputs(meta.IntVector):
-    """ List of 'Tensor' objects. Easier to use while converting. """
+    """List of 'Tensor' objects. Easier to use while converting."""
+
     tmp_outputs: List[Tensor]
 
     def __init__(self, outputs: List[int] = None):
-        """ 'outputs' is a list of indices into the 'tensors' vector. """
+        """'outputs' is a list of indices into the 'tensors' vector."""
         super().__init__(outputs, libSubGraphs.StartOutputsVector)
         self.tmp_outputs = []
 
@@ -640,9 +688,13 @@ class SubGraph(meta.TFLiteObject):
 
     # TODO name
 
-    def __init__(self, inputs: SubGraphInputs = None, outputs: SubGraphOutputs = None,
-                 tensors: Tensors = None,
-                 operators: Operators = None):
+    def __init__(
+        self,
+        inputs: SubGraphInputs = None,
+        outputs: SubGraphOutputs = None,
+        tensors: Tensors = None,
+        operators: Operators = None,
+    ):
         self.inputs = inputs
         self.outputs = outputs
         self.tensors = tensors
@@ -707,14 +759,17 @@ class Model(meta.TFLiteObject):
 
     @classmethod
     def __gen_file_identifier(cls):
-        """ Generate byte-like object representing the TFLite format """
+        """Generate byte-like object representing the TFLite format"""
         return cls.__fileIdentifier.encode("ascii")
 
-    def __init__(self, version: int = 1,
-                 description: str = None,
-                 buffers: Buffers = None,
-                 operator_codes: OperatorCodes = None,
-                 sub_graphs: SubGraphs = None) -> None:
+    def __init__(
+        self,
+        version: int = 1,
+        description: str = None,
+        buffers: Buffers = None,
+        operator_codes: OperatorCodes = None,
+        sub_graphs: SubGraphs = None,
+    ) -> None:
         self.version = version
         self.description = description
         self.operator_codes = operator_codes

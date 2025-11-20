@@ -15,17 +15,18 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ScalarType;
-using exec_aten::string_view;
-using exec_aten::Tensor;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
+using std::string_view;
 using torch::executor::testing::TensorFactory;
 
 // Note: This file is used for testing op_gelu for *portable kernel specific*.
 // If your test case is generic and should be tested on all kernels, add it to
 // executorch/kernels/test/op_gelu_test.cpp instead.
 
-Tensor& op_gelu_out(const Tensor& self, string_view approximate, Tensor& out) {
-  executorch::runtime::KernelRuntimeContext context{};
+Tensor&
+op_gelu_out(const Tensor& self, std::string_view approximate, Tensor& out) {
+  executorch::ET_RUNTIME_NAMESPACE::KernelRuntimeContext context{};
   return torch::executor::native::gelu_out(context, self, approximate, out);
 }
 

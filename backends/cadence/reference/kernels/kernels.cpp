@@ -7,11 +7,10 @@
  */
 
 #include <executorch/backends/cadence/reference/kernels/kernels.h>
-#include <math.h>
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <limits>
-#include <numeric>
 
 namespace impl {
 namespace reference {
@@ -20,10 +19,18 @@ namespace kernels {
 // Quantize a fp32 value to an int8_t/uint8_t value
 template <typename T>
 T quantize(const float x, float scale, int32_t zero_point) {
-  constexpr float min_val = std::numeric_limits<T>::min();
-  constexpr float max_val = std::numeric_limits<T>::max();
-  float tmp = roundf(x * scale + zero_point);
-  return std::max(std::min(tmp, max_val), min_val);
+  // constexpr float min_val = std::numeric_limits<T>::min();
+  // constexpr float max_val = std::numeric_limits<T>::max();
+  // float tmp = roundf(x * scale + zero_point);
+  // return std::max(std::min(tmp, max_val), min_val);
+  // Match Executorch CPU kernel implementation at
+  // https://fburl.com/code/fxizw6u6
+  int64_t qvalue;
+  qvalue = static_cast<int64_t>(zero_point + std::nearbyint(scale * x));
+
+  qvalue = std::max<int64_t>(qvalue, std::numeric_limits<T>::min());
+  qvalue = std::min<int64_t>(qvalue, std::numeric_limits<T>::max());
+  return static_cast<T>(qvalue);
 }
 
 // Quantize an fp32 array to an int8_t/uint8_t array
@@ -66,7 +73,6 @@ typed_quantize_val(int8_t);
 typed_quantize_val(uint8_t);
 typed_quantize_val(int16_t);
 typed_quantize_val(uint16_t);
-typed_quantize_val(int32_t);
 #undef typed_quantize_val
 
 #define typed_quantize_vec(dtype)  \
@@ -80,7 +86,6 @@ typed_quantize_vec(int8_t);
 typed_quantize_vec(uint8_t);
 typed_quantize_vec(int16_t);
 typed_quantize_vec(uint16_t);
-typed_quantize_vec(int32_t);
 #undef typed_quantize_vec
 
 #define typed_dequantize_val(dtype) \
@@ -89,7 +94,6 @@ typed_dequantize_val(int8_t);
 typed_dequantize_val(uint8_t);
 typed_dequantize_val(int16_t);
 typed_dequantize_val(uint16_t);
-typed_dequantize_val(int32_t);
 #undef typed_dequantize_val
 
 #define typed_dequantize_vec(dtype) \
@@ -103,7 +107,6 @@ typed_dequantize_vec(int8_t);
 typed_dequantize_vec(uint8_t);
 typed_dequantize_vec(int16_t);
 typed_dequantize_vec(uint16_t);
-typed_dequantize_vec(int32_t);
 #undef typed_dequantize_vec
 
 }; // namespace kernels

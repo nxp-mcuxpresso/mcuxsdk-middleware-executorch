@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class LeakyReluOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class LeakyReluOptions(object):
     def GetRootAsLeakyReluOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def LeakyReluOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # LeakyReluOptions
     def Init(self, buf, pos):
@@ -32,23 +37,31 @@ class LeakyReluOptions(object):
     def Alpha(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Float32Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Float32Flags, o + self._tab.Pos
+            )
         return 0.0
+
 
 def LeakyReluOptionsStart(builder):
     builder.StartObject(1)
 
+
 def Start(builder):
     LeakyReluOptionsStart(builder)
+
 
 def LeakyReluOptionsAddAlpha(builder, alpha):
     builder.PrependFloat32Slot(0, alpha, 0.0)
 
+
 def AddAlpha(builder, alpha):
     LeakyReluOptionsAddAlpha(builder, alpha)
 
+
 def LeakyReluOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return LeakyReluOptionsEnd(builder)

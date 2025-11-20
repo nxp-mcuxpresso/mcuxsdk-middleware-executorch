@@ -11,14 +11,13 @@
 Representation of the TFLite operator 'MaxPool2D'.
 """
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.lib.tflite.ActivationFunctionType as libActivationFunctionType
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator as libBuiltinOperator
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions as libBuiltinOptions
 import executorch.backends.nxp.backend.ir.lib.tflite.Padding as libPadding
 import executorch.backends.nxp.backend.ir.lib.tflite.Pool2DOptions as libPool2DOptions
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+import flatbuffers as fb
 
 
 class MaxPool2D(meta.BuiltinOptions):
@@ -29,12 +28,19 @@ class MaxPool2D(meta.BuiltinOptions):
     filter_h: int
     fused_activation_function: libActivationFunctionType.ActivationFunctionType
 
-    def __init__(self, padding: libPadding.Padding = libPadding.Padding.SAME,
-                 stride_w: int = 1, stride_h: int = 1,
-                 filter_w: int = 1, filter_h: int = 1,
-                 fused_activation_function: libActivationFunctionType.ActivationFunctionType = libActivationFunctionType.ActivationFunctionType.NONE) -> None:
-        super().__init__(libBuiltinOptions.BuiltinOptions.Pool2DOptions,
-                         libBuiltinOperator.BuiltinOperator.MAX_POOL_2D)
+    def __init__(
+        self,
+        padding: libPadding.Padding = libPadding.Padding.SAME,
+        stride_w: int = 1,
+        stride_h: int = 1,
+        filter_w: int = 1,
+        filter_h: int = 1,
+        fused_activation_function: libActivationFunctionType.ActivationFunctionType = libActivationFunctionType.ActivationFunctionType.NONE,
+    ) -> None:
+        super().__init__(
+            libBuiltinOptions.BuiltinOptions.Pool2DOptions,
+            libBuiltinOperator.BuiltinOperator.MAX_POOL_2D,
+        )
         self.padding = padding
         self.stride_w = stride_w
         self.stride_h = stride_h
@@ -50,6 +56,8 @@ class MaxPool2D(meta.BuiltinOptions):
         libPool2DOptions.AddStrideH(builder, self.stride_h)
         libPool2DOptions.AddFilterHeight(builder, self.filter_h)
         libPool2DOptions.AddFilterWidth(builder, self.filter_w)
-        libPool2DOptions.AddFusedActivationFunction(builder, self.fused_activation_function)
+        libPool2DOptions.AddFusedActivationFunction(
+            builder, self.fused_activation_function
+        )
 
         return libPool2DOptions.End(builder)

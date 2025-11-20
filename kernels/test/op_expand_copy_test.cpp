@@ -17,10 +17,10 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::IntArrayRef;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::IntArrayRef;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::TensorFactory;
 
 class OpExpandOutTest : public OperatorTest {
@@ -196,9 +196,10 @@ TEST_F(OpExpandOutTest, ExpandOneToNPlusNewDimDifferentTwo) {
   EXPECT_TENSOR_EQ(out, ret);
   EXPECT_TENSOR_EQ(
       out,
-      tf.make(/*sizes*/ {2, 6, 2}, /*data=*/{42, 96, 42, 96, 42, 96, 42, 96,
-                                             42, 96, 42, 96, 42, 96, 42, 96,
-                                             42, 96, 42, 96, 42, 96, 42, 96}));
+      tf.make(
+          /*sizes*/ {2, 6, 2},
+          /*data=*/{42, 96, 42, 96, 42, 96, 42, 96, 42, 96, 42, 96,
+                    42, 96, 42, 96, 42, 96, 42, 96, 42, 96, 42, 96}));
 }
 
 TEST_F(OpExpandOutTest, BadOutDataTypeGoodShapeDeath) {

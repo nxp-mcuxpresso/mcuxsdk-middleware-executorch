@@ -6,30 +6,28 @@
 
 # Example script for exporting simple models to flatbuffer
 
+# pyre-unsafe
+
 import logging
 import tempfile
 
 import torch
 
 from executorch.backends.cadence.aot.ops_registrations import *  # noqa
-from typing import Any, Tuple
+from typing import Any, Optional, Tuple
 
 from executorch.backends.cadence.aot.compiler import (
+    _lower_ep_to_cadence_gen_etrecord,
     convert_pt2,
-    export_to_executorch_gen_etrecord,
     fuse_pt2,
+    prepare_pt2,
 )
 
-from executorch.backends.cadence.aot.quantizer.quantizer import CadenceQuantizer
+from executorch.backends.cadence.aot.quantizer.quantizer import CadenceDefaultQuantizer
 from executorch.backends.cadence.runtime import runtime
 from executorch.backends.cadence.runtime.executor import BundledProgramManager
 from executorch.exir import ExecutorchProgramManager
 from torch import nn
-from torch.ao.quantization.observer import HistogramObserver, MinMaxObserver
-from torch.ao.quantization.quantizer.xnnpack_quantizer_utils import (
-    QuantizationConfig,
-    QuantizationSpec,
-)
 
 from .utils import save_bpte_program, save_pte_program
 
@@ -37,58 +35,43 @@ from .utils import save_bpte_program, save_pte_program
 FORMAT = "[%(levelname)s %(asctime)s %(filename)s:%(lineno)s] %(message)s"
 logging.basicConfig(level=logging.INFO, format=FORMAT)
 
-act_qspec = QuantizationSpec(
-    dtype=torch.int8,
-    quant_min=-128,
-    quant_max=127,
-    qscheme=torch.per_tensor_affine,
-    is_dynamic=False,
-    observer_or_fake_quant_ctr=HistogramObserver.with_args(eps=2**-12),
-)
-
-wgt_qspec = QuantizationSpec(
-    dtype=torch.int8,
-    quant_min=-128,
-    quant_max=127,
-    qscheme=torch.per_tensor_affine,
-    is_dynamic=False,
-    observer_or_fake_quant_ctr=MinMaxObserver,
-)
-
 
 def export_model(
     model: nn.Module,
     example_inputs: Tuple[Any, ...],
     file_name: str = "CadenceDemoModel",
-    run_and_compare: bool = True,
+    working_dir: Optional[str] = None,
 ):
     # create work directory for outputs and model binary
-    working_dir = tempfile.mkdtemp(dir="/tmp")
-    logging.debug(f"Created work directory {working_dir}")
-
-    qconfig = QuantizationConfig(
-        act_qspec,
-        act_qspec,
-        wgt_qspec,
-        None,
-    )
+    if working_dir is None:
+        working_dir = tempfile.mkdtemp(dir="/tmp")
+        logging.debug(f"Created work directory {working_dir}")
 
     # Instantiate the quantizer
-    quantizer = CadenceQuantizer(qconfig)
+    quantizer = CadenceDefaultQuantizer()
+
+    # Prepare the model
+    prepared_gm = prepare_pt2(model, example_inputs, quantizer)
+
+    # Calibrate the model
+    for samples in [example_inputs]:
+        prepared_gm(*samples)
 
     # Convert the model
-    converted_model = convert_pt2(model, example_inputs, quantizer)
+    converted_model = convert_pt2(prepared_gm)
 
     # Get reference outputs from converted model
     ref_outputs = converted_model(*example_inputs)
 
     # Quantize the model (note: quantizer needs to be the same as
-    # the one used in convert_pt2)
+    # the one used in prepare_and_convert_pt2)
     quantized_model = fuse_pt2(converted_model, quantizer)
 
+    ep = torch.export.export(quantized_model, example_inputs, strict=True)
+
     # Get edge program after Cadence specific passes
-    exec_prog: ExecutorchProgramManager = export_to_executorch_gen_etrecord(
-        quantized_model, example_inputs, output_dir=working_dir
+    exec_prog: ExecutorchProgramManager = _lower_ep_to_cadence_gen_etrecord(
+        ep, output_dir=working_dir
     )
 
     logging.info("Final exported graph:\n")
@@ -112,11 +95,24 @@ def export_model(
         f"Executorch bundled program buffer saved to {file_name} is {len(buffer)} total bytes"
     )
 
-    # TODO: move to test infra
-    if run_and_compare:
-        runtime.run_and_compare(
-            executorch_prog=exec_prog,
-            inputs=example_inputs,
-            ref_outputs=ref_outputs,
-            working_dir=working_dir,
-        )
+
+def export_and_run_model(
+    model: nn.Module,
+    example_inputs: Tuple[Any, ...],
+    file_name: str = "CadenceDemoModel",
+    eps_error: float = 1e-1,
+    eps_warn: float = 1e-5,
+):
+    # create work directory for outputs and model binary
+    working_dir = tempfile.mkdtemp(dir="/tmp")
+    logging.debug(f"Created work directory {working_dir}")
+    exec_prog = export_model(model, example_inputs, file_name, working_dir)
+    ref_outputs = model(*example_inputs)
+    runtime.run_and_compare(
+        executorch_prog=exec_prog,
+        inputs=example_inputs,
+        ref_outputs=ref_outputs,
+        working_dir=working_dir,
+        eps_error=eps_error,
+        eps_warn=eps_warn,
+    )

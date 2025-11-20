@@ -225,7 +225,7 @@ class HintBasedSymShapeEvalPass(PassBase):
                                 for i, v in enumerate(spec.shape):
                                     if concrete_shape[i] is None:
                                         # get updated shape from var_to_range
-                                        _value_range = shape_env.var_to_range[
+                                        _value_range = shape_env.var_to_range[  # pyre-fixme[16] `Optional` has no attribute `var_to_range`.
                                             v._sympy_()  # pyre-fixme[16] Undefined attribute: `int` has no attribute `_sympy_`.
                                         ]
                                         # cannot handle unbounded, unbacked symints; add a range to bound it.
@@ -278,7 +278,7 @@ class ConstraintBasedSymShapeEvalPass(PassBase):
                             not isinstance(s, int) for s in concrete_stride
                         ):
                             raise RuntimeError(
-                                f"Cannot evalute the shape upper bound of a dynamic-shaped tensor to a concrete bounded integer. Got tensor spec: {spec}."
+                                f"Cannot evaluate the shape upper bound of a dynamic-shaped tensor to a concrete bounded integer. Got tensor spec: {spec}."
                                 f"The upper bound shape we get {concrete_shape}, the upper bound stride we get {concrete_stride}"
                                 "This tensor could either be from 1. a data-dependent operation such as nonzero. Or 2. an input, whose don't have a constraint for the upper bound."
                                 "Please use export's constrain_as_size() or constrain_as_value() apis and set a concrete upper bound to resolve this."

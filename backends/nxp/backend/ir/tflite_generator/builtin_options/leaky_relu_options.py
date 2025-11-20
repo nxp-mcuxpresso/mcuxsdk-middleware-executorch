@@ -7,20 +7,21 @@
 #
 
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator as libBuiltinOperator
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions as libBuiltinOptions
 import executorch.backends.nxp.backend.ir.lib.tflite.LeakyReluOptions as libLeakyReluOptions
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+import flatbuffers as fb
 
 
 class LeakyRelu(meta.BuiltinOptions):
     alpha: float
 
     def __init__(self, alpha: float) -> None:
-        super().__init__(libBuiltinOptions.BuiltinOptions.LeakyReluOptions,
-                         libBuiltinOperator.BuiltinOperator.LEAKY_RELU)
+        super().__init__(
+            libBuiltinOptions.BuiltinOptions.LeakyReluOptions,
+            libBuiltinOperator.BuiltinOperator.LEAKY_RELU,
+        )
         self.alpha = alpha
 
     def gen_tflite(self, builder: fb.Builder):

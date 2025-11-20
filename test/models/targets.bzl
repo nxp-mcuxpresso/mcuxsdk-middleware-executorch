@@ -61,12 +61,16 @@ def define_common_targets():
     MODULES_TO_EXPORT = [
         "ModuleAdd",
         "ModuleAddHalf",
+        "ModuleAddMul",
         "ModuleBasic",
-        "ModuleLinear",
+        "ModuleKVCacheCachePos",
+        "ModuleKVCacheInputPos",
         "ModuleMultipleEntry",
+        "ModuleNoKVCache",
         "ModuleIndex",
         "ModuleDynamicCatUnallocatedIO",
         "ModuleSimpleTrain",
+        "ModuleStateful",
     ]
 
     # Generates Executorch .pte program files for various modules at build time.
@@ -75,9 +79,39 @@ def define_common_targets():
         name = "exported_programs",
         cmd = "$(exe :export_program) --modules " + ",".join(MODULES_TO_EXPORT) + " --outdir $OUT",
         outs = {
-            fname + seg_suffix + ".pte": [fname + seg_suffix + ".pte"]
+            fname + ".pte": [fname + ".pte"]
             for fname in MODULES_TO_EXPORT
-            for seg_suffix in ["", "-no-constant-segment"]
+        },
+        default_outs = ["."],
+        visibility = [
+            "//executorch/...",
+            # This genrule can't run in xplat since it uses EXIR, so make its
+            # output visible to xplat tests. This is an exceptional case, and
+            # typically shouldn't be done.
+            "fbsource//xplat/executorch/...",
+        ],
+        # Allow the xplat entry in the visibility list. This is an exceptional
+        # case, and typically shouldn't be done.
+        _is_external_target = True,
+    )
+
+    # Class names of nn.Modules for :exported_programs to export.
+    MODULES_AND_DATA_TO_EXPORT = [
+        "ModuleAddMul",
+        "ModuleLinear",
+        "ModuleSimpleTrain",
+    ]
+
+    runtime.genrule(
+        name = "exported_program_and_data",
+        cmd = "$(exe :export_program) --modules " + ",".join(MODULES_AND_DATA_TO_EXPORT) + " --external-constants --outdir $OUT",
+        outs = {
+            "ModuleAddMul.pte": ["ModuleAddMulProgram.pte"],
+            "ModuleAddMul.ptd": ["ModuleAddMulProgram.ptd"],
+            "ModuleLinear.pte": ["ModuleLinearProgram.pte"],
+            "ModuleLinear.ptd": ["ModuleLinearProgram.ptd"],
+            "ModuleSimpleTrainProgram.pte": ["ModuleSimpleTrainProgram.pte"],
+            "ModuleSimpleTrain.ptd": ["ModuleSimpleTrainProgram.ptd"],
         },
         default_outs = ["."],
         visibility = [
@@ -118,38 +152,39 @@ def define_common_targets():
         deps = [
             ":export_delegated_program_lib",
             "//executorch/backends/xnnpack/partition:xnnpack_partitioner",
-
+            "//executorch/exir/backend/test/demos/rpc:executor_backend_preprocess",
         ],
         visibility = [],  # Private
     )
 
-    # Class names of nn.Modules for :exported_delegated_programs to export.
+    # Class names of nn.Modules available in export_delegated_program.py.
     DELEGATED_MODULES_TO_EXPORT = [
         "ModuleAddMul",
         "ModuleAddLarge",
         "ModuleSubLarge",
+        "ModuleLinear",
     ]
 
     # Name of the backend to use when exporting delegated programs.
     BACKEND_ID = "StubBackend"
 
-    # Generates Executorch .pte program files for various modules at build time.
+    # Generates Executorch .pte program files for the AddMul module at build time.
     # To use one, depend on a target like
-    # ":exported_delegated_programs[ModuleAdd.pte]" or
-    # ":exported_delegated_programs[ModuleAdd-nosegments.pte]" (which does not
+    # ":exported_delegated_add_mul[ModuleAdd.pte]" or
+    # ":exported_delegated_add_mul[ModuleAdd-nosegments.pte]" (which does not
     # extract the delegate data blobs into segments).
     runtime.genrule(
-        name = "exported_delegated_programs",
-        cmd = "$(exe :export_delegated_program)" +
-              " --modules " + ",".join(DELEGATED_MODULES_TO_EXPORT) +
-              " --backend_id " + BACKEND_ID +
-              " --outdir $OUT",
+        name = "exported_delegated_add_mul",
+        cmd = "$(exe :export_delegated_program) --modules ModuleAddMul --backend_id " + BACKEND_ID + " --outdir $OUT" +
+              " && $(exe :export_delegated_program) --modules ModuleAddMul --backend_id " + BACKEND_ID + " --inline_delegate_segments --outdir $OUT" +
+            # Create files with a large alignment as well as the default.
+            # This alignment should be so large that it's extremely unlikely for
+            # the data to accidentally be aligned to it in the default case.
+              " && $(exe :export_delegated_program) --modules ModuleAddMul --backend_id " + BACKEND_ID + " --inline_delegate_segments --delegate_alignment 1024 --outdir $OUT",
         outs = {
-            fname + seg_suffix + da_suffix + ".pte": [fname + seg_suffix + da_suffix + ".pte"]
-            for fname in DELEGATED_MODULES_TO_EXPORT
-            for seg_suffix in ["", "-nosegments"]
-            # "da" = delegate alignment
-            for da_suffix in ["", "-da1024"]
+            "ModuleAddMul.pte": ["ModuleAddMul.pte"],
+            "ModuleAddMul-nosegments.pte": ["ModuleAddMul-nosegments.pte"],
+            "ModuleAddMul-nosegments-da1024.pte": ["ModuleAddMul-nosegments-da1024.pte"],
         },
         default_outs = ["."],
         visibility = [
@@ -161,7 +196,7 @@ def define_common_targets():
     runtime.genrule(
         name = "exported_xnnp_delegated_programs",
         cmd = "$(exe :export_delegated_program)" +
-              " --modules " + ",".join(DELEGATED_MODULES_TO_EXPORT) +
+              " --modules ModuleAddLarge,ModuleSubLarge" +
               " --backend_id " + "XnnpackBackend" +
               " --outdir $OUT",
         outs = {
@@ -176,4 +211,43 @@ def define_common_targets():
             "@EXECUTORCH_CLIENTS",
         ],
         env = {"PYTORCH_DISABLE_JUSTKNOBS": "1",},
+    )
+
+    runtime.genrule(
+        name = "exported_xnnpack_program_and_data",
+        cmd = "$(exe :export_delegated_program)" +
+            " --modules ModuleLinear" +
+            " --backend_id XnnpackBackend" +
+            " --external_constants" +
+            " --outdir $OUT",
+
+        outs = {
+            "ModuleLinear-e.pte": ["ModuleLinear-e.pte"],
+            "ModuleLinear.ptd": ["ModuleLinear.ptd"],
+        },
+        default_outs = ["."],
+        visibility = [
+            "//executorch/backends/xnnpack/test/...",
+            "//executorch/test/...",
+        ],
+    )
+
+    # Export with demo ExecutorBackend for program-data separation test.
+    runtime.genrule(
+        name = "exported_executor_backend_program_and_data",
+        cmd = "$(exe :export_delegated_program)" +
+            " --modules ModuleLinear" +
+            " --backend_id ExecutorBackend" +
+            " --external_constants" +
+            " --outdir $OUT",
+
+        outs = {
+            "ModuleLinear-e.pte": ["ModuleLinear-e.pte"],
+        },
+        default_outs = ["."],
+        visibility = [
+            "//executorch/runtime/executor/test/...",
+            "//executorch/extension/flat_tensor/test/...",
+            "//executorch/test/...",
+        ],
     )

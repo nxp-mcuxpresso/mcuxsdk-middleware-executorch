@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class TensorType(object):
     FLOAT32 = 0
     FLOAT16 = 1

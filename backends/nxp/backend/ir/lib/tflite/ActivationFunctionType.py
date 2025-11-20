@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class ActivationFunctionType(object):
     NONE = 0
     RELU = 1

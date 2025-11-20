@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloGatherOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloGatherOptions(object):
     def GetRootAsStablehloGatherOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloGatherOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloGatherOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloGatherOptions
     def Init(self, buf, pos):
@@ -33,7 +40,10 @@ class StablehloGatherOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloGatherOptions
@@ -60,7 +70,10 @@ class StablehloGatherOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloGatherOptions
@@ -87,7 +100,10 @@ class StablehloGatherOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloGatherOptions
@@ -121,7 +137,10 @@ class StablehloGatherOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloGatherOptions
@@ -147,77 +166,111 @@ class StablehloGatherOptions(object):
     def IndicesAreSorted(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
+
 
 def StablehloGatherOptionsStart(builder):
     builder.StartObject(6)
 
+
 def Start(builder):
     StablehloGatherOptionsStart(builder)
 
+
 def StablehloGatherOptionsAddOffsetDims(builder, offsetDims):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(offsetDims), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(offsetDims), 0
+    )
+
 
 def AddOffsetDims(builder, offsetDims):
     StablehloGatherOptionsAddOffsetDims(builder, offsetDims)
 
+
 def StablehloGatherOptionsStartOffsetDimsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartOffsetDimsVector(builder, numElems: int) -> int:
     return StablehloGatherOptionsStartOffsetDimsVector(builder, numElems)
 
+
 def StablehloGatherOptionsAddCollapsedSliceDims(builder, collapsedSliceDims):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(collapsedSliceDims), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(collapsedSliceDims), 0
+    )
+
 
 def AddCollapsedSliceDims(builder, collapsedSliceDims):
     StablehloGatherOptionsAddCollapsedSliceDims(builder, collapsedSliceDims)
 
+
 def StablehloGatherOptionsStartCollapsedSliceDimsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartCollapsedSliceDimsVector(builder, numElems: int) -> int:
     return StablehloGatherOptionsStartCollapsedSliceDimsVector(builder, numElems)
 
+
 def StablehloGatherOptionsAddStartIndexMap(builder, startIndexMap):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(startIndexMap), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(startIndexMap), 0
+    )
+
 
 def AddStartIndexMap(builder, startIndexMap):
     StablehloGatherOptionsAddStartIndexMap(builder, startIndexMap)
 
+
 def StablehloGatherOptionsStartStartIndexMapVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartStartIndexMapVector(builder, numElems: int) -> int:
     return StablehloGatherOptionsStartStartIndexMapVector(builder, numElems)
 
+
 def StablehloGatherOptionsAddIndexVectorDim(builder, indexVectorDim):
     builder.PrependInt64Slot(3, indexVectorDim, 0)
+
 
 def AddIndexVectorDim(builder, indexVectorDim):
     StablehloGatherOptionsAddIndexVectorDim(builder, indexVectorDim)
 
+
 def StablehloGatherOptionsAddSliceSizes(builder, sliceSizes):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(sliceSizes), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(sliceSizes), 0
+    )
+
 
 def AddSliceSizes(builder, sliceSizes):
     StablehloGatherOptionsAddSliceSizes(builder, sliceSizes)
 
+
 def StablehloGatherOptionsStartSliceSizesVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartSliceSizesVector(builder, numElems: int) -> int:
     return StablehloGatherOptionsStartSliceSizesVector(builder, numElems)
 
+
 def StablehloGatherOptionsAddIndicesAreSorted(builder, indicesAreSorted):
     builder.PrependBoolSlot(5, indicesAreSorted, 0)
+
 
 def AddIndicesAreSorted(builder, indicesAreSorted):
     StablehloGatherOptionsAddIndicesAreSorted(builder, indicesAreSorted)
 
+
 def StablehloGatherOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloGatherOptionsEnd(builder)

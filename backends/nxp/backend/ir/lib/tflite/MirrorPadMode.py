@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class MirrorPadMode(object):
     REFLECT = 0
     SYMMETRIC = 1

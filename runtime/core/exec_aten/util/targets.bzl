@@ -1,4 +1,4 @@
-load("@fbsource//xplat/executorch/build:runtime_wrapper.bzl", "runtime")
+load("@fbsource//xplat/executorch/build:runtime_wrapper.bzl", "get_aten_mode_options", "runtime")
 
 def define_common_targets():
     """Defines targets that should be shared between fbcode and xplat.
@@ -7,7 +7,7 @@ def define_common_targets():
     TARGETS and BUCK files that call this function.
     """
 
-    for aten_mode in (True, False):
+    for aten_mode in get_aten_mode_options():
         aten_suffix = "_aten" if aten_mode else ""
 
         exported_preprocessor_flags_ = []
@@ -40,6 +40,7 @@ def define_common_targets():
             ],
             exported_deps = [
                 "//executorch/runtime/core:core",
+                "//executorch/runtime/core/portable_type/c10/c10:c10",
             ],
             visibility = [
                 "//executorch/...",
@@ -60,7 +61,9 @@ def define_common_targets():
             ],
             exported_preprocessor_flags = ["-DUSE_ATEN_LIB"] if aten_mode else [],
             exported_deps = [
+                ":tensor_dimension_limit",
                 "//executorch/runtime/core:core",
+                "//executorch/runtime/core/portable_type/c10/c10:c10",
             ] + [
                 "//executorch/runtime/core/exec_aten:lib" + aten_suffix,
                 ":scalar_type_util" + aten_suffix,
@@ -72,3 +75,26 @@ def define_common_targets():
             # specify library directory path.
             force_static = True,
         )
+
+        runtime.cxx_library(
+            name = "tensor_shape_to_c_string" + aten_suffix,
+            srcs = ["tensor_shape_to_c_string.cpp"],
+            exported_deps = [
+                "//executorch/runtime/core:core",
+                "//executorch/runtime/core/exec_aten/util:tensor_dimension_limit",
+            ],
+            exported_headers = ["tensor_shape_to_c_string.h"],
+            visibility = [
+                "//executorch/...",
+                "@EXECUTORCH_CLIENTS",
+            ],
+        )
+
+    runtime.cxx_library(
+        name = "tensor_dimension_limit",
+        exported_headers = ["tensor_dimension_limit.h"],
+        visibility = [
+            "//executorch/...",
+            "@EXECUTORCH_CLIENTS",
+        ],
+    )

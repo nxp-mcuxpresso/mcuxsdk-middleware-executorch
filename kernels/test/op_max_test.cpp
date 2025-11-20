@@ -18,9 +18,9 @@
 #include <cmath>
 
 using namespace ::testing;
-using exec_aten::ArrayRef;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::ArrayRef;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::TensorFactory;
 
 class OpMaxOutTest : public OperatorTest {
@@ -316,7 +316,7 @@ TEST_F(OpMaxOutTest, MismatchedDTypesDies) {
 
 TEST_F(OpMaxOutTest, AllRealInputLongOutputPasses) {
 #define TEST_ENTRY(ctype, dtype) test_max_out_dtype<ScalarType::dtype>();
-  ET_FORALL_REAL_TYPES_AND(Bool, TEST_ENTRY);
+  ET_FORALL_REALHBBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 

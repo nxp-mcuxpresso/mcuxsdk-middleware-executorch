@@ -12,16 +12,21 @@ Module contains helper functions that work with TFLite data types.
 """
 from enum import Enum
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.logger as logger
+
+import flatbuffers as fb
 from executorch.backends.nxp.backend.ir.lib.tflite.TensorType import TensorType
 
 # Lists of types. Used to simplify specification of supported types in conversion modules.
 FLOATS = [TensorType.FLOAT16, TensorType.FLOAT32, TensorType.FLOAT64]
 INTS = [TensorType.INT8, TensorType.INT16, TensorType.INT32, TensorType.INT64]
 UINTS = [TensorType.UINT8, TensorType.UINT16, TensorType.UINT32, TensorType.UINT64]
-ALL_TYPES = FLOATS + INTS + UINTS + [TensorType.STRING, TensorType.BOOL, TensorType.COMPLEX64, TensorType.COMPLEX128]
+ALL_TYPES = (
+    FLOATS
+    + INTS
+    + UINTS
+    + [TensorType.STRING, TensorType.BOOL, TensorType.COMPLEX64, TensorType.COMPLEX128]
+)
 
 
 class TensorFlowDataType(Enum):
@@ -88,42 +93,74 @@ class TensorFlowDataType(Enum):
 
 def is_unsigned(data_type: TensorType) -> bool:
     return data_type in {
-        TensorType.UINT8, TensorType.UINT16, TensorType.UINT32, TensorType.UINT64
+        TensorType.UINT8,
+        TensorType.UINT16,
+        TensorType.UINT32,
+        TensorType.UINT64,
     }
 
 
 def is_signed(data_type: TensorType) -> bool:
     return data_type in {
-        TensorType.INT8, TensorType.INT16, TensorType.INT32, TensorType.INT64
+        TensorType.INT8,
+        TensorType.INT16,
+        TensorType.INT32,
+        TensorType.INT64,
     }
 
 
 def name_for_type(data_type: TensorType) -> str:
-    """ Return the name of given TFLite data type. """
-    names = ["FLOAT32", "FLOAT16", "INT32", "UINT8", "INT64", "STRING", "BOOL", "INT16", "COMPLEX64", "INT8", "FLOAT64",
-             "COMPLEX128", "UINT64", "RESOURCE", "VARIANT", "UINT32", "UINT16", "INT4", ]
+    """Return the name of given TFLite data type."""
+    names = [
+        "FLOAT32",
+        "FLOAT16",
+        "INT32",
+        "UINT8",
+        "INT64",
+        "STRING",
+        "BOOL",
+        "INT16",
+        "COMPLEX64",
+        "INT8",
+        "FLOAT64",
+        "COMPLEX128",
+        "UINT64",
+        "RESOURCE",
+        "VARIANT",
+        "UINT32",
+        "UINT16",
+        "INT4",
+    ]
 
     return names[data_type]
 
 
 def type_size(data_type: TensorType):
-    """ Return the memory size in bytes of given TFLite data type. """
+    """Return the memory size in bytes of given TFLite data type."""
     if data_type in {TensorType.UINT8, TensorType.INT8}:
         return 1
     elif data_type in {TensorType.UINT16, TensorType.INT16, TensorType.FLOAT16}:
         return 2
     elif data_type in {TensorType.UINT32, TensorType.INT32, TensorType.FLOAT32}:
         return 4
-    elif data_type in {TensorType.UINT64, TensorType.INT64, TensorType.FLOAT64, TensorType.COMPLEX64}:
+    elif data_type in {
+        TensorType.UINT64,
+        TensorType.INT64,
+        TensorType.FLOAT64,
+        TensorType.COMPLEX64,
+    }:
         return 8
     elif data_type in {TensorType.COMPLEX128}:
         return 16
 
-    logger.e(logger.Code.INTERNAL_ERROR, f"Unexpected type '{data_type}' in types.type_size().")
+    logger.e(
+        logger.Code.INTERNAL_ERROR,
+        f"Unexpected type '{data_type}' in types.type_size().",
+    )
 
 
-def prepend_function(builder: fb.Builder, data_type: TensorType):
-    """ Return the flatbuffer 'Prepend<type>()' function for given type. """
+def prepend_function(builder: fb.Builder, data_type: TensorType):  # noqa C901
+    """Return the flatbuffer 'Prepend<type>()' function for given type."""
     if data_type == TensorType.UINT8:
         return builder.PrependUint8
     elif data_type == TensorType.UINT16:
@@ -143,7 +180,9 @@ def prepend_function(builder: fb.Builder, data_type: TensorType):
         return builder.PrependInt64
 
     elif data_type == TensorType.FLOAT16:
-        logger.w("Flatbuffer prepend function for FLOAT16 datatype is not supported! Using default 16b alternative.")
+        logger.w(
+            "Flatbuffer prepend function for FLOAT16 datatype is not supported! Using default 16b alternative."
+        )
         return builder.PrependInt16  # Might not work
     elif data_type == TensorType.FLOAT32:
         return builder.PrependFloat32
@@ -153,4 +192,7 @@ def prepend_function(builder: fb.Builder, data_type: TensorType):
     elif data_type == TensorType.BOOL:
         return builder.PrependBool
 
-    logger.e(logger.Code.NOT_IMPLEMENTED, f"Unsupported flatbuffer prepend function for type '{data_type}'!")
+    logger.e(
+        logger.Code.NOT_IMPLEMENTED,
+        f"Unsupported flatbuffer prepend function for type '{data_type}'!",
+    )

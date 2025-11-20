@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class Int32Vector(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class Int32Vector(object):
     def GetRootAsInt32Vector(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def Int32VectorBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # Int32Vector
     def Init(self, buf, pos):
@@ -33,7 +38,10 @@ class Int32Vector(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Int32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # Int32Vector
@@ -55,26 +63,36 @@ class Int32Vector(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
+
 def Int32VectorStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     Int32VectorStart(builder)
 
+
 def Int32VectorAddValues(builder, values):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(values), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(values), 0
+    )
+
 
 def AddValues(builder, values):
     Int32VectorAddValues(builder, values)
 
+
 def Int32VectorStartValuesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartValuesVector(builder, numElems: int) -> int:
     return Int32VectorStartValuesVector(builder, numElems)
 
+
 def Int32VectorEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return Int32VectorEnd(builder)

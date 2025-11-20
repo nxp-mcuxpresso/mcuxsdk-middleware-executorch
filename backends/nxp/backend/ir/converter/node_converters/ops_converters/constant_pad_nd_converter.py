@@ -7,17 +7,28 @@ import copy
 from typing import Collection
 
 import numpy as np
-from torch.fx import Node
-from torch.nn import Parameter
 
 from executorch.backends.nxp.backend.edge_helper import input_rank
-from executorch.backends.nxp.backend.ir.converter.conversion.translator import tf_lite_type_to_numpy, \
-    create_channels_first_to_channels_last_permutation, apply_permutation_to
-from executorch.backends.nxp.backend.ir.converter.node_converter import NodeConverter
-from executorch.backends.nxp.backend.ir.converter.node_converter import Target, CustomDelegationOptions
-from executorch.backends.nxp.backend.ir.converter.quantization_utils import quantize_int8
+from executorch.backends.nxp.backend.ir.converter.conversion.translator import (
+    apply_permutation_to,
+    create_channels_first_to_channels_last_permutation,
+    tf_lite_type_to_numpy,
+)
+from executorch.backends.nxp.backend.ir.converter.node_converter import (
+    CustomDelegationOptions,
+    NodeConverter,
+    Target,
+)
+from executorch.backends.nxp.backend.ir.converter.quantization_utils import (
+    quantize_int8,
+)
 from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
-from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import pad_v2_options, pad_options
+from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import (
+    pad_options,
+    pad_v2_options,
+)
+from torch.fx import Node
+from torch.nn import Parameter
 
 
 class ConstantPadNDConverter(NodeConverter):
@@ -26,10 +37,11 @@ class ConstantPadNDConverter(NodeConverter):
         node: Node,
         target: Target,
         parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
+        custom_delegation_options: CustomDelegationOptions,
     ) -> bool:
         match target:
             case Target.RT700:
+                # TODO: Consider different tensor formats (dim-order)
                 paddings = node.args[1]
                 if len(paddings) > 4 and paddings[4:6] != [0, 0]:
                     # Attempt to Pad channels dimension, which is not supported on Neutron.
@@ -44,7 +56,7 @@ class ConstantPadNDConverter(NodeConverter):
     def _is_supported_in_IR(
         node: Node,
         parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
+        custom_delegation_options: CustomDelegationOptions,
     ) -> bool:
         paddings = node.args[1]
 
@@ -59,11 +71,17 @@ class ConstantPadNDConverter(NodeConverter):
         if not NodeConverter._has_shared_q_params_if_quantized(node):
             return False
 
+        if len(paddings) > 4 and paddings[4:6] != [0, 0]:
+            # Attempt to Pad channels dimension -> currently not supported
+            return False
+
         return True
 
     # noinspection PyMethodMayBeStatic
-    def _convert_paddings_to_tflite(self, paddings: Collection[int], input_tensor: tflite_model.Tensor) -> list[int]:
-        """ Convert the PyTorch paddings to TFLite paddings.
+    def _convert_paddings_to_tflite(
+        self, paddings: Collection[int], input_tensor: tflite_model.Tensor
+    ) -> list[int]:
+        """Convert the PyTorch paddings to TFLite paddings.
             The PyTorch padding is added to the individual dimensions from the back (slightly confusing), see:
              https://pytorch.org/docs/stable/generated/torch.nn.functional.pad.html#torch.nn.functional.pad
             TFLite padding has shape [input_rank, 2], where start padding and end padding is specified for every
@@ -85,13 +103,15 @@ class ConstantPadNDConverter(NodeConverter):
 
         if input_tensor.tensor_format.is_channels_last():
             # Permute the `tfl_paddings` to match.
-            to_tflite_perm = create_channels_first_to_channels_last_permutation(input_tensor.rank)
+            to_tflite_perm = create_channels_first_to_channels_last_permutation(
+                input_tensor.rank
+            )
             paddings = apply_permutation_to(paddings, to_tflite_perm)
 
         return paddings
 
     def convert(self, node: Node):
-        """ Convert the `aten.constant_pad_nd` operator to TFLite `PadV2`. """
+        """Convert the `aten.constant_pad_nd` operator to TFLite `PadV2`."""
         self.assert_convertible(node)
 
         t_op = self._create_tflite_op_with_io_tensors(node)
@@ -102,7 +122,9 @@ class ConstantPadNDConverter(NodeConverter):
         constant = node.args[2]
 
         paddings = self._convert_paddings_to_tflite(paddings, x)
-        paddings_tensor = self.builder.create_tensor_for_data(np.asarray(paddings, 'int32'), 'paddings')
+        paddings_tensor = self.builder.create_tensor_for_data(
+            np.asarray(paddings, "int32"), "paddings"
+        )
 
         if constant == 0.0:
             # We're padding with zeros, we can use traditional Pad op
@@ -115,16 +137,19 @@ class ConstantPadNDConverter(NodeConverter):
 
         if x.quantization is None:
             constant_tensor = self.builder.create_tensor_for_data(
-                np.array([constant], tf_lite_type_to_numpy(x.type)),
-                'constant'
+                np.array([constant], tf_lite_type_to_numpy(x.type)), "constant"
             )
         else:
             quantization = copy.copy(x.quantization)
-            scale, zero_point = quantization.scale.vector, quantization.zero_point.vector
-            constant_data = quantize_int8(np.array([constant], np.float32), scale, zero_point)
+            scale, zero_point = (
+                quantization.scale.vector,
+                quantization.zero_point.vector,
+            )
+            constant_data = quantize_int8(
+                np.array([constant], np.float32), scale, zero_point
+            )
             constant_tensor = self.builder.create_tensor_for_data(
-                constant_data,
-                'constant'
+                constant_data, "constant"
             )
             constant_tensor.quantization = quantization
 

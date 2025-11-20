@@ -77,5 +77,45 @@ Error::Error(SourceLocation source_location, const char* cond, std::string msg)
   what_ = oss.str();
 }
 
+//
+// ShaderNotSupportedError
+//
+
+std::ostream& operator<<(std::ostream& out, const VulkanExtension result) {
+  switch (result) {
+    case VulkanExtension::SHADER_INT16:
+      out << "shaderInt16";
+      break;
+    case VulkanExtension::INT16_STORAGE:
+      out << "VK_KHR_16bit_storage";
+      break;
+    case VulkanExtension::INT8_STORAGE:
+      out << "VK_KHR_8bit_storage";
+      break;
+    case VulkanExtension::INTEGER_DOT_PRODUCT:
+      out << "VK_KHR_shader_integer_dot_product";
+      break;
+    case VulkanExtension::SHADER_INT64:
+      out << "shaderInt64";
+      break;
+    case VulkanExtension::SHADER_FLOAT64:
+      out << "shaderFloat64";
+      break;
+  }
+  return out;
+}
+
+ShaderNotSupportedError::ShaderNotSupportedError(
+    std::string shader_name,
+    VulkanExtension extension)
+    : shader_name_(std::move(shader_name)), extension_{extension} {
+  std::ostringstream oss;
+  oss << "Shader " << shader_name_ << " ";
+  oss << "not compatible with device. ";
+  oss << "Missing support for extension or physical device feature: ";
+  oss << extension_;
+  what_ = oss.str();
+}
+
 } // namespace vkapi
 } // namespace vkcompute

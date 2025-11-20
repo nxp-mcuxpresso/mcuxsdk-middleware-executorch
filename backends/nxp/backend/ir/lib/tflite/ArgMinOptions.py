@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class ArgMinOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class ArgMinOptions(object):
     def GetRootAsArgMinOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def ArgMinOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # ArgMinOptions
     def Init(self, buf, pos):
@@ -35,20 +40,26 @@ class ArgMinOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
+
 def ArgMinOptionsStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     ArgMinOptionsStart(builder)
 
+
 def ArgMinOptionsAddOutputType(builder, outputType):
     builder.PrependInt8Slot(0, outputType, 0)
+
 
 def AddOutputType(builder, outputType):
     ArgMinOptionsAddOutputType(builder, outputType)
 
+
 def ArgMinOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ArgMinOptionsEnd(builder)

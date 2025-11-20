@@ -4,12 +4,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-from torch.fx.passes.infra.pass_base import PassResult
 
 from executorch.exir import EdgeProgramManager
 from executorch.exir.dialects._ops import ops as exir_ops
 from executorch.exir.pass_base import ExportPass
-from executorch.exir.passes.quantize_io_pass import QuantizeOutputs, QuantizeInputs
+from executorch.exir.passes.quantize_io_pass import QuantizeInputs, QuantizeOutputs
+from torch.fx.passes.infra.pass_base import PassResult
 
 
 class RemoveIOQuantOpsPass(ExportPass):
@@ -27,7 +27,9 @@ class RemoveIOQuantOpsPass(ExportPass):
         inputs_to_quantization = []
 
         for input_index, user_input in enumerate(user_inputs):
-            placeholders = [n for n in graph.nodes if n.op == "placeholder" and n.name == user_input]
+            placeholders = [
+                n for n in graph.nodes if n.op == "placeholder" and n.name == user_input
+            ]
             assert placeholders
             target_placeholder = placeholders[0]
 
@@ -35,7 +37,10 @@ class RemoveIOQuantOpsPass(ExportPass):
                 raise ValueError(f"Input {input_index} has more than one users")
 
             quantize = next(iter(target_placeholder.users))
-            if quantize.target != exir_ops.edge.quantized_decomposed.quantize_per_tensor.default:
+            if (
+                quantize.target
+                != exir_ops.edge.quantized_decomposed.quantize_per_tensor.default
+            ):
                 continue
 
             inputs_to_quantization.append(input_index)
@@ -54,7 +59,10 @@ class RemoveIOQuantOpsPass(ExportPass):
 
         user_outputs = list(outputs[0].args[0])
         for output_index, user_output in enumerate(user_outputs):
-            if user_output.target != exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default:
+            if (
+                user_output.target
+                != exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default
+            ):
                 continue
 
             outputs_to_quantization.append(output_index)

@@ -13,12 +13,12 @@ Representation of the TFLite operator 'Reshape'.
 
 from typing import List, Optional
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator as libBuiltinOperator
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions as libBuiltinOptions
 import executorch.backends.nxp.backend.ir.lib.tflite.ReshapeOptions as libReshapeOptions
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+
+import flatbuffers as fb
 
 
 class NewShape(meta.IntVector):
@@ -30,8 +30,10 @@ class Reshape(meta.BuiltinOptions):
     new_shape: Optional[NewShape]
 
     def __init__(self, new_shape: Optional[List[int]]) -> None:
-        super().__init__(libBuiltinOptions.BuiltinOptions.ReshapeOptions,
-                         libBuiltinOperator.BuiltinOperator.RESHAPE)
+        super().__init__(
+            libBuiltinOptions.BuiltinOptions.ReshapeOptions,
+            libBuiltinOperator.BuiltinOperator.RESHAPE,
+        )
         if new_shape is not None:
             self.new_shape = NewShape(new_shape)
         else:

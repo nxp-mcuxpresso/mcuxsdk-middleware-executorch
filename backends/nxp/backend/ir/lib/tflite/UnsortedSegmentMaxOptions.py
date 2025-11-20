@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class UnsortedSegmentMaxOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,22 +22,31 @@ class UnsortedSegmentMaxOptions(object):
     def GetRootAsUnsortedSegmentMaxOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def UnsortedSegmentMaxOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def UnsortedSegmentMaxOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # UnsortedSegmentMaxOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
+
 def UnsortedSegmentMaxOptionsStart(builder):
     builder.StartObject(0)
+
 
 def Start(builder):
     UnsortedSegmentMaxOptionsStart(builder)
 
+
 def UnsortedSegmentMaxOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return UnsortedSegmentMaxOptionsEnd(builder)

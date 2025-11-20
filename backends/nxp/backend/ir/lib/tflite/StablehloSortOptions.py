@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloSortOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class StablehloSortOptions(object):
     def GetRootAsStablehloSortOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def StablehloSortOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloSortOptions
     def Init(self, buf, pos):
@@ -39,7 +44,9 @@ class StablehloSortOptions(object):
     def IsStable(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # StablehloSortOptions
@@ -49,32 +56,42 @@ class StablehloSortOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def StablehloSortOptionsStart(builder):
     builder.StartObject(3)
+
 
 def Start(builder):
     StablehloSortOptionsStart(builder)
 
+
 def StablehloSortOptionsAddDimension(builder, dimension):
     builder.PrependInt64Slot(0, dimension, 0)
+
 
 def AddDimension(builder, dimension):
     StablehloSortOptionsAddDimension(builder, dimension)
 
+
 def StablehloSortOptionsAddIsStable(builder, isStable):
     builder.PrependBoolSlot(1, isStable, 0)
+
 
 def AddIsStable(builder, isStable):
     StablehloSortOptionsAddIsStable(builder, isStable)
 
+
 def StablehloSortOptionsAddComparatorSubgraphIndex(builder, comparatorSubgraphIndex):
     builder.PrependInt32Slot(2, comparatorSubgraphIndex, 0)
+
 
 def AddComparatorSubgraphIndex(builder, comparatorSubgraphIndex):
     StablehloSortOptionsAddComparatorSubgraphIndex(builder, comparatorSubgraphIndex)
 
+
 def StablehloSortOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloSortOptionsEnd(builder)

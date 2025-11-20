@@ -7,14 +7,19 @@
 import numpy as np
 import pytest
 import torch
+
+from executorch.backends.nxp.backend.edge_program_converter import (
+    EdgeProgramToIRConverter,
+)
+from executorch.backends.nxp.tests.executorch_pipeline import to_quantized_edge_program
+from executorch.backends.nxp.tests.executors import (
+    convert_run_compare,
+    ToNCHWPreprocess,
+    ToNHWCPreprocess,
+)
+from executorch.backends.nxp.tests.models import ConvWithSigmoid
 from torch import nn
 from torch.export import ExportedProgram
-
-from executorch.backends.nxp.backend.edge_program_converter import EdgeProgramToIRConverter
-from executorch.backends.nxp.tests.executorch_pipeline import to_quantized_edge_program
-from executorch.backends.nxp.tests.executors import convert_run_compare, ToChannelLastPreprocess, \
-    ToChannelFirstPreprocess
-from executorch.backends.nxp.tests.models import ConvWithSigmoid
 
 
 @pytest.fixture(autouse=True)
@@ -34,21 +39,26 @@ def test_conv_sigmoid(mocker, input_shape: tuple[int] = (1, 3, 112, 112)):
     exported_program: ExportedProgram = converter_spy.call_args.args[1]
 
     input_data = (np.random.random(input_shape) * 50).astype(np.int8)
-    convert_run_compare(exported_program,
-                        tfl_model=tflite_flatbuffers_model,
-                        tflite_input_preprocess=ToChannelLastPreprocess(),
-                        tflite_output_preprocess=ToChannelFirstPreprocess(),
-                        input_data=input_data,
-                        atol=1.)
+    convert_run_compare(
+        exported_program,
+        tfl_model=tflite_flatbuffers_model,
+        tflite_input_preprocess=ToNHWCPreprocess(),
+        tflite_output_preprocess=ToNCHWPreprocess(),
+        input_data=input_data,
+        atol=1.0,
+    )
 
 
-@pytest.mark.parametrize('input_shape', [
-    pytest.param((10,), id="Scalar"),
-    pytest.param((10, 25), id="1D"),
-    pytest.param((10, 25, 25), id="2D"),
-    pytest.param((10, 3, 25, 25), id="3D"),
-    pytest.param((10, 3, 25, 25, 25), id="4D")
-])
+@pytest.mark.parametrize(
+    "input_shape",
+    [
+        pytest.param((10,), id="Scalar"),
+        pytest.param((10, 25), id="1D"),
+        pytest.param((10, 25, 25), id="2D"),
+        pytest.param((10, 3, 25, 25), id="3D"),
+        pytest.param((10, 3, 25, 25, 25), id="4D"),
+    ],
+)
 def test_sigmoid_only(mocker, input_shape):
     model = nn.Sigmoid()
 
@@ -60,6 +70,6 @@ def test_sigmoid_only(mocker, input_shape):
     exported_program: ExportedProgram = converter_spy.call_args.args[1]
 
     input_data = (np.random.random(input_shape) * 50).astype(np.int8)
-    convert_run_compare(exported_program,
-                        tfl_model=tflite_flatbuffers_model,
-                        input_data=input_data)
+    convert_run_compare(
+        exported_program, tfl_model=tflite_flatbuffers_model, input_data=input_data
+    )

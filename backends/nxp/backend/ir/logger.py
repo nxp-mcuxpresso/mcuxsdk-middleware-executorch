@@ -18,27 +18,29 @@ from typing import NoReturn, Optional
 
 
 class Style:
-    """ Strings used to set a color and other styles to the output printed to console.
+    """Strings used to set a color and other styles to the output printed to console.
 
-        example usage:
-            logger.w(f'{logger.Style.orange + logger.Style.bold}Some warning. {logger.Style.end}Additional info.')
+    example usage:
+        logger.w(f'{logger.Style.orange + logger.Style.bold}Some warning. {logger.Style.end}Additional info.')
 
     """
-    red = '\033[91m'
-    green = '\033[92m'
-    orange = '\033[93m'
-    blue = '\033[94m'
-    magenta = '\033[95m'
-    cyan = '\033[96m'
 
-    bold = '\033[1m'
-    underline = '\033[4m'
+    red = "\033[91m"
+    green = "\033[92m"
+    orange = "\033[93m"
+    blue = "\033[94m"
+    magenta = "\033[95m"
+    cyan = "\033[96m"
 
-    end = '\033[0m'
+    bold = "\033[1m"
+    underline = "\033[4m"
+
+    end = "\033[0m"
 
 
 class MessageImportance(Enum):
-    """ Importance levels of messages to print. """
+    """Importance levels of messages to print."""
+
     DEBUG = 0
     INFO = 1
     WARNING = 2
@@ -49,25 +51,34 @@ MIN_OUTPUT_IMPORTANCE = MessageImportance.WARNING
 
 
 class Message:
-    """ Custom messages, that are printed to console from different locations in the code. """
+    """Custom messages, that are printed to console from different locations in the code."""
 
-    ALLOW_SELECT_OPS = 'If you want to convert the model using the SELECT_TF_OPS, run the conversion again with ' \
-                       f'the flag {Style.bold + Style.cyan}--allow-select-ops{Style.end}.'
+    ALLOW_SELECT_OPS = (
+        "If you want to convert the model using the SELECT_TF_OPS, run the conversion again with "
+        f"the flag {Style.bold + Style.cyan}--allow-select-ops{Style.end}."
+    )
 
-    GUARANTEE_NON_NEGATIVE_INDICES = f'{Style.green}If you know that the indices are always non-negative, you can run' \
-                                     f' the converter with the flag {Style.bold + Style.cyan}--non-negative-indices' \
-                                     f'{Style.end}.'
+    GUARANTEE_NON_NEGATIVE_INDICES = (
+        f"{Style.green}If you know that the indices are always non-negative, you can run"
+        f" the converter with the flag {Style.bold + Style.cyan}--non-negative-indices"
+        f"{Style.end}."
+    )
 
-    CAST_INT64_TO_INT32 = f'Use option {Style.bold + Style.cyan}--cast-int64-to-int32{Style.end} to disable this ' \
-                          'check and re-cast input/output to INT32.'
+    CAST_INT64_TO_INT32 = (
+        f"Use option {Style.bold + Style.cyan}--cast-int64-to-int32{Style.end} to disable this "
+        "check and re-cast input/output to INT32."
+    )
 
-    IGNORE_OPSET_VERSION = 'If you want to try and convert the model anyway, run the conversion again with the flag ' \
-                           f'{Style.bold + Style.cyan}--ignore-opset-version{Style.end}. Keep in mind that the output' \
-                           ' TFLite model may potentially be invalid.'
+    IGNORE_OPSET_VERSION = (
+        "If you want to try and convert the model anyway, run the conversion again with the flag "
+        f"{Style.bold + Style.cyan}--ignore-opset-version{Style.end}. Keep in mind that the output"
+        " TFLite model may potentially be invalid."
+    )
 
 
 class Code(Enum):
-    """ Error codes """
+    """Error codes"""
+
     INTERNAL_ERROR = 1
     GENERATED_MODEL_INVALID = 2
     INVALID_OPTIMIZATION = 3
@@ -174,7 +185,12 @@ class ConversionLog:
         self._current_logging_context = []
         self._log_count = 0
 
-    def add_log(self, importance: MessageImportance, message: str, error_code: Code | None = None):
+    def add_log(
+        self,
+        importance: MessageImportance,
+        message: str,
+        error_code: Code | None = None,
+    ):
         data = {
             "message": message,
             "logging_context_hierarchy": list(self._current_logging_context),
@@ -256,7 +272,7 @@ class loggingContext:
 
 
 def d(msg: str):
-    """ Log internal debug message with given parameters. """
+    """Log internal debug message with given parameters."""
 
     if MIN_OUTPUT_IMPORTANCE.value > MessageImportance.DEBUG.value:
         return
@@ -266,7 +282,7 @@ def d(msg: str):
 
 
 def i(msg: str):
-    """ Log info message with given parameters. """
+    """Log info message with given parameters."""
 
     if MIN_OUTPUT_IMPORTANCE.value > MessageImportance.INFO.value:
         return
@@ -276,7 +292,7 @@ def i(msg: str):
 
 
 def w(msg: str):
-    """ Log warning message with given parameters. """
+    """Log warning message with given parameters."""
 
     if MIN_OUTPUT_IMPORTANCE.value > MessageImportance.WARNING.value:
         return
@@ -286,10 +302,10 @@ def w(msg: str):
 
 
 def e(err_code: Code, msg: str, exception: Optional[Exception] = None) -> NoReturn:
-    """ Print and raise exception with error message composed of provided error code, messages and optional exception.
-        :param err_code: Error code.
-        :param msg: Error message.
-        :param exception: (Optional) Exception object to print before the program exits.
+    """Print and raise exception with error message composed of provided error code, messages and optional exception.
+    :param err_code: Error code.
+    :param msg: Error message.
+    :param exception: (Optional) Exception object to print before the program exits.
     """
 
     error = Error(err_code, msg, exception)
@@ -300,17 +316,24 @@ def e(err_code: Code, msg: str, exception: Optional[Exception] = None) -> NoRetu
 
 
 def expect_type(obj, expected_type, msg: str = ""):
-    if type(obj) != expected_type:
-        w(msg + f":Object '{obj}' is of type '{type(obj)}' where '{expected_type}' was expected!")
+    if type(obj) is not expected_type:
+        w(
+            msg
+            + f":Object '{obj}' is of type '{type(obj)}' where '{expected_type}' was expected!"
+        )
 
 
 def require_type(obj, required_type, msg: str = ""):
-    if type(obj) != required_type:
-        e(Code.INVALID_TYPE, msg + f":Object '{obj}' is of type '{type(obj)}' where '{required_type}' was required!")
+    if type(obj) is not required_type:
+        e(
+            Code.INVALID_TYPE,
+            msg
+            + f":Object '{obj}' is of type '{type(obj)}' where '{required_type}' was required!",
+        )
 
 
-def internal_assert(truth_value: bool, msg: str = ''):
-    """ Assert that the 'truth_value' is True. If not, raise a logger INTERNAL_ERROR with message 'msg'.
+def internal_assert(truth_value: bool, msg: str = ""):
+    """Assert that the 'truth_value' is True. If not, raise a logger INTERNAL_ERROR with message 'msg'.
 
     :param truth_value: Boolean to check.
     :param msg: Message to raise the Error with.

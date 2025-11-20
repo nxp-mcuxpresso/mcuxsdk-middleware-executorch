@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloReduceOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloReduceOptions(object):
     def GetRootAsStablehloReduceOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloReduceOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloReduceOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloReduceOptions
     def Init(self, buf, pos):
@@ -33,7 +40,10 @@ class StablehloReduceOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloReduceOptions
@@ -62,32 +72,44 @@ class StablehloReduceOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def StablehloReduceOptionsStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     StablehloReduceOptionsStart(builder)
 
+
 def StablehloReduceOptionsAddDimensions(builder, dimensions):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(dimensions), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(dimensions), 0
+    )
+
 
 def AddDimensions(builder, dimensions):
     StablehloReduceOptionsAddDimensions(builder, dimensions)
 
+
 def StablehloReduceOptionsStartDimensionsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartDimensionsVector(builder, numElems: int) -> int:
     return StablehloReduceOptionsStartDimensionsVector(builder, numElems)
 
+
 def StablehloReduceOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex):
     builder.PrependInt32Slot(1, bodySubgraphIndex, 0)
+
 
 def AddBodySubgraphIndex(builder, bodySubgraphIndex):
     StablehloReduceOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex)
 
+
 def StablehloReduceOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloReduceOptionsEnd(builder)

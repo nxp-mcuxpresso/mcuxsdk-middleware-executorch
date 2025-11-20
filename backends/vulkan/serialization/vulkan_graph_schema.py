@@ -29,6 +29,9 @@ class VkDataType(IntEnum):
     INT32 = 3
     FLOAT16 = 4
     FLOAT32 = 5
+    FLOAT64 = 6
+    INT64 = 7
+    UNSET = 127
 
 
 class VkStorageType(IntEnum):
@@ -59,6 +62,7 @@ class VkTensor:
     mem_obj_id: int
     storage_type: VkStorageType = VkStorageType.DEFAULT_STORAGE
     memory_layout: VkMemoryLayout = VkMemoryLayout.DEFAULT_LAYOUT
+    staging_datatype: VkDataType = VkDataType.UNSET
 
 
 @dataclass
@@ -135,6 +139,7 @@ class VkValue:
 class VkBytes:
     offset: int
     length: int
+    named_key: str = ""
 
 
 @dataclass

@@ -3,45 +3,48 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import operator
-
+import executorch.backends.nxp.backend.ir.logger as logger
 import flatbuffers
+from executorch.backends.nxp.backend.ir.conversion_config import ConversionConfig
+from executorch.backends.nxp.backend.ir.conversion_context import ConversionContext
+from executorch.backends.nxp.backend.ir.converter.builder.aten_model_builder_director import (
+    AtenModelBuilderDirector,
+)
+from executorch.backends.nxp.backend.ir.converter.node_converter import (
+    CustomDelegationOptions,
+)
 from torch.export import ExportedProgram
 from torch.export.graph_signature import InputKind
 from torch.fx import Node
 from torch.nn.parameter import Parameter
-
-import executorch.backends.nxp.backend.ir.logger as logger
-from executorch.backends.nxp.backend.ir.conversion_config import ConversionConfig
-from executorch.backends.nxp.backend.ir.conversion_context import ConversionContext
-from executorch.backends.nxp.backend.ir.converter.builder.aten_model_builder_director import AtenModelBuilderDirector
-from executorch.backends.nxp.backend.ir.converter.node_converter import CustomDelegationOptions
-from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters import *
-from executorch.backends.nxp.backend.node_format_inference import NodeFormatInference, NodeFormat
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters import *  # noqa F403
+from executorch.backends.nxp.backend.node_format_inference import (
+    NodeFormat,
+    NodeFormatInference,
+)
 from executorch.exir.dialects._ops import ops as exir_ops
 
 # noinspection PyProtectedMember
 functions_converters = {
-    exir_ops.edge.aten.addmm.default: AddMMConverter,
-    exir_ops.edge.aten.avg_pool2d.default: AvgPool2dConverter,
-    exir_ops.edge.aten._adaptive_avg_pool2d.default: AdaptiveAvgPool2dConverter,
-    exir_ops.edge.aten.constant_pad_nd.default: ConstantPadNDConverter,
-    exir_ops.edge.aten.convolution.default: ConvolutionConverter,
-    exir_ops.edge.aten.max_pool2d.default: MaxPool2dConverter,
-    exir_ops.edge.aten.mm.default: MMConverter,
-    exir_ops.edge.aten.permute_copy.default: PermuteCopyConverter,
-    exir_ops.edge.aten.relu.default: ReLUConverter,
-    exir_ops.edge.aten.hardtanh.default: HardTanhConverter,
-    exir_ops.edge.aten.tanh.default: TanhConverter,
-    exir_ops.edge.aten._softmax.default: SoftmaxConverter,
-    exir_ops.edge.aten.view_copy.default: ViewCopyConverter,
-    exir_ops.edge.aten.add.Tensor: AddTensorConverter,
-    exir_ops.edge.aten.mean.dim: MeanDimConverter,
-    exir_ops.edge.aten.clone.default: CloneConverter,
-    exir_ops.edge.aten.abs.default: AbsConverter,
-    exir_ops.edge.aten.cat.default: CatConverter,
-    exir_ops.edge.aten.sigmoid.default: SigmoidConverter,
-    exir_ops.edge.aten.gru.input: GRUConverter,
+    exir_ops.edge.aten.abs.default: AbsConverter,  # noqa F405
+    exir_ops.edge.aten._adaptive_avg_pool2d.default: AdaptiveAvgPool2dConverter,  # noqa F405
+    exir_ops.edge.aten.addmm.default: AddMMConverter,  # noqa F405
+    exir_ops.edge.aten.add.Tensor: AddTensorConverter,  # noqa F405
+    exir_ops.edge.aten.avg_pool2d.default: AvgPool2dConverter,  # noqa F405
+    exir_ops.edge.aten.cat.default: CatConverter,  # noqa F405
+    exir_ops.edge.aten.clone.default: CloneConverter,  # noqa F405
+    exir_ops.edge.aten.constant_pad_nd.default: ConstantPadNDConverter,  # noqa F405
+    exir_ops.edge.aten.convolution.default: ConvolutionConverter,  # noqa F405
+    exir_ops.edge.aten.hardtanh.default: HardTanhConverter,  # noqa F405
+    exir_ops.edge.aten.max_pool2d.default: MaxPool2dConverter,  # noqa F405
+    exir_ops.edge.aten.mean.dim: MeanDimConverter,  # noqa F405
+    exir_ops.edge.aten.mm.default: MMConverter,  # noqa F405
+    exir_ops.edge.aten.permute_copy.default: PermuteCopyConverter,  # noqa F405
+    exir_ops.edge.aten.relu.default: ReLUConverter,  # noqa F405
+    exir_ops.edge.aten._softmax.default: SoftmaxConverter,  # noqa F405
+    exir_ops.edge.aten.tanh.default: TanhConverter,  # noqa F405
+    exir_ops.edge.aten.view_copy.default: ViewCopyConverter,  # noqa F405
+    exir_ops.edge.aten.sigmoid.default: SigmoidConverter,  # noqa F405
 }
 
 
@@ -50,11 +53,14 @@ class EdgeProgramToIRConverter:
     Converter from convertion of ExportedProgram in Edge dialect to IR (TFLite Flatbuffers).
     """
 
+    _default_conversion_config = ConversionConfig()
+    _default_delegation_options = CustomDelegationOptions()
+
     def convert_program(
         self,
         edge_program: ExportedProgram,
-        conversion_config=ConversionConfig(),
-        custom_delegation_options: CustomDelegationOptions = CustomDelegationOptions()
+        conversion_config=_default_conversion_config,
+        custom_delegation_options: CustomDelegationOptions = _default_delegation_options,
     ) -> (bytes, dict):
         """
         Convert ExportedProgram in Edge dialect to IR (TFLite flatbuffers) as bytes.
@@ -68,7 +74,10 @@ class EdgeProgramToIRConverter:
         parameters_mapping = self.map_inputs_to_parameters(edge_program)
 
         cc = self.build_conversion_context(
-            parameters_mapping, node_formats, conversion_config, custom_delegation_options
+            parameters_mapping,
+            node_formats,
+            conversion_config,
+            custom_delegation_options,
         )
 
         # Program conversion
@@ -77,7 +86,9 @@ class EdgeProgramToIRConverter:
         self._process_nodes(edge_program.graph.nodes, cc)
 
         # Assign output
-        io_formats = cc.tflite_builder.assign_model_io_to_subgraph_and_get_io_formats(edge_program.graph_signature)
+        io_formats = cc.tflite_builder.assign_model_io_to_subgraph_and_get_io_formats(
+            edge_program.graph_signature
+        )
 
         # TFLite model generation
         internal_tflite_model = cc.tflite_builder.finish()
@@ -95,7 +106,9 @@ class EdgeProgramToIRConverter:
                 if node.name in context.parameters_mapping:
                     # Node is placeholder and has data -> append as static tensor with data
                     tensor = context.parameters_mapping[node.name]
-                    context.tflite_builder.append_as_static_tensor(node, node_format, tensor)
+                    context.tflite_builder.append_as_static_tensor(
+                        node, node_format, tensor
+                    )
                 else:
                     # Node is placeholder and doesn't have data (user input) -> append as fake tensor
                     context.tflite_builder.append_as_fake_tensor(node, node_format)
@@ -107,7 +120,9 @@ class EdgeProgramToIRConverter:
                 # Nothing to do
                 pass
             else:
-                logger.e(logger.Code.INTERNAL_ERROR, f"Unexpected node op type: '{node.op}'!")
+                logger.e(
+                    logger.Code.INTERNAL_ERROR, f"Unexpected node op type: '{node.op}'!"
+                )
 
     def _process_nodes(self, nodes: list[Node], conversion_context: ConversionContext):
         """
@@ -119,8 +134,7 @@ class EdgeProgramToIRConverter:
 
         qdq_related_functions = [
             exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default,
-            exir_ops.edge.quantized_decomposed.dequantize_per_channel.default,
-            exir_ops.edge.quantized_decomposed.quantize_per_tensor.default
+            exir_ops.edge.quantized_decomposed.quantize_per_tensor.default,
         ]
 
         for node in nodes:
@@ -128,13 +142,13 @@ class EdgeProgramToIRConverter:
                 if node.target in qdq_related_functions and "cluster" in node.meta:
                     # Skip (De)Quantize nodes that were already processed
                     pass
-                elif node.target == operator.getitem and node.meta.get('processed', False):
-                    # The node was already processed alongside the Q/DQ ops.
-                    pass
                 elif node.target in functions_converters:
                     functions_converters[node.target](conversion_context).convert(node)
                 else:
-                    logger.e(logger.Code.NOT_IMPLEMENTED, f"Converter for '{node.target.__name__}' not implemented!")
+                    logger.e(
+                        logger.Code.NOT_IMPLEMENTED,
+                        f"Converter for '{node.target.__name__}' not implemented!",
+                    )
 
     @staticmethod
     def map_inputs_to_parameters(edge_program: ExportedProgram) -> dict[str, Parameter]:
@@ -148,7 +162,9 @@ class EdgeProgramToIRConverter:
 
         for input_spec in edge_program.graph_signature.input_specs:
             if input_spec.kind in [InputKind.PARAMETER, InputKind.BUFFER]:
-                result_map[input_spec.arg.name] = edge_program.state_dict[input_spec.target]
+                result_map[input_spec.arg.name] = edge_program.state_dict[
+                    input_spec.target
+                ]
 
         return result_map
 
@@ -156,46 +172,46 @@ class EdgeProgramToIRConverter:
     def build_conversion_context(
         parameters_mapping: dict,
         node_formats: dict[Node, NodeFormat],
-        conversion_config: ConversionConfig = ConversionConfig(),
-        custom_delegation_options: CustomDelegationOptions = CustomDelegationOptions()
+        conversion_config: ConversionConfig = _default_conversion_config,
+        custom_delegation_options: CustomDelegationOptions = _default_delegation_options,
     ) -> ConversionContext:
-        tflite_builder = AtenModelBuilderDirector(3, "TFLite from EdgeProgram", conversion_config)
+        tflite_builder = AtenModelBuilderDirector(
+            3, "TFLite from EdgeProgram", conversion_config
+        )
 
         # Add "sentinel" buffer (defined in schema.fbs)
         tflite_builder.build_empty_buffer()
 
         context = ConversionContext(
-            tflite_builder, conversion_config, parameters_mapping, node_formats, custom_delegation_options
+            tflite_builder,
+            conversion_config,
+            parameters_mapping,
+            node_formats,
+            custom_delegation_options,
         )
 
         return context
 
-    def _convert_qdq_cluster_q_dq_nodes(self, nodes: list[Node], conversion_context: ConversionContext):
+    def _convert_qdq_cluster_q_dq_nodes(
+        self, nodes: list[Node], conversion_context: ConversionContext
+    ):
         """
-        Go through program and convert De(Quantize) nodes that are part of the QDQ cluster into tensors.
-        Also convert related `GetItem` nodes to NO-OPs, which just propagate the quantization.
+        Go through program and convert De(Quantize) nodes that are part of the QDQ cluster into
+        tensors.
 
         :param nodes: Program's nodes.
         :param conversion_context: ConversionContext instance.
         """
         qdq_q_ops_converters = {
-            exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default: QDQPerTensorDequantizeConverter,
-            exir_ops.edge.quantized_decomposed.dequantize_per_channel.default: QDQPerChannelDequantizeConverter,
-            exir_ops.edge.quantized_decomposed.quantize_per_tensor.default: QDQQuantizeConverter,
+            exir_ops.edge.quantized_decomposed.dequantize_per_tensor.default: QDQDequantizeConverter,  # noqa F405
+            exir_ops.edge.quantized_decomposed.quantize_per_tensor.default: QDQQuantizeConverter,  # noqa F405
         }
 
         for node in nodes:
             part_of_qdq_cluster = "cluster" in node.meta
-            if node.op == "call_function" and node.target in qdq_q_ops_converters and part_of_qdq_cluster:
+            if (
+                node.op == "call_function"
+                and node.target in qdq_q_ops_converters
+                and part_of_qdq_cluster
+            ):
                 qdq_q_ops_converters[node.target](conversion_context).convert(node)
-
-        # It is possible (and common) for `GetItem` nodes to be a part of a QDQ cluster. In these cases, they consume
-        #  an output of the main compute operator, and they are followed by a `Quantize` operator, which specifies the
-        #  output quantization parameters of the cluster. So the input of the `GetItem` is float32, and the output is
-        #  quantized. Therefore, the quantization must be propagated from the output to the input.
-        for node in nodes:
-            if node.target == operator.getitem:
-                # Convert the builtin function into a "NO-OP" in the IR, and propagate the quantization parameters in
-                #  reverse.
-                GetItemConverter(conversion_context).convert(node)
-                node.meta['processed'] = True

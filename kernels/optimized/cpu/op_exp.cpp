@@ -8,8 +8,8 @@
 
 #include <cmath>
 
-#include <executorch/kernels/optimized/vec/functional.h>
-#include <executorch/kernels/optimized/vec/vec.h>
+#include <ATen/cpu/vec/functional.h>
+#include <ATen/cpu/vec/vec.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
 
 namespace torch {
@@ -27,15 +27,15 @@ template <
     typename CTYPE_OUT,
     typename std::enable_if<
         std::is_same_v<CTYPE_IN, CTYPE_OUT> &&
-            !std::is_same_v<CTYPE_IN, exec_aten::Half> &&
-            !std::is_same_v<CTYPE_OUT, exec_aten::BFloat16>,
+            !std::is_same_v<CTYPE_IN, executorch::aten::Half> &&
+            !std::is_same_v<CTYPE_OUT, executorch::aten::BFloat16>,
         int>::type = 0>
 void exp_data(
     const CTYPE_IN* in_data,
     const size_t numel,
     CTYPE_OUT* out_data) {
-  using Vec = executorch::vec::Vectorized<CTYPE_IN>;
-  executorch::vec::map<CTYPE_IN>(
+  using Vec = at::vec::Vectorized<CTYPE_IN>;
+  at::vec::map<CTYPE_IN>(
       [](Vec x) { return x.exp(); }, out_data, in_data, numel);
 }
 
@@ -47,10 +47,10 @@ template <
     typename CTYPE_OUT,
     typename std::enable_if<
         !std::is_same_v<CTYPE_IN, CTYPE_OUT> ||
-            std::is_same_v<CTYPE_IN, exec_aten::Half> ||
-            std::is_same_v<CTYPE_IN, exec_aten::BFloat16> ||
-            std::is_same_v<CTYPE_OUT, exec_aten::Half> ||
-            std::is_same_v<CTYPE_OUT, exec_aten::BFloat16>,
+            std::is_same_v<CTYPE_IN, executorch::aten::Half> ||
+            std::is_same_v<CTYPE_IN, executorch::aten::BFloat16> ||
+            std::is_same_v<CTYPE_OUT, executorch::aten::Half> ||
+            std::is_same_v<CTYPE_OUT, executorch::aten::BFloat16>,
         int>::type = 0>
 void exp_data(
     const CTYPE_IN* in_data,

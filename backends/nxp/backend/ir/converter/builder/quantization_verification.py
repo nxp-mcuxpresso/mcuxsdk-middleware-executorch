@@ -6,10 +6,12 @@
 import abc
 
 import numpy as np
-
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
-from executorch.backends.nxp.backend.ir.lib.tflite.TensorType import TensorType
 from executorch.backends.nxp.backend.ir import logger
+
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
+from executorch.backends.nxp.backend.ir.lib.tflite.TensorType import TensorType
 from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
 
 
@@ -71,28 +73,43 @@ class SharedParamsForType(QuantizationRule):
             elif isinstance(tensor, Output):
                 shared_tensors.append(op.tmp_outputs[tensor.idx])
             else:
-                logger.e(logger.Code.INTERNAL_ERROR, f"Unknown IOTensor type: {type(tensor)}")
+                logger.e(
+                    logger.Code.INTERNAL_ERROR, f"Unknown IOTensor type: {type(tensor)}"
+                )
 
         if shared_tensors[0].type != self.tensor_type:
             return True
 
-        if all([tensor.quantization is None for tensor in shared_tensors]):
+        if all(tensor.quantization is None for tensor in shared_tensors):
             return True
 
         first_quantization = shared_tensors[0].quantization
 
         # Check quantization values (scales & zero-points)
-        scales_same = all([first_quantization.scale == t.quantization.scale for t in shared_tensors[1:]])
-        zp_same = all([first_quantization.zero_point == t.quantization.zero_point for t in shared_tensors[1:]])
+        scales_same = all(
+            first_quantization.scale == t.quantization.scale for t in shared_tensors[1:]
+        )
+        zp_same = all(
+            first_quantization.zero_point == t.quantization.zero_point
+            for t in shared_tensors[1:]
+        )
         return scales_same and zp_same
 
     def __str__(self):
-        return f"Q-params match required for tensors: {', '.join(map(str, self.tensors))}"
+        return (
+            f"Q-params match required for tensors: {', '.join(map(str, self.tensors))}"
+        )
 
 
 class ExactValueForType(QuantizationRule):
 
-    def __init__(self, tensor_type: TensorType, tensor: IOTensor, scale: list[float], zero_point: list):
+    def __init__(
+        self,
+        tensor_type: TensorType,
+        tensor: IOTensor,
+        scale: list[float],
+        zero_point: list,
+    ):
         self.tensor = tensor
         self.tensor_type = tensor_type
         self.scale = scale
@@ -109,7 +126,10 @@ class ExactValueForType(QuantizationRule):
         elif isinstance(self.tensor, Output):
             tflite_tensor = op.tmp_outputs[self.tensor.idx]
         else:
-            logger.e(logger.Code.INTERNAL_ERROR, f"Unknown IOTensor type: {type(self.tensor)}")
+            logger.e(
+                logger.Code.INTERNAL_ERROR,
+                f"Unknown IOTensor type: {type(self.tensor)}",
+            )
 
         if tflite_tensor.quantization is None or self.tensor_type != tflite_tensor.type:
             return True
@@ -125,11 +145,11 @@ class ExactValueForType(QuantizationRule):
 
 
 class FullyConnectedWeightZeroPoint(QuantizationRule):
-    """ LiteRT documentation says that `FullyConnected` must have weight zero point = 0
-         (https://ai.google.dev/edge/litert/models/quantization_spec)
-        If this condition is not satisfied, LiteRT will not raise any errors but the output will not be correct.
+    """LiteRT documentation says that `FullyConnected` must have weight zero point = 0
+     (https://ai.google.dev/edge/litert/models/quantization_spec)
+    If this condition is not satisfied, LiteRT will not raise any errors but the output will not be correct.
 
-        However, if the `weights` are dynamic the kernels DO in fact support any zero point. Not just 0s.
+    However, if the `weights` are dynamic the kernels DO in fact support any zero point. Not just 0s.
     """
 
     def valid(self, op: tflite_model.Operator) -> bool:
@@ -167,31 +187,46 @@ class ValidBiasValues(QuantizationRule):
             return True
 
         if (input_1_quant := op.tmp_inputs[0].quantization) is None:
-            logger.w("Bias tensor quantized but first input tensor not. This is not supported in TFLite.")
+            logger.w(
+                "Bias tensor quantized but first input tensor not. This is not supported in TFLite."
+            )
             return False
         if (input_2_quant := op.tmp_inputs[1].quantization) is None:
-            logger.w("Bias tensor quantized but weight tensor not. This is not supported in TFLite.")
+            logger.w(
+                "Bias tensor quantized but weight tensor not. This is not supported in TFLite."
+            )
             return False
 
         if op.tmp_inputs[2].type != TensorType.INT32:
-            logger.w("Quantized bias tensor's type isn't INT32. This is not supported in TFLite.")
+            logger.w(
+                "Quantized bias tensor's type isn't INT32. This is not supported in TFLite."
+            )
             return False
 
-        expected_bias_scale = np.array(input_1_quant.scale.vector) * np.array(input_2_quant.scale.vector)
+        expected_bias_scale = np.array(input_1_quant.scale.vector) * np.array(
+            input_2_quant.scale.vector
+        )
 
-        if not np.allclose(expected_bias_scale.astype(np.float32), np.array(bias_quant.scale.vector, dtype=np.float32)):
-            logger.w(f"Scale of quantized bias tensor '{op.tmp_inputs[2].name}' is not equal to 'input0_scale * "
-                     "input1_scale[...]'. This is not supported in TFLite.")
+        if not np.allclose(
+            expected_bias_scale.astype(np.float32),
+            np.array(bias_quant.scale.vector, dtype=np.float32),
+        ):
+            logger.w(
+                f"Scale of quantized bias tensor '{op.tmp_inputs[2].name}' is not equal to 'input0_scale * "
+                "input1_scale[...]'. This is not supported in TFLite."
+            )
             return False
 
         if bias_quant.zero_point.vector[0] != 0:
-            logger.w("Zero point of quantized bias tensor is not equal to '0'. This is not supported in TFLite.")
+            logger.w(
+                "Zero point of quantized bias tensor is not equal to '0'. This is not supported in TFLite."
+            )
             return False
 
         return True
 
     def __str__(self):
-        return f"ExactBiasValues()"
+        return "ExactBiasValues()"
 
 
 def verify_quantization_integrity(model: tflite_model.Model):
@@ -211,15 +246,11 @@ def verify_quantization_integrity(model: tflite_model.Model):
             SharedParamsForType(TensorType.INT8, Input(0), OptionalInput(3)),
             SharedParamsForType(TensorType.INT8, Input(0), OptionalInput(4)),
         ],
-        BuiltinOperator.CONV_2D: [
-            ValidBiasValues()
-        ],
-        BuiltinOperator.DEPTHWISE_CONV_2D: [
-            ValidBiasValues()
-        ],
+        BuiltinOperator.CONV_2D: [ValidBiasValues()],
+        BuiltinOperator.DEPTHWISE_CONV_2D: [ValidBiasValues()],
         BuiltinOperator.FULLY_CONNECTED: [
             ValidBiasValues(),
-            FullyConnectedWeightZeroPoint()
+            FullyConnectedWeightZeroPoint(),
         ],
         BuiltinOperator.GATHER: [
             SharedParamsForType(TensorType.INT8, Input(0), Output(0)),
@@ -230,7 +261,7 @@ def verify_quantization_integrity(model: tflite_model.Model):
             SharedParamsForType(TensorType.UINT8, Input(0), Output(0)),
         ],
         BuiltinOperator.L2_NORMALIZATION: [
-            ExactValueForType(TensorType.INT8, Output(0), [1.0 / 128.], [0]),
+            ExactValueForType(TensorType.INT8, Output(0), [1.0 / 128.0], [0]),
         ],
         BuiltinOperator.LOG_SOFTMAX: [
             ExactValueForType(TensorType.INT8, Output(0), [16.0 / 256.0], [127]),
@@ -314,7 +345,9 @@ def verify_quantization_integrity(model: tflite_model.Model):
     }
 
     ops: list[tflite_model.Operator] = model.sub_graphs.vector[0].operators.vector
-    operator_codes = {idx: code.builtin_code for idx, code in enumerate(model.operator_codes.vector)}
+    operator_codes = {
+        idx: code.builtin_code for idx, code in enumerate(model.operator_codes.vector)
+    }
     is_error = False
 
     for op in ops:
@@ -324,7 +357,8 @@ def verify_quantization_integrity(model: tflite_model.Model):
                     if not rule.valid(op):
                         logger.w(
                             f"TFLite operator with op_type='{op.builtin_options.operator_type}' wasn't quantized "
-                            f"properly. Following TFLite quantization rule was not satisfied: '{rule}'.")
+                            f"properly. Following TFLite quantization rule was not satisfied: '{rule}'."
+                        )
                         is_error = True
         else:
             if operator_codes[op.opcode_index] in rules:
@@ -332,9 +366,12 @@ def verify_quantization_integrity(model: tflite_model.Model):
                     if not rule.valid(op):
                         logger.w(
                             f"TFLite operator with op_type='{operator_codes[op.opcode_index]}' wasn't quantized "
-                            f"properly. Following TFLite quantization rule was not satisfied: '{rule}'.")
+                            f"properly. Following TFLite quantization rule was not satisfied: '{rule}'."
+                        )
                         is_error = True
 
     if is_error:
-        logger.e(logger.Code.INTERNAL_ERROR,
-                 "Some ops were not correctly quantized. Refer to previous log messages and please report this issue.")
+        logger.e(
+            logger.Code.INTERNAL_ERROR,
+            "Some ops were not correctly quantized. Refer to previous log messages and please report this issue.",
+        )

@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class StablehloComparisonDirection(object):
     STABLEHLO_COMPARISON_DIRECTION_EQ = 0
     STABLEHLO_COMPARISON_DIRECTION_NE = 1

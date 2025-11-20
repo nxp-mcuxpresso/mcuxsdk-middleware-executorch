@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloCompareOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloCompareOptions(object):
     def GetRootAsStablehloCompareOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloCompareOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloCompareOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloCompareOptions
     def Init(self, buf, pos):
@@ -32,36 +39,48 @@ class StablehloCompareOptions(object):
     def ComparisonDirection(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
+            )
         return 0
 
     # StablehloCompareOptions
     def CompareType(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
+            )
         return 0
+
 
 def StablehloCompareOptionsStart(builder):
     builder.StartObject(2)
 
+
 def Start(builder):
     StablehloCompareOptionsStart(builder)
+
 
 def StablehloCompareOptionsAddComparisonDirection(builder, comparisonDirection):
     builder.PrependUint32Slot(0, comparisonDirection, 0)
 
+
 def AddComparisonDirection(builder, comparisonDirection):
     StablehloCompareOptionsAddComparisonDirection(builder, comparisonDirection)
+
 
 def StablehloCompareOptionsAddCompareType(builder, compareType):
     builder.PrependUint32Slot(1, compareType, 0)
 
+
 def AddCompareType(builder, compareType):
     StablehloCompareOptionsAddCompareType(builder, compareType)
 
+
 def StablehloCompareOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloCompareOptionsEnd(builder)

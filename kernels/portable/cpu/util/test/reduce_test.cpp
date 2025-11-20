@@ -15,11 +15,11 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ArrayRef;
-using exec_aten::optional;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::ArrayRef;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using executorch::runtime::testing::TensorFactory;
+using std::optional;
 using torch::executor::apply_over_dim;
 using torch::executor::apply_over_dim_list;
 using torch::executor::get_out_numel;

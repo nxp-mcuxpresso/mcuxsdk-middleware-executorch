@@ -1,18 +1,18 @@
-# Copyright 2025 NXP
-#
-# This source code is licensed under the BSD-style license found in the
-# LICENSE file in the root directory of this source tree.
-
 import numpy as np
 import pytest
 import torch
-from torch.export import ExportedProgram
 
-from executorch.backends.nxp.backend.edge_program_converter import EdgeProgramToIRConverter
+from executorch.backends.nxp.backend.edge_program_converter import (
+    EdgeProgramToIRConverter,
+)
 from executorch.backends.nxp.tests.executorch_pipeline import to_quantized_edge_program
-from executorch.backends.nxp.tests.executors import convert_run_compare, ToChannelFirstPreprocess, \
-    ToChannelLastPreprocess
+from executorch.backends.nxp.tests.executors import (
+    convert_run_compare,
+    ToChannelFirstPreprocess,
+    ToChannelLastPreprocess,
+)
 from executorch.backends.nxp.tests.models import MeanDimConvModule, MeanDimLinearModule
+from torch.export import ExportedProgram
 
 
 @pytest.fixture(autouse=True)
@@ -21,9 +21,12 @@ def reseed_model_per_test_run():
     np.random.seed(23)
 
 
-@pytest.mark.parametrize("input_shape, dim", [
-    pytest.param((1, 4, 8, 8), (-1, -2), id="Dim -1, -2."),
-])
+@pytest.mark.parametrize(
+    "input_shape, dim",
+    [
+        pytest.param((1, 4, 8, 8), (-1, -2), id="Dim -1, -2."),
+    ],
+)
 def test_mean_dim_conv_quant_conversion(mocker, input_shape, dim, keeepdim=True):
     model = MeanDimConvModule(dim, keeepdim)
 
@@ -40,20 +43,32 @@ def test_mean_dim_conv_quant_conversion(mocker, input_shape, dim, keeepdim=True)
 
     input_data = (np.random.random(input_shape).astype(np.float32) * 50).astype(np.int8)
 
-    convert_run_compare(exported_program, tflite_input_preprocess=ToChannelLastPreprocess(), input_data=input_data,
-                        tflite_output_preprocess=ToChannelFirstPreprocess(), tfl_model=tflite_flatbuffers_model,
-                        atol=1.)
+    convert_run_compare(
+        exported_program,
+        tflite_input_preprocess=ToChannelLastPreprocess(),
+        input_data=input_data,
+        tflite_output_preprocess=ToChannelFirstPreprocess(),
+        tfl_model=tflite_flatbuffers_model,
+    )
 
 
-@pytest.mark.parametrize("input_shape, dim", [
-    pytest.param((1, 32), 0, id="Dim 0."),
-    pytest.param((1, 32), 1, id="Dim 1."),
-])
-@pytest.mark.parametrize("keeepdim", [
-    pytest.param(False, id="Don't keep dim."),
-    pytest.param(True, id="Keep dim."),
-])
-def test_mean_dim_linear_unsupported_quant_conversion(mocker, input_shape, dim, keeepdim):
+@pytest.mark.parametrize(
+    "input_shape, dim",
+    [
+        pytest.param((1, 32), 0, id="Dim 0."),
+        pytest.param((1, 32), 1, id="Dim 1."),
+    ],
+)
+@pytest.mark.parametrize(
+    "keeepdim",
+    [
+        pytest.param(False, id="Don't keep dim."),
+        pytest.param(True, id="Keep dim."),
+    ],
+)
+def test_mean_dim_linear_unsupported_quant_conversion(
+    mocker, input_shape, dim, keeepdim
+):
     model = MeanDimLinearModule(dim, keeepdim)
 
     converter_spy = mocker.spy(EdgeProgramToIRConverter, "convert_program")
@@ -63,7 +78,7 @@ def test_mean_dim_linear_unsupported_quant_conversion(mocker, input_shape, dim, 
     nodes = list(edge_program.graph.nodes)
 
     # Last 2 dimensions are not used or keepdim is False, cannot be converted to MeanDim, node is not delegated
-    assert nodes[6].target.__name__ == 'aten.mean.dim'
+    assert nodes[6].target.__name__ == "aten.mean.dim"
 
     # Capture generated model
     tflite_flatbuffers_model, io_formats = converter_spy.spy_return
@@ -73,22 +88,30 @@ def test_mean_dim_linear_unsupported_quant_conversion(mocker, input_shape, dim, 
 
     input_data = (np.random.random(input_shape).astype(np.float32) * 50).astype(np.int8)
 
-    convert_run_compare(exported_program, tfl_model=tflite_flatbuffers_model, input_data=input_data)
+    convert_run_compare(
+        exported_program, tfl_model=tflite_flatbuffers_model, input_data=input_data
+    )
 
 
-@pytest.mark.parametrize("input_shape, dim", [
-    pytest.param((1, 4, 8, 8), 0, id="Dim 0."),
-    pytest.param((1, 4, 8, 8), 2, id="Dim 2."),
-    pytest.param((1, 4, 8, 8), -1, id="Dim -1."),
-    pytest.param((1, 4, 8, 8), -2, id="Dim -2."),
-    pytest.param((1, 4, 8, 8), (0, 1), id="Dim 0, 1."),
-    pytest.param((1, 4, 8, 8), (1, 3), id="Dim 1, 3."),
-    pytest.param((1, 4, 8, 8), (-1, -3), id="Dim -1, -3."),
-])
-@pytest.mark.parametrize("keeepdim", [
-    pytest.param(False, id="Don't keep dim."),
-    pytest.param(True, id="Keep dim."),
-])
+@pytest.mark.parametrize(
+    "input_shape, dim",
+    [
+        pytest.param((1, 4, 8, 8), 0, id="Dim 0."),
+        pytest.param((1, 4, 8, 8), 2, id="Dim 2."),
+        pytest.param((1, 4, 8, 8), -1, id="Dim -1."),
+        pytest.param((1, 4, 8, 8), -2, id="Dim -2."),
+        pytest.param((1, 4, 8, 8), (0, 1), id="Dim 0, 1."),
+        pytest.param((1, 4, 8, 8), (1, 3), id="Dim 1, 3."),
+        pytest.param((1, 4, 8, 8), (-1, -3), id="Dim -1, -3."),
+    ],
+)
+@pytest.mark.parametrize(
+    "keeepdim",
+    [
+        pytest.param(False, id="Don't keep dim."),
+        pytest.param(True, id="Keep dim."),
+    ],
+)
 def test_mean_dim_conv_unsupported_quant_conversion(mocker, input_shape, dim, keeepdim):
     model = MeanDimConvModule(dim, keeepdim)
 
@@ -99,7 +122,7 @@ def test_mean_dim_conv_unsupported_quant_conversion(mocker, input_shape, dim, ke
     nodes = list(edge_program.graph.nodes)
 
     # Last 2 dimensions are not used or keepdim is False, cannot be converted to MeanDim, node is not delegated
-    assert nodes[6].target.__name__ == 'aten.mean.dim'
+    assert nodes[6].target.__name__ == "aten.mean.dim"
 
     # Capture generated model
     tflite_flatbuffers_model, io_formats = converter_spy.spy_return
@@ -109,5 +132,10 @@ def test_mean_dim_conv_unsupported_quant_conversion(mocker, input_shape, dim, ke
 
     input_data = (np.random.random(input_shape).astype(np.float32) * 50).astype(np.int8)
 
-    convert_run_compare(exported_program, tflite_input_preprocess=ToChannelLastPreprocess(), input_data=input_data,
-                        tflite_output_preprocess=ToChannelFirstPreprocess(), tfl_model=tflite_flatbuffers_model)
+    convert_run_compare(
+        exported_program,
+        tflite_input_preprocess=ToChannelLastPreprocess(),
+        input_data=input_data,
+        tflite_output_preprocess=ToChannelFirstPreprocess(),
+        tfl_model=tflite_flatbuffers_model,
+    )

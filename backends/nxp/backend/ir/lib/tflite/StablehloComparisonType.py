@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class StablehloComparisonType(object):
     STABLEHLO_COMPARISON_TYPE_NOTYPE = 0
     STABLEHLO_COMPARISON_TYPE_FLOAT = 1

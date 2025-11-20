@@ -13,6 +13,7 @@
  * this package.
  */
 
+#include <c10/util/irange.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_factory.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_util.h>
 #include <executorch/runtime/core/exec_aten/util/scalar_type_util.h>
@@ -21,8 +22,8 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using executorch::runtime::testing::TensorFactory;
 
 //
@@ -44,7 +45,7 @@ void add_tensors_impl(const Tensor& a, const Tensor& b, Tensor& out) {
   const auto data_a = a.const_data_ptr<CTYPE>();
   const auto data_b = b.const_data_ptr<CTYPE>();
   auto data_out = out.mutable_data_ptr<CTYPE>();
-  for (size_t i = 0; i < n; ++i) {
+  for (const auto i : c10::irange(n)) {
     data_out[i] = data_a[i] + data_b[i];
   }
 }

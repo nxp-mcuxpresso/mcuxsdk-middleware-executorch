@@ -3,11 +3,9 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.import torch
 
-import torch
-from executorch.backends.nxp.backend.edge_program_converter import EdgeProgramToIRConverter
-from executorch.backends.nxp.backend.ir.converter.node_converter import Target
 from executorch.backends.nxp.tests.executorch_pipeline import to_quantized_edge_program
 from executorch.backends.nxp.tests.models import Conv2dModule
+
 
 def test_operator_selector_mechanism():
     model = Conv2dModule(bias=False)
@@ -15,7 +13,9 @@ def test_operator_selector_mechanism():
 
     operators_not_to_delegate = ["aten::convolution"]
 
-    edge_program_manager = to_quantized_edge_program(model, input_shape, operators_not_to_delegate=operators_not_to_delegate)
+    edge_program_manager = to_quantized_edge_program(
+        model, input_shape, operators_not_to_delegate=operators_not_to_delegate
+    )
 
     exported_program = edge_program_manager.exported_program()
 

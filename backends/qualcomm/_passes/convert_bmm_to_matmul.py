@@ -21,7 +21,7 @@ class ConvertBmmToMatmul(ExportPass):
 
     view_copy = exir_ops.edge.aten.view_copy.default
     expand_copy = exir_ops.edge.aten.expand_copy.default
-    clone = exir_ops.edge.aten.clone.default
+    clone = exir_ops.edge.dim_order_ops._clone_dim_order.default
     bmm = exir_ops.edge.aten.bmm.default
     matmul = exir_ops.edge.aten.matmul.default
     patterns = [
@@ -46,13 +46,16 @@ class ConvertBmmToMatmul(ExportPass):
     def call(self, graph_module: torch.fx.GraphModule):
         graph = graph_module.graph
         partitions = get_source_partitions(
-            graph, [operator.matmul, torch.matmul, torch.bmm]
+            graph,
+            [operator.matmul, torch.matmul, torch.bmm, torch.ops.aten.matmul.default],
         )
         for _, src_partitions in partitions.items():
             for src_partition in src_partitions:
                 op_cnt = Counter([n.target for n in src_partition.nodes])
                 if op_cnt not in self.patterns:
-                    continue
+                    raise AssertionError(
+                        "Found a new pattern needed be converted to linear op"
+                    )
 
                 inputs = src_partition.input_nodes
                 bmm_node = [n for n in src_partition.nodes if n.target == self.bmm][0]

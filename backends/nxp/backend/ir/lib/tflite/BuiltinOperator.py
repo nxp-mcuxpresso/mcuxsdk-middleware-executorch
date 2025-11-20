@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class BuiltinOperator(object):
     ADD = 0
     AVERAGE_POOL_2D = 1

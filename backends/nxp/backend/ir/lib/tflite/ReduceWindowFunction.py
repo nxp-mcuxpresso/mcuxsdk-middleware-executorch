@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class ReduceWindowFunction(object):
     UNSUPPORTED = 0
     ADD = 1

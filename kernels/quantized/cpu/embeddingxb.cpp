@@ -17,9 +17,9 @@ namespace torch {
 namespace executor {
 namespace native {
 
-using Tensor = exec_aten::Tensor;
-using Scalar = exec_aten::Scalar;
-using ScalarType = exec_aten::ScalarType;
+using Tensor = executorch::aten::Tensor;
+using Scalar = executorch::aten::Scalar;
+using ScalarType = executorch::aten::ScalarType;
 
 namespace {
 
@@ -65,11 +65,11 @@ static inline int32_t get_embedding_dim(
 void check_embedding_xbit_args(
     const Tensor& weight,
     const Tensor& weight_scales,
-    const exec_aten::optional<Tensor>& opt_weight_zero_points,
+    const std::optional<Tensor>& opt_weight_zero_points,
     const int64_t weight_quant_min,
     const int64_t weight_quant_max,
     const Tensor& indices,
-    exec_aten::optional<ScalarType> out_dtype,
+    std::optional<ScalarType> out_dtype,
     Tensor& out,
     int weight_nbit) {
   ET_CHECK_MSG(8 % weight_nbit == 0, "nbit must divide 8");
@@ -170,7 +170,7 @@ template <typename CTYPE_PARAMS, typename CTYPE_OUT>
 void embedding_xbit_per_channel(
     const Tensor& weight,
     const Tensor& weight_scales,
-    const exec_aten::optional<Tensor>& opt_weight_zero_points,
+    const std::optional<Tensor>& opt_weight_zero_points,
     const Tensor& indices,
     Tensor& out,
     int weight_nbit) {
@@ -225,14 +225,14 @@ void resize_out_tensor(
     const Tensor& indices,
     Tensor& out,
     int weight_nbit) {
-  exec_aten::SizesType expected_output_size[kTensorDimensionLimit];
+  executorch::aten::SizesType expected_output_size[kTensorDimensionLimit];
   for (size_t i = 0; i < indices.dim(); i++) {
     expected_output_size[i] = indices.size(i);
   }
   const size_t embedding_dim = get_embedding_dim(weight.size(1), weight_nbit);
   expected_output_size[out.dim() - 1] = embedding_dim;
 
-  exec_aten::ArrayRef<exec_aten::SizesType> output_size{
+  executorch::aten::ArrayRef<executorch::aten::SizesType> output_size{
       expected_output_size, static_cast<size_t>(out.dim())};
 
   torch::executor::Error err = resize_tensor(out, output_size);
@@ -258,15 +258,18 @@ void resize_out_tensor(
 Tensor& quantized_embedding_xbit_out(
     // TODO Evaluate whether this name is appropriate for an operator that takes
     // non quant input and returns fp output
+    KernelRuntimeContext& ctx,
     const Tensor& weight,
     const Tensor& weight_scales,
-    const exec_aten::optional<Tensor>& opt_weight_zero_points,
+    const std::optional<Tensor>& opt_weight_zero_points,
     const int64_t weight_quant_min,
     const int64_t weight_quant_max,
     const Tensor& indices,
     Tensor& out,
     int weight_nbit) {
   ScalarType out_type = out.scalar_type();
+
+  resize_out_tensor(weight, indices, out, weight_nbit);
 
   // TODO (jakeszwe): improve these to account for the size of out in relation
   // to weight and indices accounting for a possible batch dimension
@@ -296,10 +299,9 @@ Tensor& quantized_embedding_xbit_out(
 }
 
 Tensor& quantized_embedding_xbit_out(
-    KernelRuntimeContext& context,
     const Tensor& weight,
     const Tensor& weight_scales,
-    const exec_aten::optional<Tensor>& opt_weight_zero_points,
+    const std::optional<Tensor>& opt_weight_zero_points,
     int64_t weight_quant_min,
     int64_t weight_quant_max,
     const Tensor& indices,
@@ -307,9 +309,9 @@ Tensor& quantized_embedding_xbit_out(
     int weight_nbit) {
   // TODO(larryliu): Add a context arg to the real op function and remove this
   // wrapper
-  (void)context;
-  resize_out_tensor(weight, indices, out, weight_nbit);
-  return quantized_embedding_xbit_out(
+  KernelRuntimeContext context;
+  auto& res = quantized_embedding_xbit_out(
+      context,
       weight,
       weight_scales,
       opt_weight_zero_points,
@@ -318,20 +320,25 @@ Tensor& quantized_embedding_xbit_out(
       indices,
       out,
       weight_nbit);
+  ET_CHECK(context.failure_state() == Error::Ok);
+  return res;
 }
 
 Tensor& quantized_embedding_xbit_dtype_out(
     // TODO Evaluate whether this name is appropriate for an operator that takes
     // non quant input and returns fp output
+    KernelRuntimeContext& ctx,
     const Tensor& weight,
     const Tensor& weight_scales,
-    const exec_aten::optional<Tensor>& opt_weight_zero_points,
+    const std::optional<Tensor>& opt_weight_zero_points,
     const int64_t weight_quant_min,
     const int64_t weight_quant_max,
     const Tensor& indices,
-    exec_aten::optional<ScalarType> out_dtype,
+    std::optional<ScalarType> out_dtype,
     Tensor& out,
     int weight_nbit) {
+  resize_out_tensor(weight, indices, out, weight_nbit);
+
   // TODO (jakeszwe): improve these to account for the size of out in relation
   // to weight and indices accounting for a possible batch dimension
   check_embedding_xbit_args(
@@ -365,21 +372,20 @@ Tensor& quantized_embedding_xbit_dtype_out(
 }
 
 Tensor& quantized_embedding_xbit_dtype_out(
-    KernelRuntimeContext& context,
     const Tensor& weight,
     const Tensor& weight_scales,
-    const exec_aten::optional<Tensor>& opt_weight_zero_points,
+    const std::optional<Tensor>& opt_weight_zero_points,
     int64_t weight_quant_min,
     int64_t weight_quant_max,
     const Tensor& indices,
-    exec_aten::optional<ScalarType> out_dtype,
+    std::optional<ScalarType> out_dtype,
     Tensor& out,
     int weight_nbit) {
   // TODO(larryliu): Add a context arg to the real op function and remove this
   // wrapper
-  (void)context;
-  resize_out_tensor(weight, indices, out, weight_nbit);
-  return quantized_embedding_xbit_dtype_out(
+  KernelRuntimeContext context;
+  auto& res = quantized_embedding_xbit_dtype_out(
+      context,
       weight,
       weight_scales,
       opt_weight_zero_points,
@@ -389,6 +395,8 @@ Tensor& quantized_embedding_xbit_dtype_out(
       out_dtype,
       out,
       weight_nbit);
+  ET_CHECK(context.failure_state() == Error::Ok);
+  return res;
 }
 
 } // namespace native

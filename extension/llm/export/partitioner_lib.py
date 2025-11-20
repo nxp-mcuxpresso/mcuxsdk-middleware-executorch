@@ -32,7 +32,9 @@ def get_xnnpack_partitioner(dynamic_quant_only_partitioner: bool = True):
 
 
 def get_vulkan_partitioner(
-    dtype_override: Optional[str] = None, enable_dynamic_shape: bool = False
+    dtype_override: Optional[str] = None,
+    enable_dynamic_shape: bool = False,
+    force_fp16: bool = False,
 ):
     assert (
         dtype_override == "fp32" or dtype_override is None
@@ -41,7 +43,9 @@ def get_vulkan_partitioner(
         VulkanPartitioner,
     )
 
-    return VulkanPartitioner({"require_dynamic_shapes": enable_dynamic_shape})
+    return VulkanPartitioner(
+        {"require_dynamic_shapes": enable_dynamic_shape, "force_fp16": force_fp16}
+    )
 
 
 def get_mps_partitioner(use_kv_cache: bool = False):
@@ -57,7 +61,7 @@ def get_mps_partitioner(use_kv_cache: bool = False):
         )
     except ImportError:
         raise ImportError(
-            "Please install the MPS backend follwing https://pytorch.org/executorch/main/build-run-mps.html"
+            "Please install the MPS backend follwing https://pytorch.org/executorch/main/backends-mps"
         )
 
     compile_specs = [CompileSpec("use_fp16", bytes([True]))]
@@ -81,7 +85,8 @@ def get_coreml_partitioner(
         )
     except ImportError:
         raise ImportError(
-            "Please install the CoreML backend follwing https://pytorch.org/executorch/main/build-run-coreml.html"
+            "Please install the CoreML backend follwing https://pytorch.org/executorch/main/backends-coreml"
+            + "; for buck users, please add example dependancies: //executorch/backends/apple/coreml:backend, and etc"
         )
 
     def _validate_ios_version() -> None:
@@ -126,6 +131,7 @@ def get_coreml_partitioner(
         # On iPhone 15 Pro, CPU decode model is over 8x faster than GPU for stories110M,
         # so default to CPU_ONLY
         coreml_compute_units = "cpu_only"
+    # pyre-ignore
     coreml_compute_units = {
         "cpu_only": ct.ComputeUnit.CPU_ONLY,
         "cpu_and_ne": ct.ComputeUnit.CPU_AND_NE,
@@ -157,7 +163,11 @@ def get_coreml_partitioner(
         op_linear_quantizer_config=op_linear_quantizer_config,
     )
 
-    take_over_mutable_buffer = minimum_deployment_target >= ct.target.iOS18
+    # ExecuTorch does not build CoreML delegate runtime to handle state
+    # when using OSS scripts, so we define take_over_mutable_buffer = False,
+    # even when target is iOS18
+    # take_over_mutable_buffer = minimum_deployment_target >= ct.target.iOS18
+    take_over_mutable_buffer = False
     return CoreMLPartitioner(  # pyre-fixme[16]
         compile_specs=compile_specs,
         take_over_mutable_buffer=take_over_mutable_buffer,
@@ -189,7 +199,7 @@ def get_qnn_partitioner(
         )
     except ImportError:
         raise ImportError(
-            "Please install the Qualcomm backend following https://pytorch.org/executorch/main/build-run-qualcomm-ai-engine-direct-backend.html"
+            "Please install the Qualcomm backend following https://pytorch.org/executorch/main/backends-qualcomm"
         )
 
     use_fp16 = True
@@ -210,4 +220,6 @@ def get_qnn_partitioner(
         ),
         skip_node_id_set={},
         skip_node_op_set=skip_node_op_set,
+        # TODO: if deprecated legacy export, skip_mutable_buffer can be set False
+        skip_mutable_buffer=True,
     )

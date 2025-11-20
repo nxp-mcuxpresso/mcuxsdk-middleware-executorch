@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class FullyConnectedOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class FullyConnectedOptions(object):
     def GetRootAsFullyConnectedOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def FullyConnectedOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # FullyConnectedOptions
     def Init(self, buf, pos):
@@ -46,14 +51,18 @@ class FullyConnectedOptions(object):
     def KeepNumDims(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # FullyConnectedOptions
     def AsymmetricQuantizeInputs(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # FullyConnectedOptions
@@ -63,44 +72,58 @@ class FullyConnectedOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
+
 def FullyConnectedOptionsStart(builder):
     builder.StartObject(5)
+
 
 def Start(builder):
     FullyConnectedOptionsStart(builder)
 
+
 def FullyConnectedOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
     builder.PrependInt8Slot(0, fusedActivationFunction, 0)
+
 
 def AddFusedActivationFunction(builder, fusedActivationFunction):
     FullyConnectedOptionsAddFusedActivationFunction(builder, fusedActivationFunction)
 
+
 def FullyConnectedOptionsAddWeightsFormat(builder, weightsFormat):
     builder.PrependInt8Slot(1, weightsFormat, 0)
+
 
 def AddWeightsFormat(builder, weightsFormat):
     FullyConnectedOptionsAddWeightsFormat(builder, weightsFormat)
 
+
 def FullyConnectedOptionsAddKeepNumDims(builder, keepNumDims):
     builder.PrependBoolSlot(2, keepNumDims, 0)
+
 
 def AddKeepNumDims(builder, keepNumDims):
     FullyConnectedOptionsAddKeepNumDims(builder, keepNumDims)
 
+
 def FullyConnectedOptionsAddAsymmetricQuantizeInputs(builder, asymmetricQuantizeInputs):
     builder.PrependBoolSlot(3, asymmetricQuantizeInputs, 0)
+
 
 def AddAsymmetricQuantizeInputs(builder, asymmetricQuantizeInputs):
     FullyConnectedOptionsAddAsymmetricQuantizeInputs(builder, asymmetricQuantizeInputs)
 
+
 def FullyConnectedOptionsAddQuantizedBiasType(builder, quantizedBiasType):
     builder.PrependInt8Slot(4, quantizedBiasType, 0)
+
 
 def AddQuantizedBiasType(builder, quantizedBiasType):
     FullyConnectedOptionsAddQuantizedBiasType(builder, quantizedBiasType)
 
+
 def FullyConnectedOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return FullyConnectedOptionsEnd(builder)

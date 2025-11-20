@@ -78,14 +78,31 @@ def define_common_targets():
     )
 
     runtime.python_library(
-        name = "fuse_dequant_linear",
-        srcs = ["fuse_dequant_linear.py"],
+        name = "fuse_clamps",
+        srcs = ["fuse_clamps.py"],
         visibility = [
             "//executorch/backends/...",
         ],
         deps = [
             ":utils",
             "//caffe2:torch",
+            "//executorch/backends/vulkan:custom_ops_lib",
+            "//executorch/exir:pass_base",
+            "//executorch/exir:sym_util",
+            "//executorch/exir/dialects:lib",
+        ],
+    )
+
+    runtime.python_library(
+        name = "fuse_clamp_with_binary_op",
+        srcs = ["fuse_clamp_with_binary_op.py"],
+        visibility = [
+            "//executorch/backends/...",
+        ],
+        deps = [
+            ":utils",
+            "//caffe2:torch",
+            "//executorch/backends/vulkan:custom_ops_lib",
             "//executorch/exir:pass_base",
             "//executorch/exir:sym_util",
             "//executorch/exir/dialects:lib",
@@ -124,6 +141,20 @@ def define_common_targets():
         srcs = ["remove_clone_ops.py"],
         visibility = [
             "//executorch/backends/...",
+            "@EXECUTORCH_CLIENTS",
+        ],
+        deps = [
+            "//caffe2:torch",
+            "//executorch/exir:pass_base",
+            "//executorch/exir/dialects:lib",
+        ],
+    )
+
+    runtime.python_library(
+        name = "remove_getitem_op",
+        srcs = ["remove_getitem_op.py"],
+        visibility = [
+            "//executorch/backends/...",
         ],
         deps = [
             "//caffe2:torch",
@@ -149,6 +180,9 @@ def define_common_targets():
     runtime.python_library(
         name = "utils",
         srcs = ["utils.py"],
+        visibility = [
+            "//executorch/backends/...",
+        ],
         deps = [
             "//caffe2:torch",
             "//executorch/exir:lib",
@@ -187,6 +221,34 @@ def define_common_targets():
         ],
     )
 
+    runtime.python_library(
+        name = "rank_0_to_rank_1",
+        srcs = [
+            "rank_0_to_rank_1.py",
+        ],
+        visibility = [
+            "//executorch/backends/...",
+        ],
+        deps = [
+            "//caffe2:torch",
+            "//executorch/exir:pass_base",
+        ],
+    )
+
+    runtime.python_library(
+        name = "replace_scalar_with_tensor",
+        srcs = [
+            "replace_scalar_with_tensor.py",
+        ],
+        visibility = [
+            "//executorch/backends/...",
+        ],
+        deps = [
+            "//caffe2:torch",
+            "//executorch/exir:pass_base",
+        ],
+    )
+
     runtime.python_test(
         name = "test_duplicate_dynamic_quant_chain",
         srcs = [
@@ -195,7 +257,34 @@ def define_common_targets():
         deps = [
             "fbsource//third-party/pypi/expecttest:expecttest",  # @manual
             ":duplicate_dynamic_quant_chain",
+            "//executorch/backends/xnnpack/quantizer:xnnpack_quantizer",
             "//caffe2:torch",
             "//executorch/exir:lib",
+        ],
+    )
+
+
+    runtime.python_test(
+        name = "test_rank_0_to_rank_1",
+        srcs = [
+            "test/test_rank_0_to_rank_1.py",
+        ],
+        deps = [
+            "//caffe2:torch",
+            "//executorch/exir:lib",
+            ":rank_0_to_rank_1",
+        ],
+    )
+
+    runtime.python_test(
+        name = "test_remove_clone_ops",
+        srcs = [
+            "test/test_remove_clone_ops.py",
+        ],
+        deps = [
+            "//caffe2:torch",
+            "//executorch/exir:lib",
+            ":remove_clone_ops",
+            "//executorch/exir/tests:test_memory_format_ops_pass_utils",
         ],
     )

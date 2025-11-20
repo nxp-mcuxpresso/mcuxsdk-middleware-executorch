@@ -12,7 +12,8 @@ import numpy as np
 import torch
 from executorch.backends.qualcomm.utils.constants import QCOM_INSERTED_PERMUTE
 
-from .node_visitor import NodeVisitor, register_node_visitor
+from .node_visitor import NodeVisitor
+from .node_visitor_manager import register_node_visitor
 from .qnn_constants import OpTranspose, QNN_OP_PACKAGE_NAME_QTI_AISW
 
 
@@ -28,28 +29,30 @@ class TransposeVisitor(NodeVisitor):
         node: torch.fx.Node,
         nodes_to_wrappers: Dict[torch.fx.Node, PyQnnWrapper.TensorWrapper],
     ) -> PyQnnWrapper.PyQnnOpWrapper:
-        input_node = node.args[0]
+        input_node = self.get_node(node.args[0])
         permute_node = input_node if QCOM_INSERTED_PERMUTE in node.meta else node
         input_tensor = self.get_tensor(input_node, permute_node)
         input_tensor_wrapper = self.define_tensor(
             input_node,
+            node,
             input_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
             nodes_to_wrappers,
-            is_input_tensor=True,
         )
 
         # permutation
         permute_order = cast(List[int], node.args[1])
+        # to prevent negative values
+        permute_order = [x % len(permute_order) for x in permute_order]
         permute_order_shape = [len(permute_order)]
 
         output_tensor = input_tensor.permute(permute_order)
         output_tensor_wrapper = self.define_tensor(
             node,
+            node,
             output_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
             nodes_to_wrappers,
-            is_input_tensor=False,
         )
 
         transpose_op = PyQnnWrapper.PyQnnOpWrapper(

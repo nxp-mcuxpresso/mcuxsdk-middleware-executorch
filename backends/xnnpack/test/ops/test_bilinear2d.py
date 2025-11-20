@@ -4,6 +4,8 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 import unittest
 
 import torch
@@ -12,6 +14,9 @@ from executorch.backends.xnnpack.test.tester.tester import Export
 
 
 class TestUpsampleBilinear2d(unittest.TestCase):
+    def setUp(self):
+        torch._dynamo.reset()
+
     class StaticResizeBilinear2dModule(torch.nn.Module):
         def forward(self, x):
             a = torch.nn.functional.interpolate(
@@ -131,11 +136,17 @@ class TestUpsampleBilinear2d(unittest.TestCase):
                 3: torch.export.Dim("w", min=1, max=12),
             }
         }
-        (
+        artifact_str = str(
             Tester(self.StaticResizeBilinear2dModule(), example_inputs)
             .export(Export(dynamic_shapes))
             .to_edge_transform_and_lower()
-            # NOTE The decomposition is partially delegated. This will need to be replaced
-            # with the aten upsample op once decomp is removed.
-            .check("executorch_exir_dialects_edge__ops_aten_index_Tensor")
+            .get_artifact()
+            .exported_program()
+        )
+        # NOTE The decomposition can be partially delegated. This will need to be replaced
+        # with the aten upsample op once decomp is removed.
+        self.assertTrue(
+            "executorch_exir_dialects_edge__ops_aten_index_Tensor" in artifact_str
+            or "executorch_exir_dialects_edge__ops_aten_upsample_bilinear2d_vec"
+            in artifact_str
         )

@@ -1,130 +1,148 @@
-# Copyright 2024 Arm Limited and/or its affiliates.
-# All rights reserved.
+# Copyright 2024-2025 Arm Limited and/or its affiliates.
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-#
-# Tests the clone op which copies the data of the input tensor (possibly with new data format)
-#
 
-import unittest
 from typing import Tuple
 
 import torch
 
-from executorch.backends.arm.quantizer.arm_quantizer import (
-    ArmQuantizer,
-    get_symmetric_quantization_config,
+from executorch.backends.arm.test import common
+
+from executorch.backends.arm.test.tester.test_pipeline import (
+    EthosU55PipelineINT,
+    EthosU85PipelineINT,
+    TosaPipelineFP,
+    TosaPipelineINT,
+    VgfPipeline,
 )
-from executorch.backends.arm.test import common, conftest
-from executorch.backends.arm.test.tester.arm_tester import ArmTester
 
-from executorch.backends.xnnpack.test.tester.tester import Quantize
+aten_op = "torch.ops.aten.clone.default"
+exir_op = "executorch_exir_dialects_edge__ops_dim_order_ops__clone_dim_order_default"
 
-from executorch.exir.backend.compile_spec_schema import CompileSpec
-from parameterized import parameterized
+input_t = Tuple[torch.Tensor]
 
 
-class TestSimpleClone(unittest.TestCase):
-    """Tests clone."""
+class CloneFirstArg(torch.nn.Module):
+    def forward(self, x):
+        return x.clone() + x
 
-    class Clone(torch.nn.Module):
-        sizes = [10, 15, 50, 100]
-        test_parameters = [(torch.ones(n),) for n in sizes]
 
-        def __init__(self):
-            super().__init__()
+class CloneSecondArg(torch.nn.Module):
+    def forward(self, x):
+        return x * x.clone()
 
-        def forward(self, x: torch.Tensor):
-            x = x.clone()
-            return x
 
-    def _test_clone_tosa_MI_pipeline(
-        self, module: torch.nn.Module, test_data: torch.Tensor
-    ):
-        (
-            ArmTester(
-                module,
-                example_inputs=test_data,
-                compile_spec=common.get_tosa_compile_spec("TOSA-0.80.0+MI"),
-            )
-            .export()
-            .check_count({"torch.ops.aten.clone.default": 1})
-            .to_edge()
-            .partition()
-            .check_count({"torch.ops.higher_order.executorch_call_delegate": 1})
-            .to_executorch()
-            .run_method_and_compare_outputs(inputs=test_data)
-        )
+class CloneOutput(torch.nn.Module):
+    def forward(self, x):
+        return (x / x).clone()
 
-    def _test_clone_tosa_BI_pipeline(
-        self, module: torch.nn.Module, test_data: Tuple[torch.Tensor]
-    ):
-        quantizer = ArmQuantizer().set_io(get_symmetric_quantization_config())
-        (
-            ArmTester(
-                module,
-                example_inputs=test_data,
-                compile_spec=common.get_tosa_compile_spec("TOSA-0.80.0+BI"),
-            )
-            .quantize(Quantize(quantizer, get_symmetric_quantization_config()))
-            .export()
-            .check_count({"torch.ops.aten.clone.default": 1})
-            .to_edge()
-            .partition()
-            .check_count({"torch.ops.higher_order.executorch_call_delegate": 1})
-            .to_executorch()
-            .run_method_and_compare_outputs(inputs=test_data, qtol=1)
-        )
 
-    def _test_clone_tosa_ethos_pipeline(
-        self,
-        compile_spec: list[CompileSpec],
-        module: torch.nn.Module,
-        test_data: Tuple[torch.Tensor],
-    ):
-        quantizer = ArmQuantizer().set_io(get_symmetric_quantization_config())
-        tester = (
-            ArmTester(module, example_inputs=test_data, compile_spec=compile_spec)
-            .quantize(Quantize(quantizer, get_symmetric_quantization_config()))
-            .export()
-            .check_count({"torch.ops.aten.clone.default": 1})
-            .to_edge()
-            .partition()
-            .check_count({"torch.ops.higher_order.executorch_call_delegate": 1})
-            .to_executorch()
-            .serialize()
-        )
-        if conftest.is_option_enabled("corstone_fvp"):
-            tester.run_method_and_compare_outputs(qtol=1, inputs=test_data)
+class CloneBothArgs(torch.nn.Module):
+    def forward(self, x):
+        return x.clone() + x.clone()
 
-    def _test_clone_tosa_u55_pipeline(
-        self, module: torch.nn.Module, test_data: Tuple[torch.Tensor]
-    ):
-        self._test_clone_tosa_ethos_pipeline(
-            common.get_u55_compile_spec(), module, test_data
-        )
 
-    def _test_clone_tosa_u85_pipeline(
-        self, module: torch.nn.Module, test_data: Tuple[torch.Tensor]
-    ):
-        self._test_clone_tosa_ethos_pipeline(
-            common.get_u85_compile_spec(), module, test_data
-        )
+class CloneAfterOtherOp(torch.nn.Module):
+    def forward(self, x):
+        x = x * 2
+        return x.clone() + x
 
-    @parameterized.expand(Clone.test_parameters)
-    def test_clone_tosa_MI(self, test_tensor: torch.Tensor):
-        self._test_clone_tosa_MI_pipeline(self.Clone(), (test_tensor,))
 
-    @parameterized.expand(Clone.test_parameters)
-    def test_clone_tosa_BI(self, test_tensor: torch.Tensor):
-        self._test_clone_tosa_BI_pipeline(self.Clone(), (test_tensor,))
+class CloneParallelToOtherOp(torch.nn.Module):
+    def forward(self, x):
+        return x * 2 + x.clone()
 
-    @parameterized.expand(Clone.test_parameters)
-    def test_clone_u55_BI(self, test_tensor: torch.Tensor):
-        self._test_clone_tosa_u55_pipeline(self.Clone(), (test_tensor,))
 
-    @parameterized.expand(Clone.test_parameters)
-    def test_clone_u85_BI(self, test_tensor: torch.Tensor):
-        self._test_clone_tosa_u85_pipeline(self.Clone(), (test_tensor,))
+delegated_clones = {
+    "clone_first_arg": lambda: (CloneFirstArg, (torch.rand(1, 2, 3, 4),)),
+    "clone_second_arg": lambda: (CloneSecondArg, (torch.rand(1, 2, 3, 4),)),
+    "clone_output": lambda: (CloneOutput, (torch.rand(1, 2, 3, 4),)),
+    "clone_both_args": lambda: (CloneBothArgs, (torch.rand(1, 2, 3, 4),)),
+    "clone_after_other_op": lambda: (CloneAfterOtherOp, (torch.rand(1, 2, 3, 4),)),
+    "clone_parallel_to_other_op": lambda: (
+        CloneParallelToOtherOp,
+        (torch.rand(1, 2, 3, 4),),
+    ),
+}
+
+
+@common.parametrize("input_data", delegated_clones)
+def test_clone_tosa_FP(input_data):
+    module, input_tensor = input_data()
+    pipeline = TosaPipelineFP[input_t](
+        module(),
+        input_tensor,
+        [],
+    )
+    pipeline.run()
+
+
+@common.parametrize("input_data", delegated_clones)
+def test_clone_tosa_INT(input_data):
+    module, input_tensor = input_data()
+
+    pipeline = TosaPipelineINT[input_t](
+        module(),
+        input_tensor,
+        aten_op,
+        exir_op,
+    )
+    pipeline.run()
+
+
+@common.parametrize("input_data", delegated_clones)
+@common.XfailIfNoCorstone300
+def test_clone_u55_INT(input_data):
+    module, input_tensor = input_data()
+
+    pipeline = EthosU55PipelineINT[input_t](
+        module(),
+        input_tensor,
+        aten_op,
+        exir_op,
+        run_on_fvp=True,
+    )
+
+    pipeline.run()
+
+
+@common.parametrize("input_data", delegated_clones)
+@common.XfailIfNoCorstone320
+def test_clone_u85_INT(input_data):
+    module, input_tensor = input_data()
+
+    pipeline = EthosU85PipelineINT[input_t](
+        module(),
+        input_tensor,
+        aten_op,
+        exir_op,
+        run_on_fvp=True,
+    )
+
+    pipeline.run()
+
+
+@common.parametrize("test_data", delegated_clones)
+@common.SkipIfNoModelConverter
+def test_clone_vgf_FP(test_data):
+    module, input_tensor = test_data()
+    pipeline = VgfPipeline[input_t](
+        module(), input_tensor, aten_op, exir_op, tosa_version="TOSA-1.0+FP"
+    )
+    pipeline.run()
+
+
+@common.parametrize("test_data", delegated_clones)
+@common.SkipIfNoModelConverter
+def test_clone_vgf_INT(test_data):
+    module, input_tensor = test_data()
+    pipeline = VgfPipeline[input_t](
+        module(),
+        input_tensor,
+        aten_op,
+        exir_op,
+        tosa_version="TOSA-1.0+INT",
+    )
+    pipeline.run()

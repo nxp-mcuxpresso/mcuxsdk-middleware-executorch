@@ -7,6 +7,7 @@
  */
 
 #include <executorch/kernels/test/FunctionHeaderWrapper.h> // Declares the operator
+#include <executorch/kernels/test/ScalarOverflowTestMacros.h>
 #include <executorch/kernels/test/TestUtil.h>
 #include <executorch/kernels/test/supported_features.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
@@ -17,9 +18,9 @@
 #include <cmath>
 
 using namespace ::testing;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::TensorFactory;
 
 class OpScatterSrcOutTest : public OperatorTest {
@@ -364,11 +365,24 @@ class OpScatterValueOutTest : public OperatorTest {
     op_scatter_value_out(input, 2, index, value, out);
     EXPECT_TENSOR_EQ(out, expected);
   }
+
+  template <ScalarType DTYPE>
+  void expect_bad_scalar_value_dies(const Scalar& bad_value) {
+    TensorFactory<DTYPE> tf;
+    TensorFactory<ScalarType::Long> tf_index;
+
+    Tensor self = tf.ones({2, 2});
+    Tensor index = tf_index.zeros({2, 2});
+    Tensor out = tf.zeros({2, 2});
+
+    ET_EXPECT_KERNEL_FAILURE(
+        context_, op_scatter_value_out(self, 0, index, bad_value, out));
+  }
 };
 
 TEST_F(OpScatterSrcOutTest, AllValidInputOutputSupport) {
 #define TEST_ENTRY(CTYPE, DTYPE) test_scatter_src_out<ScalarType::DTYPE>();
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -381,7 +395,7 @@ TEST_F(OpScatterSrcOutTest, InvalidDimensionsDies) {
 
 TEST_F(OpScatterValueOutTest, AllValidInputOutputSupport) {
 #define TEST_ENTRY(CTYPE, DTYPE) test_scatter_value_out<ScalarType::DTYPE>();
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -652,3 +666,5 @@ TEST_F(OpScatterSrcOutTest, InvalidOneDimInputAndZeroDimIndex) {
   ET_EXPECT_KERNEL_FAILURE(
       context_, op_scatter_src_out(self, 0, index, src, out));
 }
+
+GENERATE_SCALAR_OVERFLOW_TESTS(OpScatterValueOutTest)

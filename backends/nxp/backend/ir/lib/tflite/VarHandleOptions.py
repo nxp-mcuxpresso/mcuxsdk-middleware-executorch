@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class VarHandleOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class VarHandleOptions(object):
     def GetRootAsVarHandleOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def VarHandleOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # VarHandleOptions
     def Init(self, buf, pos):
@@ -42,26 +47,38 @@ class VarHandleOptions(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
+
 def VarHandleOptionsStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     VarHandleOptionsStart(builder)
 
+
 def VarHandleOptionsAddContainer(builder, container):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(container), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(container), 0
+    )
+
 
 def AddContainer(builder, container):
     VarHandleOptionsAddContainer(builder, container)
 
+
 def VarHandleOptionsAddSharedName(builder, sharedName):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(sharedName), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(sharedName), 0
+    )
+
 
 def AddSharedName(builder, sharedName):
     VarHandleOptionsAddSharedName(builder, sharedName)
 
+
 def VarHandleOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return VarHandleOptionsEnd(builder)

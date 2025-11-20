@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class Metadata(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class Metadata(object):
     def GetRootAsMetadata(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def MetadataBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # Metadata
     def Init(self, buf, pos):
@@ -39,29 +44,41 @@ class Metadata(object):
     def Buffer(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
+            )
         return 0
+
 
 def MetadataStart(builder):
     builder.StartObject(2)
 
+
 def Start(builder):
     MetadataStart(builder)
 
+
 def MetadataAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0
+    )
+
 
 def AddName(builder, name):
     MetadataAddName(builder, name)
 
+
 def MetadataAddBuffer(builder, buffer):
     builder.PrependUint32Slot(1, buffer, 0)
+
 
 def AddBuffer(builder, buffer):
     MetadataAddBuffer(builder, buffer)
 
+
 def MetadataEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return MetadataEnd(builder)

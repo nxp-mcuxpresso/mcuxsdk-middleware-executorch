@@ -9,11 +9,14 @@
 Representation of the TFLite operator 'Slice'.
 """
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
-from executorch.backends.nxp.backend.ir.lib.tflite import SliceOptions as libSliceOptions
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
+import flatbuffers as fb
+from executorch.backends.nxp.backend.ir.lib.tflite import (
+    SliceOptions as libSliceOptions,
+)
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 
 

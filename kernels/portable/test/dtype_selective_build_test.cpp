@@ -11,15 +11,21 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ScalarType;
+using executorch::aten::ScalarType;
 using torch::executor::ScalarTypeToCppType;
 
 TEST(DtypeSelectiveBuildTest, UnknownOp) {
+  // Create a minimal context for error handling in ET_SWITCH
+  struct {
+    [[noreturn]] void fail(torch::executor::Error /* error */) {
+      ET_CHECK_MSG(false, "Unsupported dtype");
+    }
+  } ctx;
   ET_EXPECT_DEATH(
       ET_SWITCH_TWO_TYPES(
           Float,
           Int,
-          exec_aten::ScalarType::Float,
+          executorch::aten::ScalarType::Float,
           ctx,
           "unknown.out",
           // @lint-ignore CLANGTIDY clang-diagnostic-unused-local-typedef
@@ -29,11 +35,17 @@ TEST(DtypeSelectiveBuildTest, UnknownOp) {
 }
 
 TEST(DtypeSelectiveBuildTest, OpWithoutDtype) {
+  // Create a minimal context for error handling in ET_SWITCH
+  struct {
+    [[noreturn]] void fail(torch::executor::Error /* error */) {
+      ET_CHECK_MSG(false, "Unsupported dtype");
+    }
+  } ctx;
   ET_EXPECT_DEATH(
       ET_SWITCH_TWO_TYPES(
           Float,
           Int,
-          exec_aten::ScalarType::Int,
+          executorch::aten::ScalarType::Int,
           ctx,
           "add.out",
           // @lint-ignore CLANGTIDY clang-diagnostic-unused-local-typedef
@@ -43,11 +55,17 @@ TEST(DtypeSelectiveBuildTest, OpWithoutDtype) {
 }
 
 TEST(DtypeSelectiveBuildTest, OpWithDtype) {
+  // Create a minimal context for error handling in ET_SWITCH
+  struct {
+    [[noreturn]] void fail(torch::executor::Error /* error */) {
+      ET_CHECK_MSG(false, "Unsupported dtype");
+    }
+  } ctx;
   ASSERT_EQ(
       ET_SWITCH_TWO_TYPES(
           Float,
           Int,
-          exec_aten::ScalarType::Float,
+          executorch::aten::ScalarType::Float,
           ctx,
           "add.out",
           // @lint-ignore CLANGTIDY clang-diagnostic-unused-local-typedef

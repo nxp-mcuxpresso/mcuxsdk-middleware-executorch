@@ -21,15 +21,24 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ArrayRef;
-using exec_aten::nullopt;
-using exec_aten::optional;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::ArrayRef;
+using executorch::aten::nullopt;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
+using std::optional;
 using torch::executor::testing::TensorFactory;
 
-using OptScalar = exec_aten::optional<Scalar>;
+using OptScalar = std::optional<Scalar>;
+
+namespace {
+template <typename T>
+std::vector<T> arange(T stop) {
+  std::vector<T> result(stop);
+  std::iota(result.begin(), result.end(), 0);
+  return result;
+}
+} // namespace
 
 class OpClampOutTest : public OperatorTest {
  protected:
@@ -114,6 +123,31 @@ class OpClampOutTest : public OperatorTest {
             // Should set all elements to max.
             {6, 6, 6, 6}, // expected_data
         },
+        {
+            std::string(__func__) + ": Simple clamp larger data",
+            {18}, // sizes
+            arange<typename ClampTestCase<DTYPE>::ctype>(18), // input_data
+            OptScalar(1), // min
+            OptScalar(6), // max
+            {1,
+             1,
+             2,
+             3,
+             4,
+             5,
+             6,
+             6,
+             6,
+             6,
+             6,
+             6,
+             6,
+             6,
+             6,
+             6,
+             6,
+             6}, // expected_data
+        },
     };
 
     run_test_cases(test_cases);
@@ -149,7 +183,7 @@ class OpClampOutTest : public OperatorTest {
   void run_floating_point_test_cases() {
     using ctype = typename TensorFactory<DTYPE>::ctype;
     using opt_infinity_type = std::conditional_t<
-        std::is_same<ctype, exec_aten::Half>::value,
+        std::is_same<ctype, executorch::aten::Half>::value,
         float,
         ctype>;
     constexpr auto kInfinity = std::numeric_limits<ctype>::infinity();
@@ -260,7 +294,7 @@ class OpClampTensorOutTest : public OperatorTest {
       const optional<Tensor>& min,
       const optional<Tensor>& max,
       Tensor& out) {
-    executorch::runtime::KernelRuntimeContext context{};
+    executorch::ET_RUNTIME_NAMESPACE::KernelRuntimeContext context{};
     return torch::executor::aten::clamp_outf(context, self, min, max, out);
   }
 };

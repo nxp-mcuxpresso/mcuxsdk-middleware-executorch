@@ -13,11 +13,13 @@ from executorch.backends.nxp.backend.ir.tensor_formatting import TensorFormat
 
 
 class SingleUnitaryDimensionChangeType(Enum):
-    SQUEEZE = 0,  # Removing one dimension with value 1
+    SQUEEZE = (0,)  # Removing one dimension with value 1
     UNSQUEEZE = 1  # Adding one dimensions with value 1
 
 
-def _single_unitary_dimension_change(from_shape, to_shape) -> tuple[int, SingleUnitaryDimensionChangeType] | None:
+def _single_unitary_dimension_change(  # noqa C901
+    from_shape, to_shape
+) -> tuple[int, SingleUnitaryDimensionChangeType] | None:
     """
     Get change details (index of change and type of change) if there's only single unitary change
     between input shapes. If there is no such a change, None is returned otherwise.
@@ -28,7 +30,9 @@ def _single_unitary_dimension_change(from_shape, to_shape) -> tuple[int, SingleU
     """
     change_type = SingleUnitaryDimensionChangeType.UNSQUEEZE
 
-    if abs(len(from_shape) - len(to_shape)) != 1:  # More than one added/removed dimension
+    if (
+        abs(len(from_shape) - len(to_shape)) != 1
+    ):  # More than one added/removed dimension
         return None
     elif len(from_shape) > len(to_shape):  # Make sure 'from_shape' is a shorter one
         from_shape, to_shape = to_shape, from_shape
@@ -69,14 +73,17 @@ def _single_unitary_dimension_change(from_shape, to_shape) -> tuple[int, SingleU
             return first_non_matching_forward, change_type
     # 'from_shape' matched partially from the beginning and partly from the end of 'to_shape',
     # for example: from_shape=(2,3,4), to_shape=(2,1,3,4)
-    elif (first_non_matching_forward == first_non_matching_backward) and to_shape[first_non_matching_forward] == 1:
+    elif (first_non_matching_forward == first_non_matching_backward) and to_shape[
+        first_non_matching_forward
+    ] == 1:
         return first_non_matching_forward, change_type
 
     return None
 
 
-def _get_permutation_for_single_unitary_change_in_NC_dims(shape_from: list[int], to_shape: list[int]) \
-        -> list[int] | None:
+def _get_permutation_for_single_unitary_change_in_NC_dims(
+    shape_from: list[int], to_shape: list[int]
+) -> list[int] | None:
     """
     Get permutation used by prepended 'Transpose' operator if there's only single unitary
     dimension change (single added/removed dimension with value 1) in batch or channel dimension
@@ -90,7 +97,9 @@ def _get_permutation_for_single_unitary_change_in_NC_dims(shape_from: list[int],
     old_shape_channel_first = translator.dims_to_channels_first(shape_from)
     new_shape_channel_first = translator.dims_to_channels_first(to_shape)
 
-    change_details = _single_unitary_dimension_change(old_shape_channel_first, new_shape_channel_first)
+    change_details = _single_unitary_dimension_change(
+        old_shape_channel_first, new_shape_channel_first
+    )
 
     # Mapping from dimension change details into permutation used in prepended 'Transpose' op
     # in format: permutation_mapping[SQUEEZE/UNSQUEEZE][old_shape dimension][changed index]
@@ -103,7 +112,7 @@ def _get_permutation_for_single_unitary_change_in_NC_dims(shape_from: list[int],
             5: {
                 0: [0, 4, 2, 3, 1],
                 1: [0, 2, 3, 1, 4],
-            }
+            },
         },
         SingleUnitaryDimensionChangeType.UNSQUEEZE: {
             3: {
@@ -113,8 +122,8 @@ def _get_permutation_for_single_unitary_change_in_NC_dims(shape_from: list[int],
             4: {
                 0: [3, 1, 2, 0],
                 1: [0, 3, 1, 2],
-            }
-        }
+            },
+        },
     }
 
     if change_details is not None:
@@ -151,7 +160,9 @@ def ensure_reshape_transposition(builder, ops: OpsList) -> list[int]:
     if input_format.is_channels_last() and not output_format.is_channels_last():
         # The dimensions of the tensor lose their meaning! Insert a transpose op, to change input to match ONNX.
 
-        permutation = list(translator.create_channels_last_to_channels_first_permutation(input_rank))
+        permutation = list(
+            translator.create_channels_last_to_channels_first_permutation(input_rank)
+        )
         transpose = builder.create_transpose_operator_before(t_op, 0, permutation)
         transpose.tmp_outputs[0].tensor_format = TensorFormat.CHANNELS_FIRST
 
@@ -162,7 +173,9 @@ def ensure_reshape_transposition(builder, ops: OpsList) -> list[int]:
         # The ONNX Reshape outputs a 'channels first' tensor. This has to stay the same, and then a Transpose operator
         # must be added, to change the tensor to 'channels last'.
 
-        permutation = list(translator.create_channels_first_to_channels_last_permutation(output_rank))
+        permutation = list(
+            translator.create_channels_first_to_channels_last_permutation(output_rank)
+        )
         transpose = builder.create_transpose_operator_after(t_op, 0, permutation)
         transpose.tmp_inputs[0].tensor_format = TensorFormat.CHANNELS_FIRST
 
@@ -177,23 +190,44 @@ def ensure_reshape_transposition(builder, ops: OpsList) -> list[int]:
             # It is safe to skip 'Transposition' at all because 'NC' dimensions are the same and
             # not mixed with other dimensions
             pass
-        elif permutation := _get_permutation_for_single_unitary_change_in_NC_dims(input_shape, new_shape):
+        elif permutation := _get_permutation_for_single_unitary_change_in_NC_dims(
+            input_shape, new_shape
+        ):
             # Single added/removed dimension with value 1
             transpose = builder.create_transpose_operator_before(t_op, 0, permutation)
-            transpose.tmp_outputs[0].tensor_format = TensorFormat.RESHAPE_SINGLE_UNITARY_TRANSPOSITION
+            transpose.tmp_outputs[0].tensor_format = (
+                TensorFormat.RESHAPE_SINGLE_UNITARY_TRANSPOSITION
+            )
 
             ops.add_pre(transpose)
         else:
             # The only way to convert this correctly is to insert a Transpose operator before, to make the input
             # channels first, and another Transpose after, to make the output channels last again.
-            last_to_first_perm = translator.create_channels_last_to_channels_first_permutation(input_rank)
-            ops.add_pre(builder.create_transpose_operator_before(t_op, 0, list(last_to_first_perm)))
+            last_to_first_perm = (
+                translator.create_channels_last_to_channels_first_permutation(
+                    input_rank
+                )
+            )
+            ops.add_pre(
+                builder.create_transpose_operator_before(
+                    t_op, 0, list(last_to_first_perm)
+                )
+            )
             t_op.tmp_inputs[0].tensor_format = TensorFormat.CHANNELS_FIRST
 
             new_shape = translator.dims_to_channels_first(new_shape)
 
-            first_to_last_perm = translator.create_channels_first_to_channels_last_permutation(output_rank)
-            ops.post_ops.insert(0, builder.create_transpose_operator_after(t_op, 0, list(first_to_last_perm)))
+            first_to_last_perm = (
+                translator.create_channels_first_to_channels_last_permutation(
+                    output_rank
+                )
+            )
+            ops.post_ops.insert(
+                0,
+                builder.create_transpose_operator_after(
+                    t_op, 0, list(first_to_last_perm)
+                ),
+            )
             t_op.tmp_outputs[0].tensor_format = TensorFormat.CHANNELS_FIRST
 
     return new_shape

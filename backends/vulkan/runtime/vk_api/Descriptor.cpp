@@ -28,7 +28,17 @@ BufferBindInfo::BufferBindInfo(
     const uint32_t offset_p)
     : handle(buffer_p.handle()),
       offset(buffer_p.mem_offset() + offset_p),
-      range(buffer_p.mem_range()) {}
+      range(buffer_p.mem_range() - offset_p) {}
+
+BufferBindInfo::BufferBindInfo(
+    const VulkanBuffer& buffer_p,
+    const size_t offset_p,
+    const size_t range_p)
+    : handle(buffer_p.handle()),
+      offset(buffer_p.mem_offset() + offset_p),
+      range(range_p) {
+  VK_CHECK_COND(range_p <= (buffer_p.mem_range() - offset_p));
+}
 
 //
 // ParamsBindList
@@ -144,6 +154,7 @@ DescriptorSet& DescriptorSet::bind(
 
 VkDescriptorSet DescriptorSet::get_bind_handle() const {
   std::vector<VkWriteDescriptorSet> write_descriptor_sets;
+  write_descriptor_sets.reserve(bindings_.size());
 
   for (const ResourceBinding& binding : bindings_) {
     VkWriteDescriptorSet write{
@@ -175,9 +186,7 @@ VkDescriptorSet DescriptorSet::get_bind_handle() const {
       0u,
       nullptr);
 
-  VkDescriptorSet ret = handle_;
-
-  return ret;
+  return handle_;
 }
 
 void DescriptorSet::add_binding(const ResourceBinding& binding) {

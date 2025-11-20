@@ -19,6 +19,7 @@
 
 #include <mutex>
 #include <unordered_map>
+#include <unordered_set>
 
 #define SV(x) ::vkcompute::vkapi::SpecVar(x)
 
@@ -82,6 +83,10 @@ class SpecVarList final {
 
   void append(const SpecVarList& other);
 
+  void reserve(const size_t size);
+
+  void append(const SpecVar& other);
+
   std::vector<VkSpecializationMapEntry> generate_map_entries() const;
 
   friend bool operator==(const SpecVarList& lhs, const SpecVarList& rhs);
@@ -121,7 +126,7 @@ VkImageLayout vk_layout(const PipelineStageFlags, const MemoryAccessFlags);
 
 class PipelineLayout final {
  public:
-  explicit PipelineLayout(VkDevice, VkDescriptorSetLayout);
+  explicit PipelineLayout(VkDevice, VkDescriptorSetLayout, const uint32_t);
 
   PipelineLayout(const PipelineLayout&) = delete;
   PipelineLayout& operator=(const PipelineLayout&) = delete;
@@ -154,6 +159,8 @@ class ComputePipeline final {
     SpecVarList specialization_constants;
   };
 
+  explicit ComputePipeline(VkDevice device, VkPipeline handle);
+
   explicit ComputePipeline(
       VkDevice device,
       const Descriptor& descriptor,
@@ -170,6 +177,7 @@ class ComputePipeline final {
  private:
   VkDevice device_;
   VkPipeline handle_;
+  std::vector<VkSpecializationMapEntry> map_entries_;
 
  public:
   inline VkPipeline handle() const {
@@ -180,6 +188,10 @@ class ComputePipeline final {
   // does not allow for move assignment. The swap function will
   // be used in the hash map.
   friend void swap(ComputePipeline& lhs, ComputePipeline& rhs) noexcept;
+
+  friend bool operator==(
+      const ComputePipeline::Descriptor& _1,
+      const ComputePipeline::Descriptor& _2);
 };
 
 class PipelineLayoutCache final {
@@ -193,13 +205,17 @@ class PipelineLayoutCache final {
   PipelineLayoutCache& operator=(PipelineLayoutCache&&) = delete;
 
   ~PipelineLayoutCache();
-
-  using Key = VkDescriptorSetLayout;
+  using Key = std::pair<VkDescriptorSetLayout, uint32_t>;
   using Value = PipelineLayout;
 
   struct Hasher {
-    inline size_t operator()(VkDescriptorSetLayout descriptor_layout) const {
-      return std::hash<VkDescriptorSetLayout>()(descriptor_layout);
+    inline size_t operator()(
+        std::pair<VkDescriptorSetLayout, uint32_t> key) const {
+      size_t seed = 0;
+      seed = utils::hash_combine(
+          seed, std::hash<VkDescriptorSetLayout>()(key.first));
+      seed = utils::hash_combine(seed, std::hash<uint32_t>()(key.second));
+      return seed;
     }
   };
 
@@ -212,7 +228,7 @@ class PipelineLayoutCache final {
   std::unordered_map<Key, Value, Hasher> cache_;
 
  public:
-  VkPipelineLayout retrieve(const Key&);
+  VkPipelineLayout retrieve(const VkDescriptorSetLayout, const uint32_t);
   void purge();
 };
 
@@ -284,6 +300,8 @@ class ComputePipelineCache final {
   const std::string cache_data_path_;
 
  public:
+  bool contains(const Key&);
+  void create_pipelines(const std::unordered_set<Key, Hasher>&);
   VkPipeline retrieve(const Key&);
   void purge();
 };

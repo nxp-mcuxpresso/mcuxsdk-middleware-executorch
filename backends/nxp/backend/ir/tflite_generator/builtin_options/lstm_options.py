@@ -3,11 +3,14 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.lib.tflite.LSTMOptions as libLSTMOptions
-from executorch.backends.nxp.backend.ir.lib.tflite.ActivationFunctionType import ActivationFunctionType
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
+import flatbuffers as fb
+from executorch.backends.nxp.backend.ir.lib.tflite.ActivationFunctionType import (
+    ActivationFunctionType,
+)
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 from executorch.backends.nxp.backend.ir.lib.tflite.LSTMKernelType import LSTMKernelType
 from executorch.backends.nxp.backend.ir.tflite_generator.meta import meta
@@ -25,9 +28,14 @@ class LSTM(meta.BuiltinOptions):
     # LSTM v4+
     asymmetric_quantize_inputs: bool
 
-    def __init__(self, cell_clip: float, proj_clip: float, kernel_type: LSTMKernelType = LSTMKernelType.FULL,
-                 asymmetric_quantize_inputs: bool = False,
-                 fused_activation_function: ActivationFunctionType = ActivationFunctionType.NONE) -> None:
+    def __init__(
+        self,
+        cell_clip: float,
+        proj_clip: float,
+        kernel_type: LSTMKernelType = LSTMKernelType.FULL,
+        asymmetric_quantize_inputs: bool = False,
+        fused_activation_function: ActivationFunctionType = ActivationFunctionType.NONE,
+    ) -> None:
         super().__init__(BuiltinOptions.LSTMOptions, BuiltinOperator.LSTM)
 
         self.cell_clip = cell_clip
@@ -39,10 +47,14 @@ class LSTM(meta.BuiltinOptions):
     def gen_tflite(self, builder: fb.Builder):
         libLSTMOptions.Start(builder)
 
-        libLSTMOptions.AddFusedActivationFunction(builder, self.fused_activation_function)
+        libLSTMOptions.AddFusedActivationFunction(
+            builder, self.fused_activation_function
+        )
         libLSTMOptions.AddCellClip(builder, self.cell_clip)
         libLSTMOptions.AddProjClip(builder, self.proj_clip)
         libLSTMOptions.AddKernelType(builder, self.kernel_type)
-        libLSTMOptions.AddAsymmetricQuantizeInputs(builder, self.asymmetric_quantize_inputs)
+        libLSTMOptions.AddAsymmetricQuantizeInputs(
+            builder, self.asymmetric_quantize_inputs
+        )
 
         return libLSTMOptions.End(builder)

@@ -14,6 +14,12 @@
 #include <iostream>
 #include <sstream>
 
+#ifdef USE_VOLK_HEADER_ONLY
+// For volk.h, define this before including volk.h in exactly one CPP file.
+#define VOLK_IMPLEMENTATION
+#include <volk.h>
+#endif /* USE_VOLK_HEADER_ONLY */
+
 namespace vkcompute {
 namespace vkapi {
 
@@ -92,28 +98,52 @@ VkInstance create_instance(const RuntimeConfig& config) {
   std::vector<const char*> enabled_layers;
   std::vector<const char*> enabled_extensions;
 
-  if (config.enable_validation_messages) {
-    std::vector<const char*> requested_layers{
-        // "VK_LAYER_LUNARG_api_dump",
-        "VK_LAYER_KHRONOS_validation",
-    };
-    std::vector<const char*> requested_extensions{
-#ifdef VK_EXT_debug_report
-        VK_EXT_DEBUG_REPORT_EXTENSION_NAME,
-#endif /* VK_EXT_debug_report */
-    };
+  std::vector<const char*> requested_layers;
+  std::vector<const char*> requested_extensions;
 
-    find_requested_layers_and_extensions(
-        enabled_layers,
-        enabled_extensions,
-        requested_layers,
-        requested_extensions);
+  if (config.enable_validation_messages) {
+    requested_layers.emplace_back("VK_LAYER_KHRONOS_validation");
+#ifdef VK_EXT_debug_report
+    requested_extensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+#endif /* VK_EXT_debug_report */
   }
+
+  VkInstanceCreateFlags instance_flags = 0;
+#ifdef __APPLE__
+  instance_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+  requested_extensions.emplace_back(
+      VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
+
+  find_requested_layers_and_extensions(
+      enabled_layers,
+      enabled_extensions,
+      requested_layers,
+      requested_extensions);
+
+  const void* instance_create_next = nullptr;
+  // VkConfig on Mac platforms does not expose debugPrintf settings for whatever
+  // reason so it has to be enabled manually.
+#if defined(__APPLE__) && defined(VULKAN_DEBUG)
+  std::vector<VkValidationFeatureEnableEXT> enabled_validation_features{
+      VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT,
+  };
+  VkValidationFeaturesEXT validation_features = {
+      VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT, // sType
+      nullptr, // pNext
+      static_cast<uint32_t>(
+          enabled_validation_features.size()), // enabledValidationFeatureCount
+      enabled_validation_features.data(), // pEnabledValidationFeatures
+      0,
+      nullptr, // pDisabledValidationFeatures
+  };
+  instance_create_next = &validation_features;
+#endif /* __APPLE__ && VULKAN_DEBUG */
 
   const VkInstanceCreateInfo instance_create_info{
       VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, // sType
-      nullptr, // pNext
-      0u, // flags
+      instance_create_next, // pNext
+      instance_flags, // flags
       &application_info, // pApplicationInfo
       static_cast<uint32_t>(enabled_layers.size()), // enabledLayerCount
       enabled_layers.data(), // ppEnabledLayerNames
@@ -234,7 +264,8 @@ uint32_t select_first(const std::vector<Runtime::DeviceMapping>& devices) {
 // Global runtime initialization
 //
 
-std::unique_ptr<Runtime> init_global_vulkan_runtime() {
+std::unique_ptr<Runtime> init_global_vulkan_runtime(
+    const std::string& cache_data_path) {
   // Load Vulkan drivers
 #if defined(USE_VULKAN_VOLK)
   if (VK_SUCCESS != volkInitialize()) {
@@ -254,7 +285,6 @@ std::unique_ptr<Runtime> init_global_vulkan_runtime() {
 #endif /* VULKAN_DEBUG */
   const bool init_default_device = true;
   const uint32_t num_requested_queues = 1; // TODO: raise this value
-  const std::string cache_data_path = ""; // TODO: expose to client
 
   const RuntimeConfig default_config{
       enable_validation_messages,
@@ -353,13 +383,29 @@ uint32_t Runtime::create_adapter(const Selector& selector) {
   return adapter_i;
 }
 
+std::string& set_and_get_pipeline_cache_data_path(
+    const std::string& file_path) {
+  // The global cache data path is declared as a static local variable for the
+  // same reasons as the global runtime below.
+#if defined(ETVK_DEFAULT_CACHE_PATH)
+  static std::string global_cache_data_path = ETVK_DEFAULT_CACHE_PATH;
+#else
+  static std::string global_cache_data_path;
+#endif /* ETVK_DEFAULT_CACHE_PATH */
+
+  if (file_path.size() > 0) {
+    global_cache_data_path = file_path;
+  }
+  return global_cache_data_path;
+}
+
 Runtime* runtime() {
   // The global vulkan runtime is declared as a static local variable within a
   // non-static function to ensure it has external linkage. If it were a global
   // static variable there would be one copy per translation unit that includes
   // Runtime.h as it would have internal linkage.
   static const std::unique_ptr<Runtime> p_runtime =
-      init_global_vulkan_runtime();
+      init_global_vulkan_runtime(set_and_get_pipeline_cache_data_path(""));
 
   VK_CHECK_COND(
       p_runtime,
@@ -367,6 +413,36 @@ Runtime* runtime() {
       "because it failed to initialize.");
 
   return p_runtime.get();
+}
+
+std::unique_ptr<Adapter> init_external_adapter(
+    const VkInstance instance,
+    const VkPhysicalDevice physical_device,
+    const VkDevice logical_device,
+    const uint32_t num_queues,
+    const std::string& cache_data_path) {
+  if (instance == VK_NULL_HANDLE || physical_device == VK_NULL_HANDLE ||
+      logical_device == VK_NULL_HANDLE) {
+    return std::unique_ptr<Adapter>(nullptr);
+  }
+
+  return std::make_unique<Adapter>(
+      instance, physical_device, logical_device, num_queues, cache_data_path);
+}
+
+Adapter* set_and_get_external_adapter(
+    const VkInstance instance,
+    const VkPhysicalDevice physical_device,
+    const VkDevice logical_device) {
+  static const std::unique_ptr<Adapter> p_external_adapter =
+      init_external_adapter(
+          instance,
+          physical_device,
+          logical_device,
+          1,
+          set_and_get_pipeline_cache_data_path(""));
+
+  return p_external_adapter.get();
 }
 
 } // namespace vkapi

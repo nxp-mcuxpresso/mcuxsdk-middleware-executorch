@@ -93,7 +93,6 @@ input = torch.randn(1, 2)
 label = torch.ones(1, dtype=torch.int64)
 
 # Captures the forward graph. The graph will look similar to the model definition now.
-# Will move to export_for_training soon which is the api planned to be supported in the long term.
 ep = export(net, (input, label))
 ```
 
@@ -230,7 +229,7 @@ After exporting the model for training, we can now try learning using CMake. We 
 cd executorch
 
 # Get a clean cmake-out directory
-./install_requirements.sh --clean
+./install_executorch.sh --clean
 mkdir cmake-out
 
 # Configure cmake

@@ -11,6 +11,9 @@ from executorch.backends.xnnpack.test.tester import Tester
 
 
 class TestSoftmax(unittest.TestCase):
+    def setUp(self):
+        torch._dynamo.reset()
+
     class Softmax(torch.nn.Module):
         def __init__(self, dim):
             super().__init__()
@@ -24,9 +27,14 @@ class TestSoftmax(unittest.TestCase):
         # as xnnpack only supports softmax on the last dimension.
         valid_dims = [len(inputs[0]) - 1, -1]
 
+        dynamic_shape = {}
+        for i in range(len(inputs[0].shape)):
+            dynamic_shape[i] = torch.export.Dim(f"dynamic_dim{i}", min=1, max=100)
+        dynamic_shape = (dynamic_shape,)
+
         for dim in valid_dims:
             (
-                Tester(self.Softmax(dim), inputs)
+                Tester(self.Softmax(dim), inputs, dynamic_shapes=dynamic_shape)
                 .export()
                 .check_count({"torch.ops.aten.softmax": 1})
                 .to_edge_transform_and_lower()
@@ -34,7 +42,7 @@ class TestSoftmax(unittest.TestCase):
                 .check_not(["executorch_exir_dialects_edge__ops_aten__softmax_default"])
                 .to_executorch()
                 .serialize()
-                .run_method_and_compare_outputs()
+                .run_method_and_compare_outputs(num_runs=5)
             )
 
     def test_fp16_softmax(self):

@@ -11,7 +11,8 @@ import numpy as np
 import torch
 from executorch.backends.qualcomm.utils.constants import QCOM_DATA
 
-from .node_visitor import NodeVisitor, register_node_visitor
+from .node_visitor import NodeVisitor
+from .node_visitor_manager import register_node_visitor
 from .qnn_constants import OpGather, QNN_OP_PACKAGE_NAME_QTI_AISW
 from .utils import get_parameter
 
@@ -28,24 +29,24 @@ class Embedding(NodeVisitor):
         node: torch.fx.Node,
         nodes_to_wrappers: Dict[torch.fx.Node, PyQnnWrapper.TensorWrapper],
     ) -> PyQnnWrapper.PyQnnOpWrapper:
-        weight_node = node.args[0]
+        weight_node = self.get_node(node.args[0])
         weight_tensor = get_parameter(weight_node, self.edge_program)
         weight_tensor_wrapper = self.define_tensor(
             weight_node,
+            node,
             weight_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_STATIC,
             nodes_to_wrappers,
-            is_input_tensor=True,
         )
 
         indices_node = node.args[1]
         indices_tensor = self.get_tensor(indices_node, node)
         indices_tensor_wrapper = self.define_tensor(
             indices_node,
+            node,
             indices_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
             nodes_to_wrappers,
-            is_input_tensor=True,
         )
 
         gather_input_tensors = [weight_tensor_wrapper, indices_tensor_wrapper]
@@ -53,10 +54,10 @@ class Embedding(NodeVisitor):
         output_tensor = self.get_tensor(node, node)
         output_tensor_wrapper = self.define_tensor(
             node,
+            node,
             output_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
             nodes_to_wrappers,
-            is_input_tensor=False,
         )
         gather_output_tensors = [output_tensor_wrapper]
 
