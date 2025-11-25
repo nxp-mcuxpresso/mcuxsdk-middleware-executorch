@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloIotaOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class StablehloIotaOptions(object):
     def GetRootAsStablehloIotaOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def StablehloIotaOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloIotaOptions
     def Init(self, buf, pos):
@@ -35,20 +40,26 @@ class StablehloIotaOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int64Flags, o + self._tab.Pos)
         return 0
 
+
 def StablehloIotaOptionsStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     StablehloIotaOptionsStart(builder)
 
+
 def StablehloIotaOptionsAddIotaDimension(builder, iotaDimension):
     builder.PrependInt64Slot(0, iotaDimension, 0)
+
 
 def AddIotaDimension(builder, iotaDimension):
     StablehloIotaOptionsAddIotaDimension(builder, iotaDimension)
 
+
 def StablehloIotaOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloIotaOptionsEnd(builder)

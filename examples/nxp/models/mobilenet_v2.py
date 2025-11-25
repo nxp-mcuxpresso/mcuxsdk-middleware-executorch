@@ -8,15 +8,17 @@ from typing import Iterator
 
 import torch
 import torchvision
-from torch.utils.data import DataLoader
-from torchvision import transforms
 
 from executorch.examples.models.mobilenet_v2 import MV2Model
+from torch.utils.data import DataLoader
+from torchvision import transforms
 
 
 class MobilenetV2(MV2Model):
 
-    def get_calibration_inputs(self, batch_size: int = 1) -> Iterator[tuple[torch.Tensor]]:
+    def get_calibration_inputs(
+        self, batch_size: int = 1
+    ) -> Iterator[tuple[torch.Tensor]]:
         """
         Returns an iterator for the Imagenette validation dataset, downloading it if necessary.
 
@@ -29,7 +31,9 @@ class MobilenetV2(MV2Model):
         dataloader = self.get_dataset(batch_size)
 
         # Return the iterator
-        dataloader_iterable = itertools.starmap(lambda data, label: (data,), iter(dataloader))
+        dataloader_iterable = itertools.starmap(
+            lambda data, label: (data,), iter(dataloader)
+        )
 
         # We want approximately 500 samples
         batch_count = 500 // batch_size
@@ -37,13 +41,19 @@ class MobilenetV2(MV2Model):
 
     def get_dataset(self, batch_size):
         # Define data transformations
-        data_transforms = transforms.Compose([
-            transforms.Resize((224, 224)),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet stats
-        ])
+        data_transforms = transforms.Compose(
+            [
+                transforms.Resize((224, 224)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                ),  # ImageNet stats
+            ]
+        )
 
-        dataset = torchvision.datasets.Imagenette(root='./data', split='val', transform=data_transforms, download=True)
+        dataset = torchvision.datasets.Imagenette(
+            root="./data", split="val", transform=data_transforms, download=True
+        )
         dataloader = torch.utils.data.DataLoader(
             dataset,
             batch_size=batch_size,
@@ -53,7 +63,9 @@ class MobilenetV2(MV2Model):
         return dataloader
 
 
-def gather_samples_per_class_from_dataloader(dataloader, num_samples_per_class=10) -> list[tuple]:
+def gather_samples_per_class_from_dataloader(
+    dataloader, num_samples_per_class=10
+) -> list[tuple]:
     """
     Gathers a specified number of samples for each class from a DataLoader.
 
@@ -70,7 +82,9 @@ def gather_samples_per_class_from_dataloader(dataloader, num_samples_per_class=1
     if not isinstance(num_samples_per_class, int) or num_samples_per_class <= 0:
         raise ValueError("num_samples_per_class must be a positive integer")
 
-    labels = sorted(list(set([label for _, label in dataloader.dataset])))  # Get unique labels from the dataset
+    labels = sorted(
+        set([label for _, label in dataloader.dataset])
+    )  # Get unique labels from the dataset
     samples_per_label = {label: [] for label in labels}  # Initialize dictionary
 
     for sample, label in dataloader:
@@ -89,10 +103,12 @@ def gather_samples_per_class_from_dataloader(dataloader, num_samples_per_class=1
 def generate_input_samples_file():
     model = MobilenetV2()
     dataloader = model.get_dataset(batch_size=1)
-    samples = gather_samples_per_class_from_dataloader(dataloader, num_samples_per_class=2)
+    samples = gather_samples_per_class_from_dataloader(
+        dataloader, num_samples_per_class=2
+    )
 
     torch.save(samples, "calibration_data.pt")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     generate_input_samples_file()

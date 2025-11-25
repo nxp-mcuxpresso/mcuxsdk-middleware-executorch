@@ -9,7 +9,8 @@ import executorch.backends.qualcomm.python.PyQnnWrapperAdaptor as PyQnnWrapper
 
 import torch
 
-from .node_visitor import NodeVisitor, register_node_visitor
+from .node_visitor import NodeVisitor
+from .node_visitor_manager import register_node_visitor
 from .qnn_constants import OpDequantize, QNN_OP_PACKAGE_NAME_QTI_AISW
 
 
@@ -27,25 +28,25 @@ class DequantizeOpBase(NodeVisitor):
         input_tensor = self.get_tensor(input_node, node)
         inp_tensor_wrapper = self.define_tensor(
             input_node,
+            node,
             input_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
             nodes_to_wrappers,
-            is_input_tensor=True,
         )
         dequant_input_tensors.append(inp_tensor_wrapper)
 
         output_tensor = self.get_tensor(node, node)
         output_tensor_wrapper = self.define_tensor(
             node,
+            node,
             output_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
             nodes_to_wrappers,
-            is_input_tensor=False,
         )
         dequant_output_tensors = [output_tensor_wrapper]
 
         dequant_op = PyQnnWrapper.PyQnnOpWrapper(
-            node.target.__name__,
+            node.name,
             QNN_OP_PACKAGE_NAME_QTI_AISW,
             OpDequantize.op_name,
         )

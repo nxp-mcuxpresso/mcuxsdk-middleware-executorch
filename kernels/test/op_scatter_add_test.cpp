@@ -17,9 +17,9 @@
 #include <cmath>
 
 using namespace ::testing;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::TensorFactory;
 
 class OpScatterAddOutTest : public OperatorTest {
@@ -281,7 +281,7 @@ class OpScatterAddOutTest : public OperatorTest {
 
 TEST_F(OpScatterAddOutTest, AllValidInputOutputSupport) {
 #define TEST_ENTRY(CTYPE, DTYPE) test_scatter_add_out<ScalarType::DTYPE>();
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 

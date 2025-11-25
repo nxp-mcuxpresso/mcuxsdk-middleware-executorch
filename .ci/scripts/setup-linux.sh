@@ -10,16 +10,21 @@ set -exu
 # shellcheck source=/dev/null
 source "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
-BUILD_TOOL=$1
-if [[ -z "${BUILD_TOOL:-}" ]]; then
-  echo "Missing build tool (require buck2 or cmake), exiting..."
-  exit 1
-else
-  echo "Setup Linux for ${BUILD_TOOL} ..."
-fi
+read -r BUILD_TOOL BUILD_MODE EDITABLE < <(parse_args "$@")
+echo "Build tool: $BUILD_TOOL, Mode: $BUILD_MODE"
 
 # As Linux job is running inside a Docker container, all of its dependencies
 # have already been installed, so we use PyTorch build from source here instead
 # of nightly. This allows CI to test against latest commits from PyTorch
-install_executorch "use-pt-pinned-commit"
-build_executorch_runner "${BUILD_TOOL}"
+if [[ "${EDITABLE:-false}" == "true" ]]; then
+  install_executorch --editable
+else
+  install_executorch
+fi
+build_executorch_runner "${BUILD_TOOL}" "${BUILD_MODE}"
+
+# Fix for libcxx version issues with PyTorch prebuilts.
+# Tracking in https://github.com/pytorch/executorch/issues/14679.
+if [ "$(uname -m)" == "aarch64" ]; then
+  conda install -y -c conda-forge libstdcxx-ng
+fi

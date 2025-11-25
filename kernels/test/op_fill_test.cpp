@@ -7,6 +7,7 @@
  */
 
 #include <executorch/kernels/test/FunctionHeaderWrapper.h> // Declares the operator
+#include <executorch/kernels/test/ScalarOverflowTestMacros.h>
 #include <executorch/kernels/test/TestUtil.h>
 #include <executorch/kernels/test/supported_features.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
@@ -16,9 +17,9 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::TensorFactory;
 
 class OpFillTest : public OperatorTest {
@@ -74,6 +75,15 @@ class OpFillTest : public OperatorTest {
     // Check `out` matches expected output.
     EXPECT_TENSOR_EQ(out, exp_out);
   }
+
+  template <ScalarType DTYPE>
+  void expect_bad_scalar_value_dies(const Scalar& bad_value) {
+    TensorFactory<DTYPE> tf;
+    Tensor a = tf.ones({2, 2});
+    Tensor out = tf.zeros({2, 2});
+
+    ET_EXPECT_KERNEL_FAILURE(context_, op_fill_scalar_out(a, bad_value, out));
+  }
 };
 
 // A macro for defining tests for both scalar and tensor variants of
@@ -92,7 +102,7 @@ class OpFillTest : public OperatorTest {
     TEST_FILL_OUT(test_fill_scalar_out, DTYPE);      \
   }
 
-ET_FORALL_REAL_TYPES_AND(Bool, GENERATE_SCALAR_INPUT_SUPPORT_TEST)
+ET_FORALL_REALHBBF16_TYPES(GENERATE_SCALAR_INPUT_SUPPORT_TEST)
 
 // Create input support tests for tensor variant.
 #define GENERATE_TENSOR_INPUT_SUPPORT_TEST(_, DTYPE) \
@@ -100,7 +110,7 @@ ET_FORALL_REAL_TYPES_AND(Bool, GENERATE_SCALAR_INPUT_SUPPORT_TEST)
     TEST_FILL_OUT(test_fill_tensor_out, DTYPE);      \
   }
 
-ET_FORALL_REAL_TYPES_AND(Bool, GENERATE_TENSOR_INPUT_SUPPORT_TEST)
+ET_FORALL_REALHBBF16_TYPES(GENERATE_TENSOR_INPUT_SUPPORT_TEST)
 
 TEST_F(OpFillTest, MismatchedOtherPropertiesDies) {
   TensorFactory<ScalarType::Int> tf;
@@ -157,3 +167,5 @@ TEST_F(OpFillTest, MismatchedOutputDtypeDies) {
   // Assert `out` can't be filled due to incompatible dtype.
   ET_EXPECT_KERNEL_FAILURE(context_, op_fill_scalar_out(self, 0.0, out));
 }
+
+GENERATE_SCALAR_OVERFLOW_TESTS(OpFillTest)

@@ -122,6 +122,8 @@ class _ProgramState:
     # Delegate data stored directly in the flatbuffer. Pointed to by BackendDelegateDataReference,
     # and should be copied to Program.backend_delegate_data.
     backend_delegate_data: List[BackendDelegateInlineData] = field(default_factory=list)
+    # Delegate cache that is used across all entry points. Key is the hash of the delegated payload.
+    backend_delegate_data_cache: Dict[str, int] = field(default_factory=dict)
 
     # Constants are optionally stored in external files.
     # Aggregate unique external constants into one buffer.
@@ -144,8 +146,8 @@ class _EmitterState:
     operators: List[Operator]
     delegates: List[BackendDelegate]
     operator_cache: Dict[Tuple[str, str], int]
-    delegate_cache: Dict[bytes, int]
     emit_stacktrace: bool
+    emit_mutable_buffer_names: bool
 
     spec2id_dict: Dict[TensorSpec, int] = field(default_factory=dict)
 
@@ -249,6 +251,7 @@ class _Emitter(torch.fx.Interpreter):
 
         self.concrete_output_ids: List[_AbstractValue] = []
         self.debug_handle_map: Dict[int, Union[int, List[int]]] = {}
+        self.instruction_id_to_num_outs_map: Dict[int, int] = {}
         self.instr_id_to_delegate_debug_id_map: Dict[
             int, Dict[str, Union[str, _DelegateDebugIdentifierMap]]
         ] = {}
@@ -384,38 +387,36 @@ class _Emitter(torch.fx.Interpreter):
         # Update buffer_idx to point to the end of the list where we are adding the new buffer.
         buffer = Buffer(storage=buffer_data)
 
-        # Tensor is mutable with initial state.
-        if allocation_info:
+        # Tensor is stored outside of the PTE file.
+        if (
+            spec.extra_tensor_info is not None
+            and spec.extra_tensor_info.fully_qualified_name is not None
+            and spec.extra_tensor_info.location == TensorDataLocation.EXTERNAL
+        ):
+            assert (
+                constant_tag is not None
+            ), "Constant tag is not set for external tensor"
+            # TODO (#7633): Handle case where we have both mutable and non mutable weights that we want to put in the same external file.
+            # We will need to create 2 segments in that case, but it'll be a bit until we see this case. LLM finetuning will probably require this.
+
+            buffer_idx = len(self.program_state.external_constant_buffer)
+            self.program_state.external_constant_hash[hashed] = buffer_idx
+            self.program_state.external_constant_buffer.append(buffer_data)
+            if constant_tag not in self.program_state.external_constant_map:
+                self.program_state.external_constant_map[constant_tag] = {}
+            self.program_state.external_constant_map[constant_tag][
+                spec.extra_tensor_info.fully_qualified_name  # pyre-ignore Undefined attribute [16]: `Optional` has no attribute `fully_qualified_name`.
+            ] = buffer_idx
+        # Tensor is mutable with initial state. Place into mutable segment
+        elif allocation_info:
             buffer_idx = len(self.program_state.mutable_buffer)
             self.program_state.cached_spec_mutable_hash_values[hashed] = buffer_idx
             self.program_state.mutable_buffer.append(buffer)
-
-        # Tensor is constant.
+        # Tensor is stored in the PTE file.
         else:
-            # Tensor is stored outside of the PTE file.
-            if (
-                spec.extra_tensor_info is not None
-                and spec.extra_tensor_info.fully_qualified_name is not None
-                and spec.extra_tensor_info.location == TensorDataLocation.EXTERNAL
-            ):
-                assert (
-                    constant_tag is not None
-                ), "Constant tag is not set for external tensor"
-
-                buffer_idx = len(self.program_state.external_constant_buffer)
-                self.program_state.external_constant_hash[hashed] = buffer_idx
-                self.program_state.external_constant_buffer.append(buffer_data)
-                if constant_tag not in self.program_state.external_constant_map:
-                    self.program_state.external_constant_map[constant_tag] = {}
-                self.program_state.external_constant_map[constant_tag][
-                    spec.extra_tensor_info.fully_qualified_name  # pyre-ignore Undefined attribute [16]: `Optional` has no attribute `fully_qualified_name`.
-                ] = buffer_idx
-
-            # Tensor is stored in the PTE file.
-            else:
-                buffer_idx = len(self.program_state.constant_buffer)
-                self.program_state.cached_spec_hash_values[hashed] = buffer_idx
-                self.program_state.constant_buffer.append(buffer)
+            buffer_idx = len(self.program_state.constant_buffer)
+            self.program_state.cached_spec_hash_values[hashed] = buffer_idx
+            self.program_state.constant_buffer.append(buffer)
 
         return buffer_idx
 
@@ -455,7 +456,7 @@ class _Emitter(torch.fx.Interpreter):
 
             hashed = hashlib.sha256(buffer_data).hexdigest()
 
-            if allocation_info:
+            if allocation_info and spec.extra_tensor_info is None:
                 buffer_idx = self.program_state.cached_spec_mutable_hash_values.get(
                     hashed, -1
                 )
@@ -942,6 +943,16 @@ class _Emitter(torch.fx.Interpreter):
     def _emit_view(self, args: Tuple[_Argument, ...]) -> _EmitterValue:
         assert len(args) == 2
 
+        # Elide the view if it is static and memory planned
+        spec = self.node.meta["spec"]
+        is_static = spec.is_static_shape_tensor
+        is_memory_planned = (spec.mem_id is not None) and (spec.mem_offset is not None)
+        is_memory_planned = is_memory_planned or (
+            spec.const and spec.storage is not None
+        )
+        if is_static and is_memory_planned:
+            return self._emit_spec(spec)
+
         self_arg = self._emit_argument(args[0], torch.TensorType)  # pyre-ignore[6]
         size_arg = self._emit_argument(args[1], torch.ListType.ofInts())
         out_arg = self._emit_argument(
@@ -991,7 +1002,11 @@ class _Emitter(torch.fx.Interpreter):
                     and node.meta.get("debug_handle") is not None
                 ):
                     debug_handle_list.append(node.meta.get("debug_handle"))
+            output_node = lowered_module.original_module.graph.output_node()
+            outputs = output_node.args[0]
+            num_outputs = len(outputs) if isinstance(outputs, (list, tuple)) else 1
             self.debug_handle_map[emitter_id] = debug_handle_list
+            self.instruction_id_to_num_outs_map[emitter_id] = num_outputs
             # Debug handle for this node is the emitter_id which is essentially the index of the
             # instruction in the chain.
             self.node.meta["debug_handle"] = emitter_id
@@ -1018,7 +1033,7 @@ class _Emitter(torch.fx.Interpreter):
         code, module hierarchy etc.
         """
         delegate_map = {}
-        if hasattr(lowered_module, "meta"):
+        if lowered_module.meta is not None:
             delegate_map = lowered_module.meta.get("debug_handle_map", {})
 
         self.instr_id_to_delegate_debug_id_map[delegate_instruction_id] = {
@@ -1073,8 +1088,8 @@ class _Emitter(torch.fx.Interpreter):
         """Emit the delegates inputs and outputs as specified by the schema, then emit the
         delegate's blob."""
         processed_bytes = lowered_module.processed_bytes
-
-        delegate_index = self.emitter_state.delegate_cache.get(processed_bytes)
+        hashed = hashlib.sha256(processed_bytes).hexdigest()
+        delegate_index = self.program_state.backend_delegate_data_cache.get(hashed)
         delegate_ret = None
 
         if isinstance(self.node.meta["spec"], list):
@@ -1112,22 +1127,20 @@ class _Emitter(torch.fx.Interpreter):
         if delegate_index is None:
             # Allocate an entry for the data. TODO(T150113674): Reuse any duplicate entries if
             # present.
-            data_index: int = len(self.program_state.backend_delegate_data)
+            delegate_index = len(self.program_state.backend_delegate_data_cache)
+            self.program_state.backend_delegate_data_cache[hashed] = delegate_index
             self.program_state.backend_delegate_data.append(
                 BackendDelegateInlineData(data=processed_bytes)
             )
 
-            backend_delegate = BackendDelegate(
-                id=lowered_module.backend_id,
-                processed=BackendDelegateDataReference(
-                    location=DataLocation.INLINE, index=data_index
-                ),
-                compile_specs=lowered_module.compile_specs,
-            )
-            delegate_index = len(self.emitter_state.delegate_cache)
-            self.emitter_state.delegates.append(backend_delegate)
-            self.emitter_state.delegate_cache[processed_bytes] = delegate_index
-
+        backend_delegate = BackendDelegate(
+            id=lowered_module.backend_id,
+            processed=BackendDelegateDataReference(
+                location=DataLocation.INLINE, index=delegate_index
+            ),
+            compile_specs=lowered_module.compile_specs,
+        )
+        self.emitter_state.delegates.append(backend_delegate)
         # TODO(angelayi) Will need to emit the kwargs too, in the correct order according to the
         # function's spec and with default arguments. This requires us to store the function's spec
         # in to_backend()
@@ -1140,7 +1153,12 @@ class _Emitter(torch.fx.Interpreter):
             delegate_args.append(elem.id)
 
         self.chain.instructions.append(
-            Instruction(DelegateCall(delegate_index=delegate_index, args=delegate_args))
+            Instruction(
+                DelegateCall(
+                    delegate_index=len(self.emitter_state.delegates) - 1,
+                    args=delegate_args,
+                )
+            )
         )
 
         return delegate_ret
@@ -1182,7 +1200,7 @@ class _Emitter(torch.fx.Interpreter):
                     # The runtime currently only supports tensors with offset 0.
                     storage_offset=0,
                     sizes=[0],
-                    dim_order=[],
+                    dim_order=[0],
                     requires_grad=False,
                     layout=0,
                     data_buffer_idx=0,
@@ -1462,10 +1480,11 @@ class _Emitter(torch.fx.Interpreter):
             # pyre-ignore
             return self._emit_free(args[0])
 
-        elif target is torch.ops.higher_order.cond:
-            return self._emit_control_flow(target, args, kwargs)
-
-        elif target is torch.ops.higher_order.map_impl:
+        elif target in (
+            torch.ops.higher_order.cond,
+            torch.ops.higher_order.map_impl,
+            torch.ops.higher_order.while_loop,
+        ):
             return self._emit_control_flow(target, args, kwargs)
 
         elif target == executorch_call_delegate:
@@ -1575,7 +1594,8 @@ class _TopLevelEmitter(_Emitter):
                     warnings.warn(
                         "Mutation on a buffer in the model is detected. ExecuTorch assumes "
                         "buffers that are mutated in the graph have a meaningless initial state, "
-                        "only the shape and dtype will be serialized.",
+                        "only the shape and dtype will be serialized, unless a pass which sets "
+                        'meta["et_init_buffer"] to True such as InitializedMutableBufferPass is run.',
                         UserWarning,
                         stacklevel=1,
                     )
@@ -1592,7 +1612,7 @@ class _TopLevelEmitter(_Emitter):
             )
         return fqn, is_mutable_buffer
 
-    def placeholder(
+    def placeholder(  # noqa: C901
         self, target: _Target, args: Tuple[_Argument, ...], kwargs: Dict[str, _Argument]
     ) -> _AbstractValue:
         """Emits the value within the placeholder node.
@@ -1602,6 +1622,7 @@ class _TopLevelEmitter(_Emitter):
         """
         spec = self.node.meta["spec"]
         constant_tag = self.node.meta.get("constant_tag", None)
+        initialize_buffer = self.node.meta.get("et_init_buffer", None)
         is_user_input = True
 
         if isinstance(target, str) and isinstance(spec, TensorSpec):
@@ -1620,6 +1641,26 @@ class _TopLevelEmitter(_Emitter):
                 else:
                     spec.extra_tensor_info.fully_qualified_name = fqn
                     spec.extra_tensor_info.location = TensorDataLocation.EXTERNAL
+
+            if is_mutable_buffer:
+                # Emit names if we are supposed to.
+                if self.emitter_state.emit_mutable_buffer_names:
+                    if spec.extra_tensor_info is None:
+                        spec.extra_tensor_info = ExtraTensorInfo(
+                            fully_qualified_name=fqn,
+                            location=TensorDataLocation.SEGMENT,
+                        )
+                    else:
+                        spec.extra_tensor_info.fully_qualified_name = fqn
+                # if We aren't emitting the name then it needs to be memory planned.
+                elif spec.mem_id is None or spec.mem_offset is None:
+                    raise InternalError(
+                        self._emit_node_specific_error(
+                            self.node,
+                            # [2:] to remove the b_ prefix buffers get
+                            f'Mutable buffer "{target[2:]}" must have a memory id and offset if we are emitting it without a name. Please either memory plan your mutable buffers or call to_executorch with config=ExecutorchBackendConfig(emit_mutable_buffer_names=True)',
+                        )
+                    )
 
             # From the fqn find the corresponding tensor
             real_tensor = None
@@ -1655,7 +1696,10 @@ class _TopLevelEmitter(_Emitter):
                 spec.storage = real_tensor.untyped_storage()
 
             # User inputs and mutable buffers are not constants, other buffers or parameters are.
-            spec.const = not (is_user_input or is_mutable_buffer)
+            if initialize_buffer and is_mutable_buffer:
+                spec.const = True
+            else:
+                spec.const = not (is_user_input or is_mutable_buffer)
 
         evalue = (
             self._tensor_spec_to_evalue(spec, constant_tag)

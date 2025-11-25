@@ -11,20 +11,21 @@
 Representation of the TFLite operator 'AddN'.
 """
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+import flatbuffers as fb
 from executorch.backends.nxp.backend.ir.lib.tflite import (
-    BuiltinOptions as libBuiltinOptions,
+    AddNOptions as libAddNOptions,
     BuiltinOperator as libBuiltinOperator,
-    AddNOptions as libAddNOptions
+    BuiltinOptions as libBuiltinOptions,
 )
 
 
 class AddN(meta.BuiltinOptions):
     def __init__(self) -> None:
-        super().__init__(libBuiltinOptions.BuiltinOptions.AddNOptions,
-                         libBuiltinOperator.BuiltinOperator.ADD_N)
+        super().__init__(
+            libBuiltinOptions.BuiltinOptions.AddNOptions,
+            libBuiltinOperator.BuiltinOperator.ADD_N,
+        )
 
     def gen_tflite(self, builder: fb.Builder):
         libAddNOptions.Start(builder)

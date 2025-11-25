@@ -7,54 +7,66 @@ from collections import defaultdict
 from copy import deepcopy
 
 from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
-from executorch.backends.nxp.backend.ir.tflite_optimizer.operator_rules import AllInputsComeFrom
-from executorch.backends.nxp.backend.ir.tflite_optimizer.optimizations.base_optimization import BaseOptimization
-from executorch.backends.nxp.backend.ir.tflite_optimizer.pattern_matcher import Op, PatternMatcher
-from executorch.backends.nxp.backend.ir.tflite_optimizer.tensor_rules import TensorHasOneConsumer, TensorsHaveSameQuantization
+from executorch.backends.nxp.backend.ir.tflite_optimizer.operator_rules import (
+    AllInputsComeFrom,
+)
+from executorch.backends.nxp.backend.ir.tflite_optimizer.optimizations.base_optimization import (
+    BaseOptimization,
+)
+from executorch.backends.nxp.backend.ir.tflite_optimizer.pattern_matcher import (
+    Op,
+    PatternMatcher,
+)
+from executorch.backends.nxp.backend.ir.tflite_optimizer.tensor_rules import (
+    TensorHasOneConsumer,
+    TensorsHaveSameQuantization,
+)
 
 
 class MoveActivationBeforeConcatenation(BaseOptimization):
     """
-        Move some operators around in the following pattern.
-        This is a common pattern that emerges from the conversion of separable convolutions.
+    Move some operators around in the following pattern.
+    This is a common pattern that emerges from the conversion of separable convolutions.
 
-              │                │                            │                │
-          ┌───▼────┐       ┌───▼────┐                   ┌───▼────┐       ┌───▼────┐
-          │ Conv2D │  ...  │ Conv2D │                   │ Conv2D │  ...  │ Conv2D │
-          └───┬────┘       └───┬────┘                   └───┬────┘       └───┬────┘
-              └──┐          ┌──┘                            │                │
-              ┌──▼──────────▼─┐                          ┌──▼───┐         ┌──▼───┐
-              │ Concatenation │           ─────►         │ Relu │   ...   │ Relu │
-              └───────┬───────┘                          └──┬───┘         └──┬───┘
-                      │  'x'                                └──┐          ┌──┘
-                   ┌──▼───┐                                 ┌──▼──────────▼─┐
-                   │ Relu │                                 │ Concatenation │
-                   └──┬───┘                                 └───────┬───────┘
-                      │  'y'                                        │
+          │                │                            │                │
+      ┌───▼────┐       ┌───▼────┐                   ┌───▼────┐       ┌───▼────┐
+      │ Conv2D │  ...  │ Conv2D │                   │ Conv2D │  ...  │ Conv2D │
+      └───┬────┘       └───┬────┘                   └───┬────┘       └───┬────┘
+          └──┐          ┌──┘                            │                │
+          ┌──▼──────────▼─┐                          ┌──▼───┐         ┌──▼───┐
+          │ Concatenation │           ─────►         │ Relu │   ...   │ Relu │
+          └───────┬───────┘                          └──┬───┘         └──┬───┘
+                  │  'x'                                └──┐          ┌──┘
+               ┌──▼───┐                                 ┌──▼──────────▼─┐
+               │ Relu │                                 │ Concatenation │
+               └──┬───┘                                 └───────┬───────┘
+                  │  'y'                                        │
     """
 
-    activations = ['Relu', 'ReluN1To1', 'Relu6', 'Tanh', 'Sign']
+    activations = ["Relu", "ReluN1To1", "Relu6", "Tanh", "Sign"]
 
     def __call__(self) -> bool:
         matcher = PatternMatcher(
             self._builder,
             [
-                Op(['Concatenation'], None, ['x'], [AllInputsComeFrom('Conv2D')]),
-                Op(self.activations, ['x'], ['y'])
+                Op(["Concatenation"], None, ["x"], [AllInputsComeFrom("Conv2D")]),
+                Op(self.activations, ["x"], ["y"]),
             ],
             [
-                TensorHasOneConsumer('x'),
-
+                TensorHasOneConsumer("x"),
                 # If the activation function is not changing the quantization parameters, it can be moved without
                 #  messing with the quantization elsewhere.
-                TensorsHaveSameQuantization(['x', 'y'])
-            ])
+                TensorsHaveSameQuantization(["x", "y"]),
+            ],
+        )
 
         to_remove = []
 
         # Mapping an operator to a list of operators. These operators (value) will later be added into the TFLite
         #  model's `operators` in front of the specified operator (key).
-        to_add: dict[tflite_model.Operator, list[tflite_model.Operator]] = defaultdict(lambda: [])
+        to_add: dict[tflite_model.Operator, list[tflite_model.Operator]] = defaultdict(
+            lambda: []
+        )
 
         for [concat, activation], _, _, _ in matcher.match_patterns():
             new_concat_inputs = []
@@ -65,9 +77,13 @@ class MoveActivationBeforeConcatenation(BaseOptimization):
                 new_activation_output = self._builder.duplicate_tensor(concat_input)
                 new_activation.tmp_outputs = [new_activation_output]
 
-                to_add[concat].append(new_activation)  # Insert the new activation into the model later.
+                to_add[concat].append(
+                    new_activation
+                )  # Insert the new activation into the model later.
 
-                new_concat_inputs.append(new_activation_output)  # Connect the activation with the `Concatenation`.
+                new_concat_inputs.append(
+                    new_activation_output
+                )  # Connect the activation with the `Concatenation`.
 
             concat.tmp_inputs = new_concat_inputs
 

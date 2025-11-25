@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class Operator(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class Operator(object):
     def GetRootAsOperator(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def OperatorBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # Operator
     def Init(self, buf, pos):
@@ -32,7 +37,9 @@ class Operator(object):
     def OpcodeIndex(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags, o + self._tab.Pos
+            )
         return 0
 
     # Operator
@@ -40,7 +47,10 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Int32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # Operator
@@ -67,7 +77,10 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Int32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # Operator
@@ -101,6 +114,7 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             from flatbuffers.table import Table
+
             obj = Table(bytearray(), 0)
             self._tab.Union(obj, o)
             return obj
@@ -111,7 +125,10 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint8Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # Operator
@@ -145,7 +162,10 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.BoolFlags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
+            return self._tab.Get(
+                flatbuffers.number_types.BoolFlags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1),
+            )
         return 0
 
     # Operator
@@ -172,7 +192,10 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(20))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Int32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # Operator
@@ -198,14 +221,18 @@ class Operator(object):
     def LargeCustomOptionsOffset(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(22))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # Operator
     def LargeCustomOptionsSize(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(24))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+            return self._tab.Get(
+                flatbuffers.number_types.Uint64Flags, o + self._tab.Pos
+            )
         return 0
 
     # Operator
@@ -220,127 +247,182 @@ class Operator(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(28))
         if o != 0:
             from flatbuffers.table import Table
+
             obj = Table(bytearray(), 0)
             self._tab.Union(obj, o)
             return obj
         return None
 
+
 def OperatorStart(builder):
     builder.StartObject(13)
+
 
 def Start(builder):
     OperatorStart(builder)
 
+
 def OperatorAddOpcodeIndex(builder, opcodeIndex):
     builder.PrependUint32Slot(0, opcodeIndex, 0)
+
 
 def AddOpcodeIndex(builder, opcodeIndex):
     OperatorAddOpcodeIndex(builder, opcodeIndex)
 
+
 def OperatorAddInputs(builder, inputs):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(inputs), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(inputs), 0
+    )
+
 
 def AddInputs(builder, inputs):
     OperatorAddInputs(builder, inputs)
 
+
 def OperatorStartInputsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartInputsVector(builder, numElems: int) -> int:
     return OperatorStartInputsVector(builder, numElems)
 
+
 def OperatorAddOutputs(builder, outputs):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(outputs), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(outputs), 0
+    )
+
 
 def AddOutputs(builder, outputs):
     OperatorAddOutputs(builder, outputs)
 
+
 def OperatorStartOutputsVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartOutputsVector(builder, numElems: int) -> int:
     return OperatorStartOutputsVector(builder, numElems)
 
+
 def OperatorAddBuiltinOptionsType(builder, builtinOptionsType):
     builder.PrependUint8Slot(3, builtinOptionsType, 0)
+
 
 def AddBuiltinOptionsType(builder, builtinOptionsType):
     OperatorAddBuiltinOptionsType(builder, builtinOptionsType)
 
+
 def OperatorAddBuiltinOptions(builder, builtinOptions):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(builtinOptions), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(builtinOptions), 0
+    )
+
 
 def AddBuiltinOptions(builder, builtinOptions):
     OperatorAddBuiltinOptions(builder, builtinOptions)
 
+
 def OperatorAddCustomOptions(builder, customOptions):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(customOptions), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        5, flatbuffers.number_types.UOffsetTFlags.py_type(customOptions), 0
+    )
+
 
 def AddCustomOptions(builder, customOptions):
     OperatorAddCustomOptions(builder, customOptions)
 
+
 def OperatorStartCustomOptionsVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartCustomOptionsVector(builder, numElems: int) -> int:
     return OperatorStartCustomOptionsVector(builder, numElems)
 
+
 def OperatorAddCustomOptionsFormat(builder, customOptionsFormat):
     builder.PrependInt8Slot(6, customOptionsFormat, 0)
+
 
 def AddCustomOptionsFormat(builder, customOptionsFormat):
     OperatorAddCustomOptionsFormat(builder, customOptionsFormat)
 
+
 def OperatorAddMutatingVariableInputs(builder, mutatingVariableInputs):
-    builder.PrependUOffsetTRelativeSlot(7, flatbuffers.number_types.UOffsetTFlags.py_type(mutatingVariableInputs), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        7, flatbuffers.number_types.UOffsetTFlags.py_type(mutatingVariableInputs), 0
+    )
+
 
 def AddMutatingVariableInputs(builder, mutatingVariableInputs):
     OperatorAddMutatingVariableInputs(builder, mutatingVariableInputs)
 
+
 def OperatorStartMutatingVariableInputsVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
 
 def StartMutatingVariableInputsVector(builder, numElems: int) -> int:
     return OperatorStartMutatingVariableInputsVector(builder, numElems)
 
+
 def OperatorAddIntermediates(builder, intermediates):
-    builder.PrependUOffsetTRelativeSlot(8, flatbuffers.number_types.UOffsetTFlags.py_type(intermediates), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        8, flatbuffers.number_types.UOffsetTFlags.py_type(intermediates), 0
+    )
+
 
 def AddIntermediates(builder, intermediates):
     OperatorAddIntermediates(builder, intermediates)
 
+
 def OperatorStartIntermediatesVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartIntermediatesVector(builder, numElems: int) -> int:
     return OperatorStartIntermediatesVector(builder, numElems)
 
+
 def OperatorAddLargeCustomOptionsOffset(builder, largeCustomOptionsOffset):
     builder.PrependUint64Slot(9, largeCustomOptionsOffset, 0)
+
 
 def AddLargeCustomOptionsOffset(builder, largeCustomOptionsOffset):
     OperatorAddLargeCustomOptionsOffset(builder, largeCustomOptionsOffset)
 
+
 def OperatorAddLargeCustomOptionsSize(builder, largeCustomOptionsSize):
     builder.PrependUint64Slot(10, largeCustomOptionsSize, 0)
+
 
 def AddLargeCustomOptionsSize(builder, largeCustomOptionsSize):
     OperatorAddLargeCustomOptionsSize(builder, largeCustomOptionsSize)
 
+
 def OperatorAddBuiltinOptions2Type(builder, builtinOptions2Type):
     builder.PrependUint8Slot(11, builtinOptions2Type, 0)
+
 
 def AddBuiltinOptions2Type(builder, builtinOptions2Type):
     OperatorAddBuiltinOptions2Type(builder, builtinOptions2Type)
 
+
 def OperatorAddBuiltinOptions2(builder, builtinOptions2):
-    builder.PrependUOffsetTRelativeSlot(12, flatbuffers.number_types.UOffsetTFlags.py_type(builtinOptions2), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        12, flatbuffers.number_types.UOffsetTFlags.py_type(builtinOptions2), 0
+    )
+
 
 def AddBuiltinOptions2(builder, builtinOptions2):
     OperatorAddBuiltinOptions2(builder, builtinOptions2)
 
+
 def OperatorEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return OperatorEnd(builder)

@@ -21,9 +21,9 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ArrayRef;
-using exec_aten::Scalar;
-using exec_aten::Tensor;
+using executorch::aten::ArrayRef;
+using executorch::aten::Scalar;
+using executorch::aten::Tensor;
 using executorch::extension::FileDataLoader;
 using executorch::extension::prepare_input_tensors;
 using executorch::runtime::Error;
@@ -88,6 +88,8 @@ TEST_F(AllocationFailureStressTest, End2EndIncreaseRuntimeMemUntilSuccess) {
     // once load was successful.
     auto input_cleanup = prepare_input_tensors(*method);
     ASSERT_EQ(input_cleanup.error(), Error::Ok);
+    auto input_err = method->set_input(executorch::runtime::EValue(1.0), 2);
+    ASSERT_EQ(input_err, Error::Ok);
     err = method->execute();
     ASSERT_EQ(err, Error::Ok);
   }
@@ -123,6 +125,8 @@ TEST_F(AllocationFailureStressTest, End2EndNonConstantMemUntilSuccess) {
     // once load was successful.
     auto input_cleanup = prepare_input_tensors(*method);
     ASSERT_EQ(input_cleanup.error(), Error::Ok);
+    auto input_err = method->set_input(executorch::runtime::EValue(1.0), 2);
+    ASSERT_EQ(input_err, Error::Ok);
     err = method->execute();
     ASSERT_EQ(err, Error::Ok);
   }

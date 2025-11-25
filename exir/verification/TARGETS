@@ -1,25 +1,22 @@
-load("@fbcode_macros//build_defs:cpp_python_extension.bzl", "cpp_python_extension")
-load("@fbcode_macros//build_defs:python_library.bzl", "python_library")
+load("@fbsource//xplat/executorch/build:runtime_wrapper.bzl", "runtime")
 load("@fbcode_macros//build_defs:python_unittest.bzl", "python_unittest")
 
 oncall("executorch")
 
-cpp_python_extension(
+runtime.cxx_python_extension(
     name = "bindings",
     srcs = [
         "bindings.cpp",
     ],
     deps = [
+        "fbsource//third-party/pybind11:pybind11",
         "//caffe2:torch-cpp-cpu",
         "//caffe2:torch_extension",
         "//caffe2/c10:c10",
     ],
-    external_deps = [
-        "pybind11",
-    ],
 )
 
-python_library(
+runtime.python_library(
     name = "interpreter",
     srcs = [
         "interpreter.py",
@@ -34,7 +31,7 @@ python_library(
     ],
 )
 
-python_library(
+runtime.python_library(
     name = "devhtml",
     srcs = [
         "dev_html.py",
@@ -44,7 +41,7 @@ python_library(
     ],
 )
 
-python_library(
+runtime.python_library(
     name = "verifier",
     srcs = [
         "arg_validator.py",

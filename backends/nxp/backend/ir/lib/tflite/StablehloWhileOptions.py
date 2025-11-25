@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloWhileOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class StablehloWhileOptions(object):
     def GetRootAsStablehloWhileOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def StablehloWhileOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloWhileOptions
     def Init(self, buf, pos):
@@ -42,26 +47,34 @@ class StablehloWhileOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def StablehloWhileOptionsStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     StablehloWhileOptionsStart(builder)
 
+
 def StablehloWhileOptionsAddCondSubgraphIndex(builder, condSubgraphIndex):
     builder.PrependInt32Slot(0, condSubgraphIndex, 0)
+
 
 def AddCondSubgraphIndex(builder, condSubgraphIndex):
     StablehloWhileOptionsAddCondSubgraphIndex(builder, condSubgraphIndex)
 
+
 def StablehloWhileOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex):
     builder.PrependInt32Slot(1, bodySubgraphIndex, 0)
+
 
 def AddBodySubgraphIndex(builder, bodySubgraphIndex):
     StablehloWhileOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex)
 
+
 def StablehloWhileOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloWhileOptionsEnd(builder)

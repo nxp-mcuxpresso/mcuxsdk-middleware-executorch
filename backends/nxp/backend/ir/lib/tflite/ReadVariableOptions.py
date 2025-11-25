@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class ReadVariableOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,22 +22,29 @@ class ReadVariableOptions(object):
     def GetRootAsReadVariableOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def ReadVariableOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # ReadVariableOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
+
 def ReadVariableOptionsStart(builder):
     builder.StartObject(0)
+
 
 def Start(builder):
     ReadVariableOptionsStart(builder)
 
+
 def ReadVariableOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ReadVariableOptionsEnd(builder)

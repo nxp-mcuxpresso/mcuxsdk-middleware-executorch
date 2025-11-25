@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class BuiltinOptions2(object):
     NONE = 0
     StablehloConcatenateOptions = 1

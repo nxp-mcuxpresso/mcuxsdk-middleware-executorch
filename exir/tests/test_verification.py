@@ -35,7 +35,7 @@ class TestVerification(unittest.TestCase):
 
         # Generate program
         program = (
-            to_edge(export(WrapperModule(f), (torch.randn(2),)))
+            to_edge(export(WrapperModule(f), (torch.randn(2),), strict=True))
             .transform(
                 [
                     ConstPropPass(),
@@ -90,7 +90,9 @@ class TestVerification(unittest.TestCase):
         model1 = Op1()
         inputs = (torch.ones(2, 2),)
         program = (
-            to_edge(export(model1, inputs)).to_executorch()._emitter_output.program
+            to_edge(export(model1, inputs, strict=True))
+            .to_executorch()
+            ._emitter_output.program
         )
 
         # Initialize and test Interpreter -- assert that the operators are same as above
@@ -104,7 +106,9 @@ class TestVerification(unittest.TestCase):
         model2 = Op2()
         inputs = (torch.ones(2, 2),)
         program = (
-            to_edge(export(model2, inputs)).to_executorch()._emitter_output.program
+            to_edge(export(model2, inputs, strict=True))
+            .to_executorch()
+            ._emitter_output.program
         )
 
         # Initialize and test Interpreter -- assert that the operators are same as above
@@ -135,7 +139,7 @@ class TestVerification(unittest.TestCase):
         # Generate a program with Op2's operations (remainder, div, add)
         model2 = Op2()
         inputs = torch.ones(2, 2)
-        exec_prog = to_edge(export(model2, (inputs,))).to_executorch()
+        exec_prog = to_edge(export(model2, (inputs,), strict=True)).to_executorch()
 
         exported_prog = exec_prog.exported_program()
         res = exported_prog.module()(inputs)[0]  # noqa
@@ -158,8 +162,7 @@ class TestEdgeVerification(unittest.TestCase):
         egm = (
             to_edge(
                 export(
-                    m,
-                    (torch.randn(1, 3, 100, 100).to(dtype=torch.int),),
+                    m, (torch.randn(1, 3, 100, 100).to(dtype=torch.int),), strict=True
                 )
             )
             .exported_program()
@@ -184,6 +187,7 @@ class TestEdgeVerification(unittest.TestCase):
                 export(
                     m,
                     (torch.rand(16, 8, 32, 32), torch.rand(8), torch.rand(8)),
+                    strict=True,
                 )
             )
             .exported_program()
@@ -202,16 +206,7 @@ class TestEdgeVerification(unittest.TestCase):
                 return torch._to_cpu(x)
 
         m = TestModel()
-        egm = (
-            to_edge(
-                export(
-                    m,
-                    ([],),
-                )
-            )
-            .exported_program()
-            .graph_module
-        )
+        egm = to_edge(export(m, ([],), strict=True)).exported_program().graph_module
         verifier = EXIREdgeDialectVerifier()
         verifier(egm)
         self.assertTrue(verifier.is_valid(egm))
@@ -228,8 +223,7 @@ class TestEdgeVerification(unittest.TestCase):
 
         m = TestModel()
         egm = export(
-            m,
-            (torch.randn(1, 3, 100, 100).to(dtype=torch.int),),
+            m, (torch.randn(1, 3, 100, 100).to(dtype=torch.int),), strict=True
         ).graph_module
         verifier = EXIREdgeDialectVerifier()
         with self.assertRaises(SpecViolationError):
@@ -247,8 +241,7 @@ class TestEdgeVerification(unittest.TestCase):
         egm = (
             to_edge(
                 export(
-                    m,
-                    (torch.randn(1, 3, 100, 100).to(dtype=torch.int),),
+                    m, (torch.randn(1, 3, 100, 100).to(dtype=torch.int),), strict=True
                 )
             )
             .exported_program()
@@ -259,14 +252,22 @@ class TestEdgeVerification(unittest.TestCase):
         self.assertTrue(verifier.is_valid(egm))
 
     def test_edge_sad_with_edge_ops(self) -> None:
-        # log_softmax only takes float or double Tensor
-        m = torch.nn.LogSoftmax(dim=1)
+        # add operation does not support complex64 dtype
+        class TestModel(torch.nn.Module):
+            def __init__(self):
+                super().__init__()
+
+            def forward(self, x):
+                return x + x
+
+        m = TestModel()
         with self.assertRaises(SpecViolationError):
             _ = (
                 to_edge(
                     export(
                         m,
-                        (torch.randn(1, 3, 100, 100).to(dtype=torch.bfloat16),),
+                        (torch.randn(1, 3, 100, 100).to(dtype=torch.complex64),),
+                        strict=True,
                     )
                 )
                 .exported_program()

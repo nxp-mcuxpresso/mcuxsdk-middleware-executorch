@@ -11,9 +11,9 @@
 #include <executorch/runtime/kernel/kernel_includes.h>
 #include <cmath>
 
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
 using executorch::aten::RuntimeContext;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::Error;
 
 namespace cadence {
@@ -35,7 +35,7 @@ Tensor& tanh_out(RuntimeContext& ctx, const Tensor& in, Tensor& out) {
   }
 
   return torch::executor::native::internal::
-      unary_ufunc_realhbbf16_to_floathbf16(std::tanh, ctx, in, out);
+      unary_ufunc_realhbbf16_to_floathbf16(std::tanh, std::tanh, ctx, in, out);
 }
 
 } // namespace native

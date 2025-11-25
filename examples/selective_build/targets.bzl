@@ -1,5 +1,5 @@
 load("@fbsource//xplat/executorch/build:runtime_wrapper.bzl", "get_oss_build_kwargs", "is_xplat", "runtime")
-load("@fbsource//xplat/executorch/codegen:codegen.bzl", "et_operator_library", "executorch_generated_lib")
+load("@fbsource//xplat/executorch/codegen:codegen.bzl", "et_operator_library", "executorch_generated_lib", "ScalarType")
 
 def define_common_targets():
     """Defines targets that should be shared between fbcode and xplat.
@@ -25,6 +25,22 @@ def define_common_targets():
         ],
     )
 
+    if runtime.is_oss or is_xplat():
+        executorch_generated_lib(
+            name = "select_all_dtype_selective_lib",
+            functions_yaml_target = "//executorch/kernels/portable:functions.yaml",
+            kernel_deps = [
+                "//executorch/kernels/portable:operators",
+            ],
+            # Setting dtype_selective_build without using list or dict selection isn't a
+            # typical use case; we just do it here so that we can test that our mechanism
+            # for getting buck deps right for dtype_selective_build is working.
+            dtype_selective_build = True,
+            deps = [
+                ":select_all_ops",
+            ],
+        )
+
     # Select a list of operators: defined in `ops`
     et_operator_library(
         name = "select_ops_in_list",
@@ -49,7 +65,9 @@ def define_common_targets():
     et_operator_library(
         name = "select_ops_in_dict",
         ops_dict = {
-            "aten::add.out": ["v1/3;0,1", "v1/6;0,1"],  # int, float
+            # 1. Use kernel key, generated with a model, or
+            # 2. Specify the dtype, from executorch/codegen/codegen.bzl
+            "aten::add.out": ["v1/3;0,1", ScalarType("Float")],  # int, float
             "aten::mm.out": [],  # all dtypes
         },
     )
@@ -63,7 +81,20 @@ def define_common_targets():
         deps = [
             ":select_ops_in_dict",
         ],
-        dtype_selective_build = True,
+        dtype_selective_build = is_xplat(),
+        visibility = ["//executorch/..."],
+    )
+
+    executorch_generated_lib(
+        name = "select_ops_in_dict_lib_optimized",
+        functions_yaml_target = "//executorch/kernels/optimized:optimized.yaml",
+        kernel_deps = [
+            "//executorch/kernels/optimized:optimized_operators",
+        ],
+        deps = [
+            ":select_ops_in_dict",
+        ],
+        dtype_selective_build = is_xplat(),
         visibility = ["//executorch/..."],
     )
 
@@ -119,6 +150,8 @@ def define_common_targets():
         lib.append(":select_ops_in_list_lib")
     elif select_ops == "dict":
         lib.append(":select_ops_in_dict_lib")
+    elif select_ops == "dict_optimized":
+        lib.append(":select_ops_in_dict_lib_optimized")
     elif select_ops == "yaml":
         lib.append(":select_ops_from_yaml_lib")
     elif select_ops == "model":

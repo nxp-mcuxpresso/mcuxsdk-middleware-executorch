@@ -16,7 +16,7 @@
 #include <ostream>
 #include <sstream>
 
-using exec_aten::ScalarType;
+using executorch::aten::ScalarType;
 
 namespace executorch {
 namespace extension {
@@ -39,8 +39,8 @@ int get_edge_items_xalloc() {
 
 /// Returns the number of "edge items" to print at the beginning and end of
 /// lists when using the provided stream.
-long get_stream_edge_items(std::ostream& os) {
-  long edge_items = os.iword(get_edge_items_xalloc());
+size_t get_stream_edge_items(std::ostream& os) {
+  size_t edge_items = os.iword(get_edge_items_xalloc());
   return edge_items <= 0 ? kDefaultEdgeItems : edge_items;
 }
 
@@ -75,11 +75,11 @@ void print_double(std::ostream& os, double value) {
 template <class T>
 void print_scalar_list(
     std::ostream& os,
-    exec_aten::ArrayRef<T> list,
+    executorch::aten::ArrayRef<T> list,
     bool print_length = true,
     bool elide_inner_items = true) {
-  long edge_items = elide_inner_items ? get_stream_edge_items(os)
-                                      : std::numeric_limits<long>::max();
+  size_t edge_items = elide_inner_items ? get_stream_edge_items(os)
+                                        : std::numeric_limits<long>::max();
   if (print_length) {
     os << "(len=" << list.size() << ")";
   }
@@ -87,12 +87,11 @@ void print_scalar_list(
   // See if we'll be printing enough elements to cause us to wrap.
   bool wrapping = false;
   {
-    long num_printed_items;
+    size_t num_printed_items;
     if (elide_inner_items) {
-      num_printed_items =
-          std::min(static_cast<long>(list.size()), edge_items * 2);
+      num_printed_items = std::min(list.size(), edge_items * 2);
     } else {
-      num_printed_items = static_cast<long>(list.size());
+      num_printed_items = list.size();
     }
     wrapping = num_printed_items > kItemsPerLine;
   }
@@ -104,7 +103,7 @@ void print_scalar_list(
       // We've printed a full line, so wrap and begin a new one.
       os << "\n  ";
     }
-    os << executorch::runtime::EValue(exec_aten::Scalar(list[i]));
+    os << executorch::runtime::EValue(executorch::aten::Scalar(list[i]));
     if (wrapping || i < list.size() - 1) {
       // No trailing comma when not wrapping. Always a trailing comma when
       // wrapping. This will leave a trailing space at the end of every wrapped
@@ -137,7 +136,7 @@ void print_scalar_list(
   os << "]";
 }
 
-void print_tensor(std::ostream& os, exec_aten::Tensor tensor) {
+void print_tensor(std::ostream& os, executorch::aten::Tensor tensor) {
   os << "tensor(sizes=";
   // Always print every element of the sizes list.
   print_scalar_list(
@@ -155,7 +154,7 @@ void print_tensor(std::ostream& os, exec_aten::Tensor tensor) {
   case ScalarType::dtype:                                    \
     print_scalar_list(                                       \
         os,                                                  \
-        exec_aten::ArrayRef<ctype>(                          \
+        executorch::aten::ArrayRef<ctype>(                   \
             tensor.const_data_ptr<ctype>(), tensor.numel()), \
         /*print_length=*/false);                             \
     break;
@@ -172,7 +171,7 @@ void print_tensor(std::ostream& os, exec_aten::Tensor tensor) {
 
 void print_tensor_list(
     std::ostream& os,
-    exec_aten::ArrayRef<exec_aten::Tensor> list) {
+    executorch::aten::ArrayRef<executorch::aten::Tensor> list) {
   os << "(len=" << list.size() << ")[";
   for (size_t i = 0; i < list.size(); ++i) {
     if (list.size() > 1) {
@@ -191,7 +190,7 @@ void print_tensor_list(
 
 void print_list_optional_tensor(
     std::ostream& os,
-    exec_aten::ArrayRef<exec_aten::optional<exec_aten::Tensor>> list) {
+    executorch::aten::ArrayRef<std::optional<executorch::aten::Tensor>> list) {
   os << "(len=" << list.size() << ")[";
   for (size_t i = 0; i < list.size(); ++i) {
     if (list.size() > 1) {

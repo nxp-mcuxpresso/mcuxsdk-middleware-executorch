@@ -3,12 +3,15 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.lib.tflite.Conv3DOptions as libConv3DOptions
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
-from executorch.backends.nxp.backend.ir.lib.tflite.ActivationFunctionType import ActivationFunctionType
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
+import flatbuffers as fb
+from executorch.backends.nxp.backend.ir.lib.tflite.ActivationFunctionType import (
+    ActivationFunctionType,
+)
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 from executorch.backends.nxp.backend.ir.lib.tflite.Padding import Padding
 
@@ -23,9 +26,17 @@ class Conv3D(meta.BuiltinOptions):
     dilation_d_factor: int
     fused_activation_function: ActivationFunctionType
 
-    def __init__(self, padding: Padding = Padding.SAME, stride_w: int = 1, stride_h: int = 1, stride_d: int = 1,
-                 dilation_w_factor: int = 1, dilation_h_factor: int = 1, dilation_d_factor: int = 1,
-                 fused_activation_function: ActivationFunctionType = ActivationFunctionType.NONE) -> None:
+    def __init__(
+        self,
+        padding: Padding = Padding.SAME,
+        stride_w: int = 1,
+        stride_h: int = 1,
+        stride_d: int = 1,
+        dilation_w_factor: int = 1,
+        dilation_h_factor: int = 1,
+        dilation_d_factor: int = 1,
+        fused_activation_function: ActivationFunctionType = ActivationFunctionType.NONE,
+    ) -> None:
         super().__init__(BuiltinOptions.Conv3DOptions, BuiltinOperator.CONV_3D)
         self.padding = padding
         self.stride_w = stride_w
@@ -45,7 +56,9 @@ class Conv3D(meta.BuiltinOptions):
         libConv3DOptions.AddStrideH(builder, self.stride_h)
         libConv3DOptions.AddStrideD(builder, self.stride_d)
 
-        libConv3DOptions.AddFusedActivationFunction(builder, self.fused_activation_function)
+        libConv3DOptions.AddFusedActivationFunction(
+            builder, self.fused_activation_function
+        )
 
         libConv3DOptions.AddDilationWFactor(builder, self.dilation_w_factor)
         libConv3DOptions.AddDilationHFactor(builder, self.dilation_h_factor)

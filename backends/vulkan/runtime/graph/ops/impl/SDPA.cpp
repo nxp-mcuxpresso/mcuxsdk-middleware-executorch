@@ -8,6 +8,7 @@
 
 #include <executorch/backends/vulkan/runtime/graph/ops/OperatorRegistry.h>
 
+#include <executorch/backends/vulkan/runtime/graph/ops/impl/Common.h>
 #include <executorch/backends/vulkan/runtime/graph/ops/impl/Staging.h>
 
 #include <executorch/backends/vulkan/runtime/graph/ops/impl/MatMul.h>
@@ -18,150 +19,61 @@
 
 #include <executorch/backends/vulkan/runtime/graph/ops/impl/utils/ScalarUtils.h>
 
+#include <executorch/backends/vulkan/runtime/graph/ops/DynamicDispatchNode.h>
 #include <executorch/backends/vulkan/runtime/graph/ops/utils/ShaderNameUtils.h>
 
 namespace vkcompute {
 
-void add_kv_cache_update_node(
-    ComputeGraph& graph,
-    const ValueRef input_pos_symint,
-    const ValueRef projected,
-    const ValueRef cache) {
-  std::string kernel_name("kv_cache_update");
-  add_storage_type_suffix(kernel_name, graph.storage_type_of(projected));
-  add_dtype_suffix(kernel_name, graph.dtype_of(projected));
-
-  utils::uvec3 global_size;
-  vkapi::ParamsBindList param_ubos;
-
-  if (graph.is_buffer_storage(cache)) {
-    global_size = graph.create_global_wg_size(projected);
-
-    param_ubos = {
-        graph.numel_ubo(projected),
-        graph.strides_ubo(cache),
-        graph.get_or_create_int_param_buffer(input_pos_symint)};
-  } else {
-    global_size = graph.logical_limits_of(projected);
-
-    param_ubos = {
-        graph.logical_limits_ubo(projected),
-        graph.get_or_create_int_param_buffer(input_pos_symint)};
-  }
-  const utils::uvec3 local_size = graph.create_local_wg_size(global_size);
-
-  graph.execute_nodes().emplace_back(new DispatchNode(
-      graph,
-      VK_KERNEL_FROM_STR(kernel_name),
-      global_size,
-      local_size,
-      // Inputs and Outputs
-      {{cache, vkapi::kWrite}, {projected, vkapi::kRead}},
-      // Shader param buffers
-      param_ubos,
-      // Specialization Constants
-      {},
-      // Resizing Logic
-      nullptr,
-      {}));
+bool is_single_token(ComputeGraph* graph, const ValueRef& q_projected) {
+  return graph->size_at<uint32_t>(-3, q_projected) == 1;
 }
 
-void add_attn_weight_scale_and_mask_node(
-    ComputeGraph& graph,
-    const ValueRef input_pos_symint,
-    const ValueRef q_projected,
-    const ValueRef attn_weight) {
-  std::string kernel_name("sdpa_attn_weight_scale_and_mask");
-  add_storage_type_suffix(kernel_name, graph.storage_type_of(attn_weight));
-  add_dtype_suffix(kernel_name, graph.dtype_of(attn_weight));
+//
+// Resize functions
+//
 
-  const int32_t head_dim_size = graph.size_at<int32_t>(-1, q_projected);
-  const float scale_val = 1.0f / std::sqrt(static_cast<float>(head_dim_size));
-
-  utils::uvec3 global_size;
-  utils::uvec3 local_size;
-  vkapi::ParamsBindList param_ubos;
-
-  if (graph.is_buffer_storage(attn_weight)) {
-    global_size = {
-        graph.size_at<uint32_t>(-1, attn_weight),
-        graph.size_at<uint32_t>(-2, attn_weight),
-        graph.size_at<uint32_t>(-3, attn_weight),
-    };
-
-    param_ubos = {
-        graph.sizes_ubo(attn_weight),
-        graph.strides_ubo(attn_weight),
-        graph.create_params_buffer(scale_val)};
-  } else {
-    global_size = graph.logical_limits_of(attn_weight);
-
-    param_ubos = {
-        graph.logical_limits_ubo(attn_weight),
-        graph.get_or_create_int_param_buffer(input_pos_symint),
-        graph.create_params_buffer(scale_val)};
-  }
-
-  local_size = graph.create_local_wg_size(global_size);
-
-  graph.execute_nodes().emplace_back(new DispatchNode(
-      graph,
-      VK_KERNEL_FROM_STR(kernel_name),
-      global_size,
-      local_size,
-      // Inputs and Outputs
-      {{attn_weight, vkapi::kReadWrite}},
-      // Shader param buffers
-      param_ubos,
-      // Specialization Constants
-      {},
-      // Resizing Logic
-      nullptr,
-      {}));
-}
-
-std::vector<int64_t> get_cache_slice_sizes(
-    ComputeGraph& graph,
-    ValueRef cache,
-    ValueRef input_pos_symint,
-    ValueRef q_projected) {
-  std::vector<int64_t> slice_sizes = graph.sizes_of(cache);
-
-  // Cache slicing will always be in the channels dim
-  const int32_t input_pos_val = graph.read_symint(input_pos_symint);
-  const int64_t q_seq_len = graph.size_at<int64_t>(1, q_projected);
-  slice_sizes.at(1) = input_pos_val + q_seq_len;
-  return slice_sizes;
-}
-
-void resize_cache_slice_view_node(
+void resize_compute_attn_weights_node(
     ComputeGraph* graph,
     const std::vector<ArgGroup>& args,
-    const std::vector<ValueRef>& extra_args) {
-  (void)args;
-  std::vector<int64_t> slice_sizes = get_cache_slice_sizes(
-      *graph, extra_args[0], extra_args[1], extra_args[2]);
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef attn_weights = args.at(0).refs.at(0);
+  const ValueRef q_projected = args.at(1).refs.at(0);
+  const ValueRef input_pos_symint = resize_args.at(0);
 
-  graph->get_tensor(extra_args[3])->virtual_resize(slice_sizes);
+  const uint32_t num_q_heads = graph->size_at<uint32_t>(-2, q_projected);
+  const uint32_t seq_len = graph->size_at<uint32_t>(-3, q_projected);
+
+  const int32_t input_pos_val = graph->read_symint(input_pos_symint);
+
+  const uint32_t context_len = seq_len + input_pos_val;
+
+  std::vector<int64_t> out_sizes = {
+      1, // batch
+      num_q_heads,
+      seq_len,
+      utils::align_up_4(context_len)};
+
+  graph->virtual_resize(attn_weights, out_sizes);
 }
 
-void add_cache_slice_view_node(
-    ComputeGraph& graph,
-    ValueRef cache,
-    ValueRef input_pos_symint,
-    ValueRef q_projected,
-    ValueRef cache_sliced,
-    const int64_t max_seq_len) {
-  std::vector<int64_t> slice_sizes =
-      get_cache_slice_sizes(graph, cache, input_pos_symint, q_projected);
-  // Initialize the slice to the maximum possible size to start
-  slice_sizes.at(1) = max_seq_len;
+void resize_sdpa_attn_weights_softmax_node(
+    ComputeGraph* graph,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef attn_weights_softmax = args.at(0).refs.at(0);
+  const ValueRef attn_weights = args.at(1).refs.at(0);
 
-  graph.get_tensor(cache_sliced)->virtual_resize(slice_sizes);
+  graph->virtual_resize(attn_weights_softmax, graph->sizes_of(attn_weights));
+}
 
-  graph.execute_nodes().emplace_back(new ExecuteNode(
-      resize_cache_slice_view_node,
-      {cache, input_pos_symint, q_projected, cache_sliced}));
+void resize_sdpa_compute_out_node(
+    ComputeGraph* graph,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef out = args.at(0).refs.at(0);
+  const ValueRef q_projected = resize_args.at(0);
+
+  graph->virtual_resize(out, graph->sizes_of(q_projected));
 }
 
 void resize_sdpa_out(
@@ -173,7 +85,423 @@ void resize_sdpa_out(
   int arg_idx = 0;
   const ValueRef q_projected = extra_args[arg_idx++];
   const ValueRef out = extra_args[arg_idx++];
-  graph->get_tensor(out)->virtual_resize(graph->sizes_of(q_projected));
+  graph->virtual_resize(out, graph->sizes_of(q_projected));
+}
+
+//
+// Shader dispatch pick functions
+//
+
+utils::uvec3 kv_cache_update_global_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  (void)shader;
+  (void)resize_args;
+
+  const ValueRef projected = args.at(1).refs.at(0);
+
+  const uint32_t head_dim_size = graph->size_at<uint32_t>(-1, projected);
+  const uint32_t num_heads = graph->size_at<uint32_t>(-2, projected);
+  const uint32_t seq_len = graph->size_at<uint32_t>(-3, projected);
+
+  return {utils::div_up_4(head_dim_size), seq_len, num_heads};
+}
+
+utils::uvec3 attn_weight_scale_and_mask_global_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  (void)shader;
+  (void)resize_args;
+
+  const ValueRef attn_weight = args.at(0).refs.at(0);
+
+  if (graph->is_buffer_storage(attn_weight)) {
+    return {
+        graph->size_at<uint32_t>(-1, attn_weight),
+        graph->size_at<uint32_t>(-2, attn_weight),
+        graph->size_at<uint32_t>(-3, attn_weight),
+    };
+  } else {
+    return graph->logical_limits_of(attn_weight);
+  }
+}
+
+vkapi::ShaderInfo pick_sdpa_compute_attn_weights_shader(
+    ComputeGraph* graph,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef q_projected = args.at(1).refs.at(0);
+  const ValueRef k_cache = args.at(1).refs.at(1);
+
+  const bool is_gemv = is_single_token(graph, q_projected);
+
+  std::string shader_name = "sdpa_compute_attn_weights";
+  if (is_gemv) {
+    shader_name += "_coop";
+  } else {
+    shader_name += "_tiled";
+  }
+
+  add_storage_type_suffix(shader_name, graph->storage_type_of(q_projected));
+  add_storage_type_suffix(shader_name, graph->storage_type_of(k_cache));
+  add_dtype_suffix(shader_name, graph->dtype_of(q_projected));
+
+  return VK_KERNEL_FROM_STR(shader_name);
+}
+
+utils::uvec3 pick_sdpa_compute_attn_weights_global_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef q_projected = args.at(1).refs.at(0);
+  const ValueRef input_pos_symint = resize_args.at(0);
+
+  const uint32_t num_q_heads = graph->size_at<uint32_t>(-2, q_projected);
+  const uint32_t seq_len = graph->size_at<uint32_t>(-3, q_projected);
+
+  const int32_t input_pos_val = graph->read_symint(input_pos_symint);
+
+  const uint32_t context_len = seq_len + input_pos_val;
+
+  const uint32_t N4 = utils::div_up_4(context_len);
+  const uint32_t M4 = utils::div_up_4(seq_len);
+
+  return {N4, M4, num_q_heads};
+}
+
+utils::uvec3 pick_sdpa_compute_attn_weights_local_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const utils::uvec3& global_workgroup_size,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const bool use_coop_algorithm =
+      shader.kernel_name.find("_coop") != std::string::npos;
+
+  if (use_coop_algorithm) {
+    return {1, 64, 1};
+  } else {
+    return pick_hw_square_wg_size(
+        graph, shader, global_workgroup_size, args, resize_args);
+  }
+}
+
+utils::uvec3 pick_sdpa_attn_weights_softmax_global_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef q_projected = resize_args.at(0);
+
+  const uint32_t num_q_heads = graph->size_at<uint32_t>(-2, q_projected);
+  const uint32_t seq_len = graph->size_at<uint32_t>(-3, q_projected);
+
+  return {1, seq_len, num_q_heads};
+}
+
+utils::uvec3 pick_sdpa_attn_weights_softmax_local_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const utils::uvec3& global_workgroup_size,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  return {64, 1, 1};
+}
+
+vkapi::ShaderInfo pick_sdpa_compute_out_shader(
+    ComputeGraph* graph,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef out = args.at(0).refs.at(0);
+  const ValueRef v_cache = args.at(1).refs.at(1);
+
+  const ValueRef q_projected = resize_args.at(0);
+
+  const bool is_gemv = is_single_token(graph, q_projected);
+
+  std::string shader_name = "sdpa_compute_out";
+  if (is_gemv) {
+    shader_name += "_coop";
+  } else {
+    shader_name += "_tiled";
+  }
+
+  add_storage_type_suffix(shader_name, graph->storage_type_of(out));
+  add_storage_type_suffix(shader_name, graph->storage_type_of(v_cache));
+  add_dtype_suffix(shader_name, graph->dtype_of(out));
+
+  return VK_KERNEL_FROM_STR(shader_name);
+}
+
+utils::uvec3 pick_sdpa_compute_out_global_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const ValueRef q_projected = resize_args.at(0);
+
+  const uint32_t head_dim = graph->size_at<uint32_t>(-1, q_projected);
+  const uint32_t num_q_heads = graph->size_at<uint32_t>(-2, q_projected);
+  const uint32_t seq_len = graph->size_at<uint32_t>(-3, q_projected);
+
+  const uint32_t N4 = utils::div_up_4(head_dim);
+  const uint32_t M4 = utils::div_up_4(seq_len);
+
+  return {N4, M4, num_q_heads};
+}
+
+utils::uvec3 pick_sdpa_compute_out_local_wg_size(
+    ComputeGraph* graph,
+    const vkapi::ShaderInfo& shader,
+    const utils::uvec3& global_workgroup_size,
+    const std::vector<ArgGroup>& args,
+    const std::vector<ValueRef>& resize_args) {
+  const bool use_coop_algorithm =
+      shader.kernel_name.find("_coop") != std::string::npos;
+
+  if (use_coop_algorithm) {
+    return {1, 64, 1};
+  } else {
+    return pick_hw_square_wg_size(
+        graph, shader, global_workgroup_size, args, resize_args);
+  }
+}
+
+//
+// Dispatch nodes
+//
+
+void add_sdpa_kv_cache_update_node(
+    ComputeGraph& graph,
+    const ValueRef input_pos_symint,
+    const ValueRef projected,
+    const ValueRef cache) {
+  std::string kernel_name("sdpa_kv_cache_update");
+  add_storage_type_suffix(kernel_name, graph.storage_type_of(projected));
+  add_dtype_suffix(kernel_name, graph.dtype_of(projected));
+
+  vkapi::ParamsBindList param_ubos = {
+      graph.sizes_ubo(cache),
+      graph.sizes_ubo(projected),
+      graph.get_or_create_int_param_buffer(input_pos_symint)};
+
+  graph.execute_nodes().emplace_back(new DynamicDispatchNode(
+      graph,
+      VK_KERNEL_FROM_STR(kernel_name),
+      kv_cache_update_global_wg_size,
+      default_pick_local_wg_size,
+      // Inputs and Outputs
+      {{cache, vkapi::kWrite}, {projected, vkapi::kRead}},
+      // Shader param buffers
+      param_ubos,
+      // Push Constants
+      {},
+      // Specialization Constants
+      {},
+      // Resize Args
+      {input_pos_symint},
+      // Resizing Logic
+      nullptr));
+}
+
+void add_sdpa_compute_attn_weights_node(
+    ComputeGraph& graph,
+    const ValueRef q_projected,
+    const ValueRef k_cache,
+    const ValueRef input_pos_symint,
+    const ValueRef attn_weights) {
+  const int32_t head_dim_size = graph.size_at<int32_t>(-1, q_projected);
+  const float scale_val = 1.0f / std::sqrt(static_cast<float>(head_dim_size));
+
+  vkapi::ParamsBindList param_ubos = {
+      graph.sizes_ubo(q_projected),
+      graph.sizes_ubo(k_cache),
+      graph.get_or_create_int_param_buffer(input_pos_symint)};
+
+  graph.execute_nodes().emplace_back(new DynamicDispatchNode(
+      graph,
+      pick_sdpa_compute_attn_weights_shader,
+      pick_sdpa_compute_attn_weights_global_wg_size,
+      pick_sdpa_compute_attn_weights_local_wg_size,
+      // Inputs and Outputs
+      {{attn_weights, vkapi::kWrite}, {{q_projected, k_cache}, vkapi::kRead}},
+      // Shader param buffers
+      param_ubos,
+      // Push Constants
+      {},
+      // Specialization Constants
+      {scale_val},
+      // Resize Args
+      {input_pos_symint},
+      // Resizing Logic
+      resize_compute_attn_weights_node));
+}
+
+void add_sdpa_attn_weights_softmax_node(
+    ComputeGraph& graph,
+    const ValueRef attn_weights,
+    const ValueRef q_projected,
+    const ValueRef input_pos_symint,
+    const ValueRef attn_weights_softmax) {
+  std::string shader_name = "sdpa_attn_weights_softmax";
+  add_storage_type_suffix(
+      shader_name, graph.storage_type_of(attn_weights_softmax));
+  add_dtype_suffix(shader_name, graph.dtype_of(attn_weights_softmax));
+
+  vkapi::ParamsBindList param_ubos = {
+      graph.sizes_ubo(q_projected),
+      graph.get_or_create_int_param_buffer(input_pos_symint)};
+
+  graph.execute_nodes().emplace_back(new DynamicDispatchNode(
+      graph,
+      VK_KERNEL_FROM_STR(shader_name),
+      pick_sdpa_attn_weights_softmax_global_wg_size,
+      pick_sdpa_attn_weights_softmax_local_wg_size,
+      // Inputs and Outputs
+      {{attn_weights_softmax, vkapi::kWrite}, {attn_weights, vkapi::kRead}},
+      // Shader param buffers
+      param_ubos,
+      // Push Constants
+      {},
+      // Specialization Constants
+      {},
+      // Resize Args
+      {q_projected, input_pos_symint},
+      // Resizing Logic
+      resize_sdpa_attn_weights_softmax_node));
+}
+
+void add_sdpa_compute_out_node(
+    ComputeGraph& graph,
+    const ValueRef attn_weights_softmax,
+    const ValueRef v_cache,
+    const ValueRef q_projected,
+    const ValueRef input_pos_symint,
+    const ValueRef out) {
+  vkapi::ParamsBindList param_ubos = {
+      graph.sizes_ubo(q_projected),
+      graph.sizes_ubo(v_cache),
+      graph.get_or_create_int_param_buffer(input_pos_symint)};
+
+  graph.execute_nodes().emplace_back(new DynamicDispatchNode(
+      graph,
+      pick_sdpa_compute_out_shader,
+      pick_sdpa_compute_out_global_wg_size,
+      pick_sdpa_compute_out_local_wg_size,
+      // Inputs and Outputs
+      {{out, vkapi::kWrite}, {{attn_weights_softmax, v_cache}, vkapi::kRead}},
+      // Shader param buffers
+      param_ubos,
+      // Push Constants
+      {},
+      // Specialization Constants
+      {},
+      // Resize Args
+      {q_projected, input_pos_symint},
+      // Resizing Logic
+      resize_sdpa_compute_out_node));
+}
+
+//
+// High level operator impl
+//
+
+void update_cache_impl(ComputeGraph& graph, const std::vector<ValueRef>& args) {
+  int arg_idx = 0;
+  const ValueRef value = args[arg_idx++];
+  const ValueRef cache = args[arg_idx++];
+  const ValueRef input_pos_symint = args[arg_idx++];
+  const ValueRef out = args[arg_idx++];
+
+  // Unused variables
+  (void)out;
+
+  VK_CHECK_COND(graph.size_at<int32_t>(-4, value) == 1);
+  VK_CHECK_COND(graph.size_at<int32_t>(-4, cache) == 1);
+  VK_CHECK_COND(
+      graph.size_at<int32_t>(-1, value) == graph.size_at<int32_t>(-1, cache));
+  VK_CHECK_COND(
+      graph.size_at<int32_t>(-2, value) == graph.size_at<int32_t>(-2, cache));
+
+  add_sdpa_kv_cache_update_node(graph, input_pos_symint, value, cache);
+}
+
+void sdpa_impl(ComputeGraph& graph, const std::vector<ValueRef>& args) {
+  int arg_idx = 0;
+  const ValueRef q_projected = args[arg_idx++];
+  const ValueRef k_cache = args[arg_idx++];
+  const ValueRef v_cache = args[arg_idx++];
+  const ValueRef input_pos_symint = args[arg_idx++];
+  const ValueRef attn_mask = args[arg_idx++];
+  const ValueRef dropout_p = args[arg_idx++];
+  const ValueRef is_causal = args[arg_idx++];
+  const ValueRef scale = args[arg_idx++];
+
+  // Output tensors
+  const ValueRef out = args[arg_idx++];
+
+  // Batches must be 1
+  VK_CHECK_COND(graph.size_at<int32_t>(-4, q_projected) == 1);
+  VK_CHECK_COND(graph.size_at<int32_t>(-4, k_cache) == 1);
+  VK_CHECK_COND(graph.size_at<int32_t>(-4, v_cache) == 1);
+  // k and v projected must have the same shape
+  VK_CHECK_COND(graph.sizes_of(k_cache) == graph.sizes_of(v_cache));
+  // head dim must match between tensors
+  VK_CHECK_COND(
+      graph.size_at<int32_t>(-1, q_projected) ==
+      graph.size_at<int32_t>(-1, k_cache));
+  // All tensors must have the packed dim be the width (head) dimension
+  VK_CHECK_COND(graph.packed_dim_of(q_projected) == WHCN::kWidthDim);
+  VK_CHECK_COND(graph.packed_dim_of(k_cache) == WHCN::kWidthDim);
+  VK_CHECK_COND(graph.packed_dim_of(v_cache) == WHCN::kWidthDim);
+  // Some variables are not supported yet
+  VK_CHECK_COND(
+      graph.val_is_none(dropout_p) ||
+      graph.extract_scalar<double>(dropout_p) == 0);
+  VK_CHECK_COND(graph.val_is_none(scale));
+  // is_causal is assumed to be true in the current implementation.
+  VK_CHECK_COND(
+      graph.val_is_none(is_causal) || graph.extract_scalar<bool>(is_causal));
+  VK_CHECK_COND(graph.val_is_none(attn_mask));
+
+  const int64_t num_q_heads = graph.size_at<int64_t>(-2, q_projected);
+  const int64_t max_seq_len = graph.size_at<int64_t>(-3, q_projected);
+
+  const int64_t max_context_len = graph.size_at<int32_t>(-3, k_cache);
+
+  std::vector<int64_t> attn_weight_full_sizes = {
+      1, // batch
+      num_q_heads,
+      max_seq_len,
+      max_context_len};
+
+  TmpTensor attn_weights(
+      &graph,
+      attn_weight_full_sizes,
+      graph.dtype_of(q_projected),
+      graph.storage_type_of(q_projected),
+      utils::kWidthPacked);
+
+  TmpTensor attn_weights_softmax(
+      &graph,
+      attn_weight_full_sizes,
+      graph.dtype_of(q_projected),
+      graph.storage_type_of(q_projected),
+      utils::kWidthPacked);
+
+  add_sdpa_compute_attn_weights_node(
+      graph, q_projected, k_cache, input_pos_symint, attn_weights);
+
+  add_sdpa_attn_weights_softmax_node(
+      graph, attn_weights, q_projected, input_pos_symint, attn_weights_softmax);
+
+  add_sdpa_compute_out_node(
+      graph, attn_weights_softmax, v_cache, q_projected, input_pos_symint, out);
 }
 
 void sdpa_with_kv_cache_impl(
@@ -195,144 +523,33 @@ void sdpa_with_kv_cache_impl(
   // Output tensors
   const ValueRef out = args[arg_idx++];
 
-  // Unused variables
   (void)sequence_len;
 
-  // Batches must be 1
-  VK_CHECK_COND(graph.size_at<int32_t>(-4, q_projected) == 1);
-  VK_CHECK_COND(graph.size_at<int32_t>(-4, k_projected) == 1);
-  VK_CHECK_COND(graph.size_at<int32_t>(-4, v_projected) == 1);
-  // k and v projected must have the same shape
-  VK_CHECK_COND(graph.sizes_of(k_projected) == graph.sizes_of(v_projected));
-  // head dim must match between tensors
-  VK_CHECK_COND(
-      graph.size_at<int32_t>(-1, q_projected) ==
-      graph.size_at<int32_t>(-1, k_projected));
-  // All tensors must have the packed dim be the width (head) dimension
-  VK_CHECK_COND(graph.packed_dim_of(q_projected) == WHCN::kWidthDim);
-  VK_CHECK_COND(graph.packed_dim_of(k_projected) == WHCN::kWidthDim);
-  VK_CHECK_COND(graph.packed_dim_of(v_projected) == WHCN::kWidthDim);
-  // Some variables are not supported yet
-  VK_CHECK_COND(
-      graph.val_is_none(dropout_p) ||
-      graph.extract_scalar<double>(dropout_p) == 0);
-  VK_CHECK_COND(graph.val_is_none(scale));
-  // is_causal is assumed to be true in the current implementation.
-  VK_CHECK_COND(
-      graph.val_is_none(is_causal) || graph.extract_scalar<bool>(is_causal));
-  VK_CHECK_COND(graph.val_is_none(attn_mask));
+  const ValueRef k_cache = prepack_standard(
+      graph, k_cache_data, utils::kTexture3D, utils::kWidthPacked);
+  const ValueRef v_cache = prepack_standard(
+      graph, v_cache_data, utils::kTexture3D, utils::kWidthPacked);
 
-  const ValueRef k_cache =
-      prepack_standard_like(graph, k_cache_data, q_projected);
-  const ValueRef v_cache =
-      prepack_standard_like(graph, v_cache_data, q_projected);
+  update_cache_impl(graph, {k_projected, k_cache, input_pos_symint, -1});
+  update_cache_impl(graph, {v_projected, v_cache, input_pos_symint, -1});
 
-  const int32_t max_seq_len = graph.size_at<int32_t>(1, k_cache);
-
-  add_kv_cache_update_node(graph, input_pos_symint, k_projected, k_cache);
-  add_kv_cache_update_node(graph, input_pos_symint, v_projected, v_cache);
-
-  // Slice caches from 0 to input_pos + sequence_len
-  const ValueRef k_cache_sliced = graph.add_tensor_view(k_cache);
-  const ValueRef v_cache_sliced = graph.add_tensor_view(v_cache);
-  add_cache_slice_view_node(
+  sdpa_impl(
       graph,
-      k_cache,
-      input_pos_symint,
-      q_projected,
-      k_cache_sliced,
-      max_seq_len);
-  add_cache_slice_view_node(
-      graph,
-      v_cache,
-      input_pos_symint,
-      q_projected,
-      v_cache_sliced,
-      max_seq_len);
-
-  // Scalar values for various dims
-  const ValueRef channels = graph.add_scalar<int64_t>(1);
-  const ValueRef height = graph.add_scalar<int64_t>(2);
-  const ValueRef width = graph.add_scalar<int64_t>(3);
-
-  // Repeat interleave
-  const int64_t num_heads = graph.size_at<int64_t>(2, q_projected);
-  const int64_t num_kv_heads = graph.size_at<int64_t>(2, k_projected);
-
-  const ValueRef num_repeats =
-      graph.add_scalar<int64_t>(num_heads / num_kv_heads);
-
-  std::vector<int64_t> cache_slice_repeated_sizes(graph.sizes_of(q_projected));
-  cache_slice_repeated_sizes.at(1) = max_seq_len;
-
-  TmpTensor k_cache_sliced_repeated(
-      &graph, cache_slice_repeated_sizes, graph.dtype_of(k_cache_sliced));
-  TmpTensor v_cache_sliced_repeated(
-      &graph, cache_slice_repeated_sizes, graph.dtype_of(v_cache_sliced));
-
-  add_repeat_interleave_node(
-      graph, k_cache_sliced, num_repeats, height, k_cache_sliced_repeated);
-  add_repeat_interleave_node(
-      graph, v_cache_sliced, num_repeats, height, v_cache_sliced_repeated);
-
-  // Transpose sequence and head dims
-  const ValueRef q_transposed = graph.add_tensor_view(q_projected);
-  const ValueRef k_transposed = graph.add_tensor_view(k_cache_sliced_repeated);
-  const ValueRef v_transposed = graph.add_tensor_view(v_cache_sliced_repeated);
-
-  add_transpose_view_node(graph, q_projected, channels, height, q_transposed);
-  add_transpose_view_node(
-      graph, k_cache_sliced_repeated, channels, height, k_transposed);
-  add_transpose_view_node(
-      graph, v_cache_sliced_repeated, channels, height, v_transposed);
-
-  // Transpose K again to prepare for matmul
-  const ValueRef k_transposed_2 = graph.add_tensor_view(k_transposed);
-  add_transpose_view_node(graph, k_transposed, height, width, k_transposed_2);
-
-  // Initialize attn_weight to the maximum possible size
-  std::vector<int64_t> attn_weight_full_sizes = graph.sizes_of(q_transposed);
-  attn_weight_full_sizes.at(2) = max_seq_len;
-  attn_weight_full_sizes.at(3) = max_seq_len;
-  TmpTensor attn_weight(
-      &graph, attn_weight_full_sizes, graph.dtype_of(q_transposed));
-
-  // Resize attn_weight to the correct dim
-  std::vector<int64_t> attn_weight_sizes = attn_weight_full_sizes;
-  attn_weight_sizes.at(2) = graph.size_at<int64_t>(2, q_transposed);
-  attn_weight_sizes.at(3) = graph.size_at<int64_t>(2, k_transposed);
-  graph.get_tensor(attn_weight)->virtual_resize(attn_weight_sizes);
-
-  // Calculate attention weight, which is a matmul of Q and K
-  const ValueRef mat2_is_transposed = graph.add_scalar<bool>(false);
-  add_matmul_node(
-      graph, q_transposed, k_transposed_2, attn_weight, mat2_is_transposed);
-
-  // Apply scale and mask to the attention weight
-  add_attn_weight_scale_and_mask_node(
-      graph, input_pos_symint, q_projected, attn_weight);
-
-  TmpTensor attn_weight_softmax(
-      &graph, attn_weight_full_sizes, graph.dtype_of(q_transposed));
-  graph.get_tensor(attn_weight_softmax)->virtual_resize(attn_weight_sizes);
-  add_softmax_node(graph, attn_weight, width, attn_weight_softmax, false);
-
-  // Calculate final output
-  const ValueRef out_transposed = graph.add_tensor_view(out);
-  add_transpose_view_node(graph, out, channels, height, out_transposed);
-  add_matmul_node(
-      graph,
-      attn_weight_softmax,
-      v_transposed,
-      out_transposed,
-      mat2_is_transposed);
-
-  graph.execute_nodes().emplace_back(
-      new ExecuteNode(resize_sdpa_out, {q_projected, out}));
+      {q_projected,
+       k_cache,
+       v_cache,
+       input_pos_symint,
+       attn_mask,
+       dropout_p,
+       is_causal,
+       scale,
+       out});
 }
 
 REGISTER_OPERATORS {
   VK_REGISTER_OP(sdpa_with_kv_cache.default, sdpa_with_kv_cache_impl);
+  VK_REGISTER_OP(update_cache.default, update_cache_impl);
+  VK_REGISTER_OP(llama.custom_sdpa.default, sdpa_impl);
 }
 
 } // namespace vkcompute

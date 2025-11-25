@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class SplitVOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class SplitVOptions(object):
     def GetRootAsSplitVOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def SplitVOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # SplitVOptions
     def Init(self, buf, pos):
@@ -35,20 +40,26 @@ class SplitVOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def SplitVOptionsStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     SplitVOptionsStart(builder)
 
+
 def SplitVOptionsAddNumSplits(builder, numSplits):
     builder.PrependInt32Slot(0, numSplits, 0)
+
 
 def AddNumSplits(builder, numSplits):
     SplitVOptionsAddNumSplits(builder, numSplits)
 
+
 def SplitVOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return SplitVOptionsEnd(builder)

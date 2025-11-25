@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class IfOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class IfOptions(object):
     def GetRootAsIfOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def IfOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # IfOptions
     def Init(self, buf, pos):
@@ -42,26 +47,34 @@ class IfOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def IfOptionsStart(builder):
     builder.StartObject(2)
+
 
 def Start(builder):
     IfOptionsStart(builder)
 
+
 def IfOptionsAddThenSubgraphIndex(builder, thenSubgraphIndex):
     builder.PrependInt32Slot(0, thenSubgraphIndex, 0)
+
 
 def AddThenSubgraphIndex(builder, thenSubgraphIndex):
     IfOptionsAddThenSubgraphIndex(builder, thenSubgraphIndex)
 
+
 def IfOptionsAddElseSubgraphIndex(builder, elseSubgraphIndex):
     builder.PrependInt32Slot(1, elseSubgraphIndex, 0)
+
 
 def AddElseSubgraphIndex(builder, elseSubgraphIndex):
     IfOptionsAddElseSubgraphIndex(builder, elseSubgraphIndex)
 
+
 def IfOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return IfOptionsEnd(builder)

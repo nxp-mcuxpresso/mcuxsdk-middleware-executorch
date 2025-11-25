@@ -7,6 +7,7 @@
  */
 
 #include <executorch/kernels/test/FunctionHeaderWrapper.h> // Declares the operator
+#include <executorch/kernels/test/ScalarOverflowTestMacros.h>
 #include <executorch/kernels/test/TestUtil.h>
 #include <executorch/kernels/test/supported_features.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
@@ -16,10 +17,10 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::IntArrayRef;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::IntArrayRef;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::SupportedFeatures;
 using torch::executor::testing::TensorFactory;
 
@@ -50,7 +51,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
@@ -66,7 +67,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            7,  5,  6,  7,  8,  7,
            7,  1,  2,  3,  4,  7,
            7,  5,  6,  7,  8,  7,
-  
+
            7,  1,  2,  3,  4,  7,
            7,  5,  6,  7,  8,  7,
            7,  1,  2,  3,  4,  7,
@@ -98,7 +99,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
@@ -116,7 +117,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            7,  7,  7,  7,
            7,  7,  7,  7,
            1,  2,  3,  4,
@@ -150,7 +151,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
@@ -166,12 +167,12 @@ class OpConstantPadNDOutTest : public OperatorTest {
            7,  7,  7,  7,
            7,  7,  7,  7,
            7,  7,  7,  7,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
@@ -203,7 +204,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
@@ -221,7 +222,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            7,  7,  5,  6,  7,  8,  7,
            7,  7,  7,  7,  7,  7,  7,
            7,  7,  7,  7,  7,  7,  7,
-  
+
            7,  7,  1,  2,  3,  4,  7,
            7,  7,  5,  6,  7,  8,  7,
            7,  7,  1,  2,  3,  4,  7,
@@ -255,7 +256,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
@@ -271,12 +272,12 @@ class OpConstantPadNDOutTest : public OperatorTest {
            7,  7,  5,  6,  7,  8,  7,
            7,  7,  1,  2,  3,  4,  7,
            7,  7,  5,  6,  7,  8,  7,
-  
+
            7,  7,  1,  2,  3,  4,  7,
            7,  7,  5,  6,  7,  8,  7,
            7,  7,  1,  2,  3,  4,  7,
            7,  7,  5,  6,  7,  8,  7,
-  
+
            7,  7,  7,  7,  7,  7,  7,
            7,  7,  7,  7,  7,  7,  7,
            7,  7,  7,  7,  7,  7,  7,
@@ -308,7 +309,7 @@ class OpConstantPadNDOutTest : public OperatorTest {
            5,  6,  7,  8,
            1,  2,  3,  4,
            5,  6,  7,  8,
-  
+
            1,  2,  3,  4,
            5,  6,  7,  8,
            1,  2,  3,  4,
@@ -325,13 +326,13 @@ class OpConstantPadNDOutTest : public OperatorTest {
            7,  7,  5,  6,  7,  8,  7,
            7,  7,  1,  2,  3,  4,  7,
            7,  7,  5,  6,  7,  8,  7,
-  
+
            7,  7,  7,  7,  7,  7,  7,
            7,  7,  1,  2,  3,  4,  7,
            7,  7,  5,  6,  7,  8,  7,
            7,  7,  1,  2,  3,  4,  7,
            7,  7,  5,  6,  7,  8,  7,
-  
+
            7,  7,  7,  7,  7,  7,  7,
            7,  7,  7,  7,  7,  7,  7,
            7,  7,  7,  7,  7,  7,  7,
@@ -347,13 +348,28 @@ class OpConstantPadNDOutTest : public OperatorTest {
     op_constant_pad_nd_out(self, padding_ref, 7, out);
     EXPECT_TENSOR_CLOSE(out, expected);
   }
+
+  template <ScalarType DTYPE>
+  void expect_bad_scalar_value_dies(const Scalar& bad_value) {
+    TensorFactory<DTYPE> tf;
+    const std::vector<int32_t> sizes = {2, 2};
+    const std::vector<int32_t> sizes_out = {2, 4};
+    const std::vector<int64_t> padding = {1, 1};
+
+    IntArrayRef padding_ref = IntArrayRef(padding.data(), padding.size());
+    Tensor self = tf.ones(sizes);
+    Tensor out = tf.zeros(sizes_out);
+
+    ET_EXPECT_KERNEL_FAILURE(
+        context_, op_constant_pad_nd_out(self, padding_ref, bad_value, out));
+  }
 };
 
 TEST_F(OpConstantPadNDOutTest, TestPadDim2) {
 #define TEST_ENTRY(ctype, dtype) \
   test_constant_pad_nd_out_dim2<ScalarType::dtype>();
 
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -361,7 +377,7 @@ TEST_F(OpConstantPadNDOutTest, TestPadDim1) {
 #define TEST_ENTRY(ctype, dtype) \
   test_constant_pad_nd_out_dim1<ScalarType::dtype>();
 
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -369,7 +385,7 @@ TEST_F(OpConstantPadNDOutTest, TestPadDim0) {
 #define TEST_ENTRY(ctype, dtype) \
   test_constant_pad_nd_out_dim0<ScalarType::dtype>();
 
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -377,7 +393,7 @@ TEST_F(OpConstantPadNDOutTest, TestPadDim1And2) {
 #define TEST_ENTRY(ctype, dtype) \
   test_constant_pad_nd_out_dim12<ScalarType::dtype>();
 
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -385,7 +401,7 @@ TEST_F(OpConstantPadNDOutTest, TestPadDim0And2) {
 #define TEST_ENTRY(ctype, dtype) \
   test_constant_pad_nd_out_dim02<ScalarType::dtype>();
 
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -393,7 +409,7 @@ TEST_F(OpConstantPadNDOutTest, TestPadDim0And1And2) {
 #define TEST_ENTRY(ctype, dtype) \
   test_constant_pad_nd_out_dim012<ScalarType::dtype>();
 
-  ET_FORALL_REAL_TYPES(TEST_ENTRY);
+  ET_FORALL_REALHBF16_TYPES(TEST_ENTRY);
 #undef TEST_ENTRY
 }
 
@@ -465,3 +481,5 @@ TEST_F(OpConstantPadNDOutTest, IncorrectOutputShapeFail) {
   ET_EXPECT_KERNEL_FAILURE(
       context_, op_constant_pad_nd_out(self, padding_ref, 0, out));
 }
+
+GENERATE_SCALAR_OVERFLOW_TESTS(OpConstantPadNDOutTest)

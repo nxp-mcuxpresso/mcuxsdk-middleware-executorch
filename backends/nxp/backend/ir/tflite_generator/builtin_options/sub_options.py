@@ -11,14 +11,13 @@
 Representation of the TFLite operator 'Sub'.
 """
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+import flatbuffers as fb
 from executorch.backends.nxp.backend.ir.lib.tflite import (
-    BuiltinOptions as libBuiltinOptions,
-    BuiltinOperator as libBuiltinOperator,
     ActivationFunctionType as libActivationFunctionType,
-    SubOptions as libSubOptions
+    BuiltinOperator as libBuiltinOperator,
+    BuiltinOptions as libBuiltinOptions,
+    SubOptions as libSubOptions,
 )
 
 
@@ -27,16 +26,21 @@ class Sub(meta.BuiltinOptions):
 
     # TODO potScaleInt16
 
-    def __init__(self,
-                 fused_activation_function: libActivationFunctionType.ActivationFunctionType = libActivationFunctionType.ActivationFunctionType.NONE
-                 ) -> None:
-        super().__init__(libBuiltinOptions.BuiltinOptions.SubOptions,
-                         libBuiltinOperator.BuiltinOperator.SUB)
+    def __init__(
+        self,
+        fused_activation_function: libActivationFunctionType.ActivationFunctionType = libActivationFunctionType.ActivationFunctionType.NONE,
+    ) -> None:
+        super().__init__(
+            libBuiltinOptions.BuiltinOptions.SubOptions,
+            libBuiltinOperator.BuiltinOperator.SUB,
+        )
         self.fused_activation_function = fused_activation_function
 
     def gen_tflite(self, builder: fb.Builder):
         libSubOptions.Start(builder)
 
-        libSubOptions.AddFusedActivationFunction(builder, self.fused_activation_function)
+        libSubOptions.AddFusedActivationFunction(
+            builder, self.fused_activation_function
+        )
 
         return libSubOptions.End(builder)

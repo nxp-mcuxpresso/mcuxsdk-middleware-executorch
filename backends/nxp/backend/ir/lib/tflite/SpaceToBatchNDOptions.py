@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class SpaceToBatchNDOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,22 +22,29 @@ class SpaceToBatchNDOptions(object):
     def GetRootAsSpaceToBatchNDOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def SpaceToBatchNDOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # SpaceToBatchNDOptions
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
+
 def SpaceToBatchNDOptionsStart(builder):
     builder.StartObject(0)
+
 
 def Start(builder):
     SpaceToBatchNDOptionsStart(builder)
 
+
 def SpaceToBatchNDOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return SpaceToBatchNDOptionsEnd(builder)

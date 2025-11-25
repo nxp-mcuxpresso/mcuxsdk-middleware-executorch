@@ -6,7 +6,9 @@
 import flatbuffers as fb
 
 from executorch.backends.nxp.backend.ir.lib.tflite import ResizeNearestNeighborOptions
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 from executorch.backends.nxp.backend.ir.tflite_generator.meta import meta
 
@@ -17,7 +19,10 @@ class ResizeNearestNeighbor(meta.BuiltinOptions):
     half_pixel_centers: bool
 
     def __init__(self, align_corners: bool, half_pixel_centers: bool) -> None:
-        super().__init__(BuiltinOptions.ResizeNearestNeighborOptions, BuiltinOperator.RESIZE_NEAREST_NEIGHBOR)
+        super().__init__(
+            BuiltinOptions.ResizeNearestNeighborOptions,
+            BuiltinOperator.RESIZE_NEAREST_NEIGHBOR,
+        )
         self.align_corners = align_corners
         self.half_pixel_centers = half_pixel_centers
 
@@ -25,6 +30,8 @@ class ResizeNearestNeighbor(meta.BuiltinOptions):
         ResizeNearestNeighborOptions.Start(builder)
 
         ResizeNearestNeighborOptions.AddAlignCorners(builder, self.align_corners)
-        ResizeNearestNeighborOptions.AddHalfPixelCenters(builder, self.half_pixel_centers)
+        ResizeNearestNeighborOptions.AddHalfPixelCenters(
+            builder, self.half_pixel_centers
+        )
 
         return ResizeNearestNeighborOptions.End(builder)

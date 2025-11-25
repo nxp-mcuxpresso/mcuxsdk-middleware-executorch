@@ -1,17 +1,26 @@
-# Copyright 2024-2025 NXP
+# Copyright 2024 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-import pytest
 import numpy as np
+import pytest
 import torch
-from torch.export import ExportedProgram
 
-from executorch.backends.nxp.backend.edge_program_converter import EdgeProgramToIRConverter
-from executorch.backends.nxp.tests.executorch_pipeline import to_edge_program, to_quantized_edge_program
-from executorch.backends.nxp.tests.executors import convert_run_compare, ToNHWCPreprocess, ToNCHWPreprocess
-from executorch.backends.nxp.tests.models import ReLUModule, Conv2dModule, LinearModule
+from executorch.backends.nxp.backend.edge_program_converter import (
+    EdgeProgramToIRConverter,
+)
+from executorch.backends.nxp.tests.executorch_pipeline import (
+    to_edge_program,
+    to_quantized_edge_program,
+)
+from executorch.backends.nxp.tests.executors import (
+    convert_run_compare,
+    ToNCHWPreprocess,
+    ToNHWCPreprocess,
+)
+from executorch.backends.nxp.tests.models import Conv2dModule, LinearModule, ReLUModule
+from torch.export import ExportedProgram
 
 
 @pytest.fixture(autouse=True)
@@ -66,10 +75,17 @@ def test_relu_with_conv_quant_conversion(mocker):
     # Capture converted program
     edge_program: ExportedProgram = converter_spy.call_args.args[1]
 
-    input_data = ((2 * np.random.random(input_shape).astype(np.float32) - 1) * 50).astype(np.int8)
+    input_data = (
+        (2 * np.random.random(input_shape).astype(np.float32) - 1) * 50
+    ).astype(np.int8)
 
-    convert_run_compare(edge_program, input_data, tfl_model=tflite_flatbuffers_model,
-                        tflite_input_preprocess=ToNHWCPreprocess(), tflite_output_preprocess=ToNCHWPreprocess())
+    convert_run_compare(
+        edge_program,
+        input_data,
+        tfl_model=tflite_flatbuffers_model,
+        tflite_input_preprocess=ToNHWCPreprocess(),
+        tflite_output_preprocess=ToNCHWPreprocess(),
+    )
 
 
 def test_relu_with_linear_quant_conversion(mocker):
@@ -85,6 +101,8 @@ def test_relu_with_linear_quant_conversion(mocker):
     # Capture converted program
     edge_program: ExportedProgram = converter_spy.call_args.args[1]
 
-    input_data = ((2 * np.random.random(input_shape).astype(np.float32) - 1) * 50).astype(np.int8)
+    input_data = (
+        (2 * np.random.random(input_shape).astype(np.float32) - 1) * 50
+    ).astype(np.int8)
 
     convert_run_compare(edge_program, input_data, tfl_model=tflite_flatbuffers_model)

@@ -7,6 +7,7 @@
  */
 
 #include <executorch/kernels/test/FunctionHeaderWrapper.h> // Declares the operator
+#include <executorch/kernels/test/ScalarOverflowTestMacros.h>
 #include <executorch/kernels/test/TestUtil.h>
 #include <executorch/kernels/test/supported_features.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
@@ -17,12 +18,12 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::IntArrayRef;
-using exec_aten::MemoryFormat;
-using exec_aten::optional;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::IntArrayRef;
+using executorch::aten::MemoryFormat;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
+using std::optional;
 using torch::executor::testing::TensorFactory;
 
 class OpFullOutTest : public OperatorTest {
@@ -59,6 +60,17 @@ class OpFullOutTest : public OperatorTest {
     op_full_out(aref, 1.0, out);
     EXPECT_TENSOR_EQ(out, tf.ones(size_int32_t));
   }
+
+  template <ScalarType DTYPE>
+  void expect_bad_scalar_value_dies(const Scalar& bad_value) {
+    TensorFactory<DTYPE> tf;
+    std::vector<int32_t> sizes = {2, 2};
+    std::vector<int64_t> sizes_int64_t(sizes.begin(), sizes.end());
+    auto aref = IntArrayRef(sizes_int64_t.data(), sizes_int64_t.size());
+    Tensor out = tf.zeros(sizes);
+
+    ET_EXPECT_KERNEL_FAILURE(context_, op_full_out(aref, bad_value, out));
+  }
 };
 
 #define GENERATE_TEST(_, DTYPE)                  \
@@ -70,22 +82,9 @@ class OpFullOutTest : public OperatorTest {
     test_ones_out<ScalarType::DTYPE>({2, 3, 4}); \
   }
 
-ET_FORALL_REALH_TYPES(GENERATE_TEST)
+ET_FORALL_REALHBF16_TYPES(GENERATE_TEST)
 
-TEST_F(OpFullOutTest, ValueOverflow) {
-  if (torch::executor::testing::SupportedFeatures::get()->is_aten) {
-    GTEST_SKIP() << "ATen kernel doesn't handle overflow";
-  }
-  TensorFactory<ScalarType::Byte> tf;
-
-  std::vector<int64_t> sizes_int64_t_vec = {2, 3};
-  std::vector<int32_t> sizes_in32_t_vec = {2, 3};
-  auto sizes = IntArrayRef(sizes_int64_t_vec.data(), sizes_int64_t_vec.size());
-
-  Tensor out = tf.zeros(sizes_in32_t_vec);
-
-  op_full_out(sizes, 1000, out);
-}
+GENERATE_SCALAR_OVERFLOW_TESTS(OpFullOutTest)
 
 TEST_F(OpFullOutTest, HalfSupport) {
   TensorFactory<ScalarType::Half> tf;

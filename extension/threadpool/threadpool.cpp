@@ -45,6 +45,8 @@ size_t ThreadPool::get_thread_count() const {
 }
 
 bool ThreadPool::_unsafe_reset_threadpool(uint32_t new_thread_count) {
+  ET_LOG(Info, "Resetting threadpool to %u threads.", new_thread_count);
+
   // No need to do anything if the count is same or 0
   if (new_thread_count == get_thread_count() || new_thread_count == 0) {
     return true;
@@ -96,7 +98,11 @@ void ThreadPool::run(
 // get_threadpool is not thread safe due to leak_corrupted_threadpool
 // Make this part threadsafe: TODO(kimishpatel)
 ThreadPool* get_threadpool() {
-  ET_CHECK_MSG(cpuinfo_initialize(), "cpuinfo initialization failed");
+  if (!cpuinfo_initialize()) {
+    ET_LOG(Error, "cpuinfo initialization failed");
+    return nullptr; // NOLINT(facebook-hte-NullableReturn)
+  }
+
   int num_threads = cpuinfo_get_processors_count();
   /*
    * For llvm-tsan, holding limit for the number of locks for a single thread

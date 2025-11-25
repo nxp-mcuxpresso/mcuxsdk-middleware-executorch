@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloDotGeneralOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloDotGeneralOptions(object):
     def GetRootAsStablehloDotGeneralOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloDotGeneralOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloDotGeneralOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloDotGeneralOptions
     def Init(self, buf, pos):
@@ -33,7 +40,10 @@ class StablehloDotGeneralOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloDotGeneralOptions
@@ -60,7 +70,10 @@ class StablehloDotGeneralOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloDotGeneralOptions
@@ -87,7 +100,10 @@ class StablehloDotGeneralOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloDotGeneralOptions
@@ -114,7 +130,10 @@ class StablehloDotGeneralOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloDotGeneralOptions
@@ -141,7 +160,10 @@ class StablehloDotGeneralOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Uint32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # StablehloDotGeneralOptions
@@ -163,74 +185,120 @@ class StablehloDotGeneralOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         return o == 0
 
+
 def StablehloDotGeneralOptionsStart(builder):
     builder.StartObject(5)
+
 
 def Start(builder):
     StablehloDotGeneralOptionsStart(builder)
 
+
 def StablehloDotGeneralOptionsAddLhsBatchingDimensions(builder, lhsBatchingDimensions):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(lhsBatchingDimensions), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(lhsBatchingDimensions), 0
+    )
+
 
 def AddLhsBatchingDimensions(builder, lhsBatchingDimensions):
     StablehloDotGeneralOptionsAddLhsBatchingDimensions(builder, lhsBatchingDimensions)
 
+
 def StablehloDotGeneralOptionsStartLhsBatchingDimensionsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartLhsBatchingDimensionsVector(builder, numElems: int) -> int:
     return StablehloDotGeneralOptionsStartLhsBatchingDimensionsVector(builder, numElems)
 
+
 def StablehloDotGeneralOptionsAddRhsBatchingDimensions(builder, rhsBatchingDimensions):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(rhsBatchingDimensions), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(rhsBatchingDimensions), 0
+    )
+
 
 def AddRhsBatchingDimensions(builder, rhsBatchingDimensions):
     StablehloDotGeneralOptionsAddRhsBatchingDimensions(builder, rhsBatchingDimensions)
 
+
 def StablehloDotGeneralOptionsStartRhsBatchingDimensionsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartRhsBatchingDimensionsVector(builder, numElems: int) -> int:
     return StablehloDotGeneralOptionsStartRhsBatchingDimensionsVector(builder, numElems)
 
-def StablehloDotGeneralOptionsAddLhsContractingDimensions(builder, lhsContractingDimensions):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(lhsContractingDimensions), 0)
+
+def StablehloDotGeneralOptionsAddLhsContractingDimensions(
+    builder, lhsContractingDimensions
+):
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(lhsContractingDimensions), 0
+    )
+
 
 def AddLhsContractingDimensions(builder, lhsContractingDimensions):
-    StablehloDotGeneralOptionsAddLhsContractingDimensions(builder, lhsContractingDimensions)
+    StablehloDotGeneralOptionsAddLhsContractingDimensions(
+        builder, lhsContractingDimensions
+    )
+
 
 def StablehloDotGeneralOptionsStartLhsContractingDimensionsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
 
-def StartLhsContractingDimensionsVector(builder, numElems: int) -> int:
-    return StablehloDotGeneralOptionsStartLhsContractingDimensionsVector(builder, numElems)
 
-def StablehloDotGeneralOptionsAddRhsContractingDimensions(builder, rhsContractingDimensions):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(rhsContractingDimensions), 0)
+def StartLhsContractingDimensionsVector(builder, numElems: int) -> int:
+    return StablehloDotGeneralOptionsStartLhsContractingDimensionsVector(
+        builder, numElems
+    )
+
+
+def StablehloDotGeneralOptionsAddRhsContractingDimensions(
+    builder, rhsContractingDimensions
+):
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(rhsContractingDimensions), 0
+    )
+
 
 def AddRhsContractingDimensions(builder, rhsContractingDimensions):
-    StablehloDotGeneralOptionsAddRhsContractingDimensions(builder, rhsContractingDimensions)
+    StablehloDotGeneralOptionsAddRhsContractingDimensions(
+        builder, rhsContractingDimensions
+    )
+
 
 def StablehloDotGeneralOptionsStartRhsContractingDimensionsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
 
+
 def StartRhsContractingDimensionsVector(builder, numElems: int) -> int:
-    return StablehloDotGeneralOptionsStartRhsContractingDimensionsVector(builder, numElems)
+    return StablehloDotGeneralOptionsStartRhsContractingDimensionsVector(
+        builder, numElems
+    )
+
 
 def StablehloDotGeneralOptionsAddPrecisionConfig(builder, precisionConfig):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(precisionConfig), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(precisionConfig), 0
+    )
+
 
 def AddPrecisionConfig(builder, precisionConfig):
     StablehloDotGeneralOptionsAddPrecisionConfig(builder, precisionConfig)
 
+
 def StablehloDotGeneralOptionsStartPrecisionConfigVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartPrecisionConfigVector(builder, numElems: int) -> int:
     return StablehloDotGeneralOptionsStartPrecisionConfigVector(builder, numElems)
 
+
 def StablehloDotGeneralOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloDotGeneralOptionsEnd(builder)

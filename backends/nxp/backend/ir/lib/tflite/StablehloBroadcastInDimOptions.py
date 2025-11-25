@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloBroadcastInDimOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloBroadcastInDimOptions(object):
     def GetRootAsStablehloBroadcastInDimOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloBroadcastInDimOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloBroadcastInDimOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloBroadcastInDimOptions
     def Init(self, buf, pos):
@@ -33,7 +40,10 @@ class StablehloBroadcastInDimOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloBroadcastInDimOptions
@@ -55,26 +65,38 @@ class StablehloBroadcastInDimOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         return o == 0
 
+
 def StablehloBroadcastInDimOptionsStart(builder):
     builder.StartObject(1)
+
 
 def Start(builder):
     StablehloBroadcastInDimOptionsStart(builder)
 
+
 def StablehloBroadcastInDimOptionsAddBroadcastDimensions(builder, broadcastDimensions):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(broadcastDimensions), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(broadcastDimensions), 0
+    )
+
 
 def AddBroadcastDimensions(builder, broadcastDimensions):
     StablehloBroadcastInDimOptionsAddBroadcastDimensions(builder, broadcastDimensions)
 
+
 def StablehloBroadcastInDimOptionsStartBroadcastDimensionsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
 
+
 def StartBroadcastDimensionsVector(builder, numElems: int) -> int:
-    return StablehloBroadcastInDimOptionsStartBroadcastDimensionsVector(builder, numElems)
+    return StablehloBroadcastInDimOptionsStartBroadcastDimensionsVector(
+        builder, numElems
+    )
+
 
 def StablehloBroadcastInDimOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloBroadcastInDimOptionsEnd(builder)

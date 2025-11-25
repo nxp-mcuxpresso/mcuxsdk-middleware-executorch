@@ -12,7 +12,7 @@ import math
 from typing import List, Optional, Tuple
 
 import torch
-from executorch.examples.models.llama.llama_transformer import Attention
+from executorch.examples.models.llama.attention import Attention
 from torch import nn
 
 
@@ -32,7 +32,7 @@ class KVCacheSHA(torch.nn.Module):
     def __init__(
         self,
         max_batch_size: int,
-        max_seq_length: int,
+        max_context_length: int,
         n_heads: int,
         head_dim: int,
         dtype=torch.float32,
@@ -40,17 +40,15 @@ class KVCacheSHA(torch.nn.Module):
         super().__init__()
 
         # a buffer per head
-        cache_shape = (max_batch_size, max_seq_length, head_dim)
+        cache_shape = (max_batch_size, max_context_length, head_dim)
         for i in range(n_heads):
             self.register_buffer(
                 f"past_k_caches_{i}",
                 torch.zeros(cache_shape, dtype=dtype, device="cpu"),
-                persistent=False,
             )
             self.register_buffer(
                 f"past_v_caches_{i}",
                 torch.zeros(cache_shape, dtype=dtype, device="cpu"),
-                persistent=False,
             )
 
     def update(
@@ -79,7 +77,7 @@ class SDPASHA(torch.nn.Module):
     def __init__(
         self,
         max_batch_size: int,
-        max_seq_length: int,
+        max_context_length: int,
         n_heads: int,
         n_rep: int,
         head_dim: int,
@@ -90,7 +88,7 @@ class SDPASHA(torch.nn.Module):
         self.n_rep = n_rep
         self.dim = dim
         self.kv_cache = KVCacheSHA(
-            max_batch_size, max_seq_length, n_heads // n_rep, head_dim
+            max_batch_size, max_context_length, n_heads // n_rep, head_dim
         )
         self.scale_factor = math.sqrt(head_dim)
 
@@ -134,11 +132,11 @@ class AttentionSHA(nn.Module):
         self.n_rep = self.n_heads // self.n_kv_heads
         self.dim = attention_mha.dim
         self.max_batch_size = attention_mha.max_batch_size
-        self.max_seq_len = attention_mha.max_seq_len
+        self.max_context_len = attention_mha.max_context_len
         self.head_dim = attention_mha.dim // self.n_heads
         self.SDPA = SDPASHA(
             self.max_batch_size,
-            self.max_seq_len,
+            self.max_context_len,
             self.n_heads,
             self.n_rep,
             self.head_dim,
@@ -184,8 +182,8 @@ class AttentionSHA(nn.Module):
 
         causal_mask = torch.tril(
             torch.ones(
-                self.max_seq_len,
-                self.max_seq_len,
+                self.max_context_len,
+                self.max_context_len,
                 dtype=torch.bool,
                 device="cpu",
             )

@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloReduceWindowOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloReduceWindowOptions(object):
     def GetRootAsStablehloReduceWindowOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloReduceWindowOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloReduceWindowOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloReduceWindowOptions
     def Init(self, buf, pos):
@@ -33,7 +40,10 @@ class StablehloReduceWindowOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloReduceWindowOptions
@@ -60,7 +70,10 @@ class StablehloReduceWindowOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloReduceWindowOptions
@@ -87,7 +100,10 @@ class StablehloReduceWindowOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloReduceWindowOptions
@@ -114,7 +130,10 @@ class StablehloReduceWindowOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloReduceWindowOptions
@@ -141,7 +160,10 @@ class StablehloReduceWindowOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloReduceWindowOptions
@@ -170,80 +192,116 @@ class StablehloReduceWindowOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def StablehloReduceWindowOptionsStart(builder):
     builder.StartObject(6)
+
 
 def Start(builder):
     StablehloReduceWindowOptionsStart(builder)
 
+
 def StablehloReduceWindowOptionsAddWindowDimensions(builder, windowDimensions):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(windowDimensions), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(windowDimensions), 0
+    )
+
 
 def AddWindowDimensions(builder, windowDimensions):
     StablehloReduceWindowOptionsAddWindowDimensions(builder, windowDimensions)
 
+
 def StablehloReduceWindowOptionsStartWindowDimensionsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartWindowDimensionsVector(builder, numElems: int) -> int:
     return StablehloReduceWindowOptionsStartWindowDimensionsVector(builder, numElems)
 
+
 def StablehloReduceWindowOptionsAddWindowStrides(builder, windowStrides):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(windowStrides), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(windowStrides), 0
+    )
+
 
 def AddWindowStrides(builder, windowStrides):
     StablehloReduceWindowOptionsAddWindowStrides(builder, windowStrides)
 
+
 def StablehloReduceWindowOptionsStartWindowStridesVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartWindowStridesVector(builder, numElems: int) -> int:
     return StablehloReduceWindowOptionsStartWindowStridesVector(builder, numElems)
 
+
 def StablehloReduceWindowOptionsAddBaseDilations(builder, baseDilations):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(baseDilations), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(baseDilations), 0
+    )
+
 
 def AddBaseDilations(builder, baseDilations):
     StablehloReduceWindowOptionsAddBaseDilations(builder, baseDilations)
 
+
 def StablehloReduceWindowOptionsStartBaseDilationsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartBaseDilationsVector(builder, numElems: int) -> int:
     return StablehloReduceWindowOptionsStartBaseDilationsVector(builder, numElems)
 
+
 def StablehloReduceWindowOptionsAddWindowDilations(builder, windowDilations):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(windowDilations), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(windowDilations), 0
+    )
+
 
 def AddWindowDilations(builder, windowDilations):
     StablehloReduceWindowOptionsAddWindowDilations(builder, windowDilations)
 
+
 def StablehloReduceWindowOptionsStartWindowDilationsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartWindowDilationsVector(builder, numElems: int) -> int:
     return StablehloReduceWindowOptionsStartWindowDilationsVector(builder, numElems)
 
+
 def StablehloReduceWindowOptionsAddPadding(builder, padding):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(padding), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        4, flatbuffers.number_types.UOffsetTFlags.py_type(padding), 0
+    )
+
 
 def AddPadding(builder, padding):
     StablehloReduceWindowOptionsAddPadding(builder, padding)
 
+
 def StablehloReduceWindowOptionsStartPaddingVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartPaddingVector(builder, numElems: int) -> int:
     return StablehloReduceWindowOptionsStartPaddingVector(builder, numElems)
 
+
 def StablehloReduceWindowOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex):
     builder.PrependInt32Slot(5, bodySubgraphIndex, 0)
+
 
 def AddBodySubgraphIndex(builder, bodySubgraphIndex):
     StablehloReduceWindowOptionsAddBodySubgraphIndex(builder, bodySubgraphIndex)
 
+
 def StablehloReduceWindowOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloReduceWindowOptionsEnd(builder)

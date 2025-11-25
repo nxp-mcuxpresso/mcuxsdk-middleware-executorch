@@ -4,18 +4,26 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
+
+from executorch.backends.nxp.backend.custom_delegation_options import (
+    CustomDelegationOptions,
+)
+from executorch.backends.nxp.backend.ir.converter.conversion import translator
+from executorch.backends.nxp.backend.ir.converter.node_converter import (
+    _is_dequant_node,
+    _is_quant_node,
+    NodeConverter,
+    Target,
+)
+from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options.concatenation_options import (
+    Concatenation,
+)
 from torch.fx import Node
 from torch.nn import Parameter
 
-from executorch.backends.nxp.backend.custom_delegation_options import CustomDelegationOptions
-from executorch.backends.nxp.backend.ir.converter.conversion import translator
-from executorch.backends.nxp.backend.ir.converter.conversion.common import OpsList
-from executorch.backends.nxp.backend.ir.converter.node_converter import NodeConverter, Target
-from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options.concatenation_options import Concatenation
-
 
 def _get_shape(node: torch.fx.Node) -> list[int]:
-    return node.meta['val'].shape
+    return node.meta["val"].shape
 
 
 class CatConverter(NodeConverter):
@@ -28,16 +36,45 @@ class CatConverter(NodeConverter):
             dim += rank
 
         if not (0 <= dim < rank):
-            raise RuntimeError('`Cat` operator has invalid `dim`.')
+            raise RuntimeError("`Cat` operator has invalid `dim`.")
 
         return dim
+
+    @staticmethod
+    def _all_io_shares_quantization_parameters(node: Node) -> bool:
+        post_node = list(node.users.keys())[0]
+        if not _is_quant_node(post_node):
+            return False
+        output_zp, output_scale, output_type = (
+            post_node.args[1],
+            post_node.args[2],
+            post_node.args[5],
+        )
+
+        for input_node in node.args[0]:
+            if not _is_dequant_node(input_node):
+                return False
+
+            input_zp, input_scale, input_type = (
+                input_node.args[1],
+                input_node.args[2],
+                input_node.args[5],
+            )
+            if (input_zp, input_scale, input_type) != (
+                output_zp,
+                output_scale,
+                output_type,
+            ):
+                return False
+
+        return True
 
     @staticmethod
     def _is_supported_on_target(
         node: Node,
         target: Target,
         parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
+        custom_delegation_options: CustomDelegationOptions,
     ) -> bool:
         if custom_delegation_options.force_delegate_cat:
             return True
@@ -50,22 +87,19 @@ class CatConverter(NodeConverter):
                 if dim == 0:
                     return False
 
-                # If all input shapes are equal, the neutron is able to pad the inputs and outputs.
-                input_shapes = [ _get_shape(input_) for input_ in node.all_input_nodes ]
-                if input_shapes.count(input_shapes[0]) == len(input_shapes):
-                    return True
-
                 # Neutron requires the channels to be a multiple of `8`. The channels could either be the second or the
                 #  last dimension, depending on the formats of the node. The format, however, cannot be determined
                 #  during conversion, as it depends on what other nodes are delegated.
                 input_channels = [
-                                     # The second dimension is the channels in PyTorch. If the inputs/output are not channels first, it
-                                     #  will still be the channels in the IR.
-                                     _get_shape(input_)[1] for input_ in node.all_input_nodes
-                                 ] + [
-                                     # If the inputs/outputs are channels first, the last dimension will be the channels.
-                                     _get_shape(input_)[-1] for input_ in node.all_input_nodes
-                                 ]
+                    # The second dimension is the channels in PyTorch. If the inputs/output are not channels first, it
+                    #  will still be the channels in the IR.
+                    _get_shape(input_)[1]
+                    for input_ in node.all_input_nodes
+                ] + [
+                    # If the inputs/outputs are channels first, the last dimension will be the channels.
+                    _get_shape(input_)[-1]
+                    for input_ in node.all_input_nodes
+                ]
                 if any((input_channel % 8) != 0 for input_channel in input_channels):
                     # neutron-library/src/utils/NeutronLibraryInterrogation.cpp#1492
                     return False
@@ -88,12 +122,17 @@ class CatConverter(NodeConverter):
     def _is_supported_in_IR(
         node: Node,
         parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
+        custom_delegation_options: CustomDelegationOptions,
     ) -> bool:
+        if not CatConverter._all_io_shares_quantization_parameters(node):
+            # The IR requires all inputs to have the same quantization parameters as the output.
+            # The quantizer should quantize the operator so that this case does not happen.
+            return False
+
         return True
 
     def convert(self, node: Node):
-        """ Convert the 'aten.cat' operator to TFLite 'Concatenation'. """
+        """Convert the 'aten.cat' operator to TFLite 'Concatenation'."""
         self.assert_convertible(node)
 
         t_op = self._create_tflite_op_with_io_tensors(node)
@@ -101,22 +140,9 @@ class CatConverter(NodeConverter):
         dim = self._get_normalized_dim(node)  # Also checks the validity of `dim`.
 
         if t_op.tmp_inputs[0].tensor_format.is_channels_last():
-            dim = translator.create_channels_last_to_channels_first_permutation(t_op.tmp_inputs[0].rank)[dim]
-
-        ops = OpsList(middle_op=t_op)
-
-        if t_op.is_qdq_quantized():
-            # The IR requires all inputs to have the same quantization parameters as the output.
-            #  https://ai.google.dev/edge/litert/models/quantization_spec
-            # The quantizer should quantize the operator so that this case does not happen, but we cannot rely on it.
-            output = t_op.tmp_outputs[0]
-
-            output_q_params = list(output.quantization.scale), list(output.quantization.zero_point)
-            for input_index, input_ in enumerate(t_op.tmp_inputs):
-                if input_.quantization != output.quantization:
-                    ops.add_pre(
-                        self.builder.create_quantize_operator_before(t_op, input_index, input_.type, *output_q_params)
-                    )
+            dim = translator.create_channels_last_to_channels_first_permutation(
+                t_op.tmp_inputs[0].rank
+            )[dim]
 
         t_op.builtin_options = Concatenation(dim)
-        self.builder.append_operators(ops.flatten())
+        self.builder.append_operators([t_op])

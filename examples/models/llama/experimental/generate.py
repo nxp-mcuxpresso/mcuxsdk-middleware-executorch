@@ -4,7 +4,7 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-# Adapted from gpt-fast: https://github.com/pytorch-labs/gpt-fast/blob/main/generate.py
+# Adapted from gpt-fast: https://github.com/meta-pytorch/gpt-fast/blob/main/generate.py
 import argparse
 
 from typing import Optional, Tuple
@@ -67,8 +67,8 @@ def decode_n_tokens(
     print(f"cur_token: {cur_token}")
     new_tokens, new_probs = [], []
     for _ in range(num_new_tokens):
-        with torch.backends.cuda.sdp_kernel(
-            enable_flash=False, enable_mem_efficient=False, enable_math=True
+        with torch.nn.attention.sdpa_kernel(
+            torch.nn.attention.SDPBackend.MATH
         ):  # Actually better for Inductor to codegen attention here
             next_token, next_prob = decode_one_token(
                 model, cur_token.view(1, -1), **sampling_kwargs

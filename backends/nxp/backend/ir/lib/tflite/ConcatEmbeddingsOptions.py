@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class ConcatEmbeddingsOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class ConcatEmbeddingsOptions(object):
     def GetRootAsConcatEmbeddingsOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def ConcatEmbeddingsOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def ConcatEmbeddingsOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # ConcatEmbeddingsOptions
     def Init(self, buf, pos):
@@ -40,7 +47,10 @@ class ConcatEmbeddingsOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Int32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # ConcatEmbeddingsOptions
@@ -67,7 +77,10 @@ class ConcatEmbeddingsOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4))
+            return self._tab.Get(
+                flatbuffers.number_types.Int32Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 4),
+            )
         return 0
 
     # ConcatEmbeddingsOptions
@@ -89,44 +102,62 @@ class ConcatEmbeddingsOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
+
 def ConcatEmbeddingsOptionsStart(builder):
     builder.StartObject(3)
+
 
 def Start(builder):
     ConcatEmbeddingsOptionsStart(builder)
 
+
 def ConcatEmbeddingsOptionsAddNumChannels(builder, numChannels):
     builder.PrependInt32Slot(0, numChannels, 0)
+
 
 def AddNumChannels(builder, numChannels):
     ConcatEmbeddingsOptionsAddNumChannels(builder, numChannels)
 
+
 def ConcatEmbeddingsOptionsAddNumColumnsPerChannel(builder, numColumnsPerChannel):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(numColumnsPerChannel), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(numColumnsPerChannel), 0
+    )
+
 
 def AddNumColumnsPerChannel(builder, numColumnsPerChannel):
     ConcatEmbeddingsOptionsAddNumColumnsPerChannel(builder, numColumnsPerChannel)
 
+
 def ConcatEmbeddingsOptionsStartNumColumnsPerChannelVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartNumColumnsPerChannelVector(builder, numElems: int) -> int:
     return ConcatEmbeddingsOptionsStartNumColumnsPerChannelVector(builder, numElems)
 
+
 def ConcatEmbeddingsOptionsAddEmbeddingDimPerChannel(builder, embeddingDimPerChannel):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(embeddingDimPerChannel), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(embeddingDimPerChannel), 0
+    )
+
 
 def AddEmbeddingDimPerChannel(builder, embeddingDimPerChannel):
     ConcatEmbeddingsOptionsAddEmbeddingDimPerChannel(builder, embeddingDimPerChannel)
 
+
 def ConcatEmbeddingsOptionsStartEmbeddingDimPerChannelVector(builder, numElems):
     return builder.StartVector(4, numElems, 4)
+
 
 def StartEmbeddingDimPerChannelVector(builder, numElems: int) -> int:
     return ConcatEmbeddingsOptionsStartEmbeddingDimPerChannelVector(builder, numElems)
 
+
 def ConcatEmbeddingsOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ConcatEmbeddingsOptionsEnd(builder)

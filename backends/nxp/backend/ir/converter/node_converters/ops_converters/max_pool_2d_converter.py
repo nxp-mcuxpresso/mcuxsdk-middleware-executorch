@@ -3,49 +3,42 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 import numpy as np
+
+from executorch.backends.nxp.backend.ir.converter.conversion import (
+    aten_translator,
+    common,
+)
+from executorch.backends.nxp.backend.ir.converter.conversion.common import OpsList
+from executorch.backends.nxp.backend.ir.converter.node_converter import (
+    CustomDelegationOptions,
+    NodeConverter,
+)
+from executorch.backends.nxp.backend.ir.lib.tflite.TensorType import TensorType
+from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
+from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import (
+    max_pool_2d_options,
+)
 from torch.fx import Node
 from torch.nn import Parameter
 
-from executorch.backends.nxp.backend.ir.converter.conversion import common, aten_translator
-from executorch.backends.nxp.backend.ir.converter.conversion.common import OpsList
-from executorch.backends.nxp.backend.ir.converter.node_converter import NodeConverter, Target, CustomDelegationOptions
-from executorch.backends.nxp.backend.ir.lib.tflite.TensorType import TensorType
-from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
-from executorch.backends.nxp.backend.ir.tflite_generator.builtin_options import max_pool_2d_options
-
 
 class MaxPool2dConverter(NodeConverter):
-    """ Convert 'max_pool2d' operator to TFLite 'MaxPool2D'.
-        NOTE: max_pool2d_with_indices is a different operator and is unsupported.
+    """Convert 'max_pool2d' operator to TFLite 'MaxPool2D'.
+    NOTE: max_pool2d_with_indices is a different operator and is unsupported.
     """
-
-    @staticmethod
-    def _is_supported_on_target(
-        node: Node,
-        target: Target,
-        parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
-    ) -> bool:
-        match target:
-            case Target.RT700:
-                return True
-
-            case _:
-                return False
 
     @staticmethod
     def _is_supported_in_IR(
         node: Node,
         parameters_mapping: dict[str, Parameter],
-        custom_delegation_options: CustomDelegationOptions
+        custom_delegation_options: CustomDelegationOptions,
     ) -> bool:
         n_args = len(node.args)
 
         dilation = node.args[4] if n_args >= 5 else [1, 1]
         ceil_mode = node.args[5] if n_args == 6 else False
 
-        if any(dil != 1 for dil in dilation) or \
-            ceil_mode:
+        if any(dil != 1 for dil in dilation) or ceil_mode:
             return False
 
         if not NodeConverter._has_shared_q_params_if_quantized(node):
@@ -69,11 +62,12 @@ class MaxPool2dConverter(NodeConverter):
             case TensorType.FLOAT32:
                 return np.asarray([np.finfo(np.float32).min], dtype=np.float32)
             case _:
-                raise RuntimeError(f"Unexpected input type for MaxPool operator.")
+                raise RuntimeError("Unexpected input type for MaxPool operator.")
 
     # noinspection PyMethodMayBeStatic
-    def _convert_2d_max_pool(self, kernel_size, stride, padding, t_op: tflite_model.Operator
-                             ) -> list[tflite_model.Operator]:
+    def _convert_2d_max_pool(
+        self, kernel_size, stride, padding, t_op: tflite_model.Operator
+    ) -> list[tflite_model.Operator]:
         x = t_op.tmp_inputs[0]
 
         ops = OpsList(middle_op=t_op)
@@ -81,13 +75,16 @@ class MaxPool2dConverter(NodeConverter):
         t_op.builtin_options.filter_h = kernel_size[0]
         t_op.builtin_options.filter_w = kernel_size[1]
         common.assign_2d_strides(t_op.builtin_options, stride)
-        t_op.builtin_options.padding, explicit_padding = aten_translator.convert_padding(padding)
+        t_op.builtin_options.padding, explicit_padding = (
+            aten_translator.convert_padding(padding)
+        )
 
         if explicit_padding is not None:
             # Need to prepend a 'Pad' operator, which adds min values for type.
             constant_value = self._get_pad_constant_value(x.type)
-            pre_pad_op = self.builder.create_pad_operator_before(t_op, 0, explicit_padding,
-                                                                 constant_value=constant_value)
+            pre_pad_op = self.builder.create_pad_operator_before(
+                t_op, 0, explicit_padding, constant_value=constant_value
+            )
             ops.add_pre(pre_pad_op)
 
         return ops.flatten()

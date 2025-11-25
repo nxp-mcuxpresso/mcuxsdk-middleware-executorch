@@ -6,11 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+#include <executorch/backends/cadence/fusion_g3/operators/operators.h>
+
 #include <cmath>
 #include <tuple>
 
 #include <xa_nnlib_kernels_api.h>
 
+#include <executorch/backends/cadence/fusion_g3/operators/xt_macros.h>
 #include <executorch/kernels/portable/cpu/util/normalization_ops_util.h>
 #include <executorch/kernels/portable/cpu/vec_ops.h>
 #include <executorch/runtime/kernel/kernel_includes.h>
@@ -20,6 +23,7 @@ using ::executorch::aten::ScalarType;
 using ::executorch::aten::Tensor;
 using ::executorch::runtime::Error;
 using ::executorch::runtime::KernelRuntimeContext;
+using std::optional;
 
 namespace cadence {
 namespace impl {
@@ -32,8 +36,8 @@ template <typename CTYPE>
 void layer_norm(
     const Tensor& input,
     IntArrayRef normalized_shape,
-    const exec_aten::optional<Tensor>& weight,
-    const exec_aten::optional<Tensor>& bias,
+    const optional<Tensor>& weight,
+    const optional<Tensor>& bias,
     CTYPE eps,
     Tensor& out,
     Tensor& mean,
@@ -109,8 +113,8 @@ std::tuple<Tensor&, Tensor&, Tensor&> native_layer_norm_out(
     KernelRuntimeContext& ctx,
     const Tensor& input,
     IntArrayRef normalized_shape,
-    const exec_aten::optional<Tensor>& weight,
-    const exec_aten::optional<Tensor>& bias,
+    const optional<Tensor>& weight,
+    const optional<Tensor>& bias,
     double eps,
     Tensor& out,
     Tensor& mean_out,
@@ -118,13 +122,8 @@ std::tuple<Tensor&, Tensor&, Tensor&> native_layer_norm_out(
   (void)ctx;
 
   std::tuple<Tensor&, Tensor&, Tensor&> ret_val(out, mean_out, rstd_out);
-
-  ET_KERNEL_CHECK(
-      ctx,
-      torch::executor::check_layer_norm_args(
-          input, normalized_shape, weight, bias, out, mean_out, rstd_out),
-      InvalidArgument,
-      ret_val);
+  int kTensorDimensionLimit = executorch::runtime::kTensorDimensionLimit;
+#ifdef OP_ARG_CHECK
 
   // Only support default dim order for now.
   // TODO: Support other dim orders.
@@ -156,7 +155,7 @@ std::tuple<Tensor&, Tensor&, Tensor&> native_layer_norm_out(
         InvalidArgument,
         ret_val);
   }
-  int kTensorDimensionLimit = executorch::runtime::kTensorDimensionLimit;
+
   Tensor::SizesType mean_rstd_sizes[kTensorDimensionLimit];
   size_t mean_rstd_ndim = 0;
   torch::executor::get_layer_norm_out_target_size(
@@ -181,13 +180,36 @@ std::tuple<Tensor&, Tensor&, Tensor&> native_layer_norm_out(
           rstd_out, {mean_rstd_sizes, mean_rstd_ndim}) == Error::Ok,
       InvalidArgument,
       ret_val);
+#endif
+
+  bool optimized = true;
 
   int input_shape[kTensorDimensionLimit];
   for (int i = 0; i < input.dim(); i++) {
     input_shape[i] = input.size(i);
   }
 
-  if (out.scalar_type() == ScalarType::Float) {
+  if (!(((input.scalar_type() == ScalarType::Float) &&
+         (input.scalar_type() == out.scalar_type()) &&
+         (out.scalar_type() == mean_out.scalar_type()) &&
+         (mean_out.scalar_type() == rstd_out.scalar_type())))) {
+    optimized = false;
+  }
+
+  if (optimized) {
+    if (weight.has_value()) {
+      if (!(input.scalar_type() == weight.value().scalar_type())) {
+        optimized = false;
+      }
+    }
+    if (bias.has_value()) {
+      if (!(input.scalar_type() == bias.value().scalar_type())) {
+        optimized = false;
+      }
+    }
+  }
+
+  if ((input.scalar_type() == ScalarType::Float) && (optimized)) {
     float* const out_data = out.mutable_data_ptr<float>();
     float* const mean_data = mean_out.mutable_data_ptr<float>();
     float* const rstd_data = rstd_out.mutable_data_ptr<float>();
@@ -199,11 +221,17 @@ std::tuple<Tensor&, Tensor&, Tensor&> native_layer_norm_out(
       num_elm *= normalized_shape[i];
     }
 
+    constexpr size_t kAlignment =
+        16; // 16-byte alignment for vectorized operations
+
     float* weight_data;
     if (weight.has_value()) {
       weight_data = weight.value().mutable_data_ptr<float>();
     } else {
-      weight_data = (float*)malloc(num_elm * sizeof(float));
+      executorch::runtime::Result<void*> temp_mem_weight =
+          ctx.allocate_temp(num_elm * sizeof(float), kAlignment);
+      weight_data = (float*)(temp_mem_weight.get());
+
       for (int i = 0; i < num_elm; i++) {
         weight_data[i] = 1;
       }
@@ -212,13 +240,19 @@ std::tuple<Tensor&, Tensor&, Tensor&> native_layer_norm_out(
     if (bias.has_value()) {
       bias_data = bias.value().mutable_data_ptr<float>();
     } else {
-      bias_data = (float*)malloc(num_elm * sizeof(float));
+      executorch::runtime::Result<void*> temp_mem_bias =
+          ctx.allocate_temp(num_elm * sizeof(float), kAlignment);
+      bias_data = (float*)(temp_mem_bias.get());
+
       for (int i = 0; i < num_elm; i++) {
         bias_data[i] = 0;
       }
     }
 
-    xa_nn_native_layer_norm_f32_f32(
+    XT_KERNEL_CHECK(
+        ctx,
+        ret_val,
+        xa_nn_native_layer_norm_f32_f32,
         out_data,
         mean_data,
         rstd_data,
@@ -230,13 +264,14 @@ std::tuple<Tensor&, Tensor&, Tensor&> native_layer_norm_out(
         bias_data,
         (float)eps);
 
-    if (!bias.has_value()) {
-      free(bias_data);
-    }
-    if (!weight.has_value()) {
-      free(weight_data);
-    }
   } else {
+    ET_KERNEL_CHECK(
+        ctx,
+        torch::executor::check_layer_norm_args(
+            input, normalized_shape, weight, bias, out, mean_out, rstd_out),
+        InvalidArgument,
+        ret_val);
+
     ET_SWITCH_FLOAT_TYPES(
         input.scalar_type(), ctx, "native_layer_norm.out", CTYPE, [&]() {
           layer_norm<CTYPE>(

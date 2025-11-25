@@ -16,9 +16,9 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::SupportedFeatures;
 using torch::executor::testing::TensorFactory;
 
@@ -64,14 +64,17 @@ class OpRSubScalarOutTest : public OperatorTest {
     Tensor out = tf.zeros(sizes);
 
     // Performs substraction of tensor from scalar.
+    // Values selected to be exactly representable to avoid throwing off
+    // half/bfloat16 tests.
     op_rsub_scalar_out(
-        tf.make(sizes, /*data=*/{1.1, 2.2, 4.4, 8.8}),
-        1.1,
+        tf.make(sizes, /*data=*/{1.25, 2.25, 4.5, 8.875}),
+        1.0,
         /*alpha=*/1,
         out);
 
     // Check that it matches the expected output.
-    EXPECT_TENSOR_CLOSE(out, tf.make(sizes, /*data=*/{0.0, -1.1, -3.3, -7.7}));
+    EXPECT_TENSOR_CLOSE(
+        out, tf.make(sizes, /*data=*/{-0.25, -1.25, -3.5, -7.875}));
   }
 
   /* %python
@@ -166,6 +169,14 @@ TEST_F(OpRSubScalarOutTest, FloatTensors) {
 
 TEST_F(OpRSubScalarOutTest, DoubleTensors) {
   test_floating_point_rsub_scalar_out<ScalarType::Double>();
+}
+
+TEST_F(OpRSubScalarOutTest, HalfTensors) {
+  test_floating_point_rsub_scalar_out<ScalarType::Half>();
+}
+
+TEST_F(OpRSubScalarOutTest, BFloat16Tensors) {
+  test_floating_point_rsub_scalar_out<ScalarType::BFloat16>();
 }
 
 TEST_F(OpRSubScalarOutTest, UnhandledDtypeDies) {

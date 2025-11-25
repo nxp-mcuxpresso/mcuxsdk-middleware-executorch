@@ -1,17 +1,17 @@
-# Copyright 2024-2025 NXP
+# Copyright 2024 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from torch.fx import Node
-from torch.nn import Parameter
-
-from executorch.backends.nxp.backend.ir.converter.builder.model_builder import ModelBuilder
+from executorch.backends.nxp.backend.ir.converter.builder.model_builder import (
+    ModelBuilder,
+)
 from executorch.backends.nxp.backend.ir.converter.conversion import translator
-from executorch.backends.nxp.backend.ir.converter.tensor_utils import get_name_of_node_output
 from executorch.backends.nxp.backend.ir.tensor_formatting import TensorFormat
 from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model
 from executorch.backends.nxp.backend.node_format_inference import NodeFormat
+from torch.fx import Node
+from torch.nn import Parameter
 
 
 class AtenModelBuilderDirector(ModelBuilder):
@@ -28,33 +28,24 @@ class AtenModelBuilderDirector(ModelBuilder):
         :param node: Node instance.
         :param node_format: NodeFormat definition.
         """
-
-        def _append_tensor(tensor_, name = None):
-            type_ = translator.convert_data_type(tensor_.dtype)
-            shape = list(tensor_.shape)
-
-            if node_format.is_channels_first():
-                shape = translator.dims_to_channels_last(shape)
-
-            tensor = self.create_empty_tensor(name or node.name, type_, shape)
-            tensor.tensor_format = TensorFormat.from_node_format(node_format)
-
         if self.tensor_exists(node.name):
             return
 
-        tensor_or_tuple = node.meta["val"]
-        if isinstance(tensor_or_tuple, tuple):
-            # The `node` can produce multiple output tensors, which are represented using this tuple.
-            for i, t in enumerate(tensor_or_tuple):
-                _append_tensor(
-                    t,
-                    get_name_of_node_output(node, i)
-                )
+        tensor = node.meta["val"]
+        if isinstance(tensor, tuple):
+            tensor = tensor[0]  # Fake tensor
+        _type = translator.convert_data_type(tensor.dtype)
+        shape = list(tensor.shape)
 
-        else:
-            _append_tensor(tensor_or_tuple)
+        if node_format.is_channels_first():
+            shape = translator.dims_to_channels_last(shape)
 
-    def append_as_static_tensor(self, node: Node, node_format: NodeFormat, tensor: Parameter):
+        tensor = self.create_empty_tensor(node.name, _type, shape)
+        tensor.tensor_format = TensorFormat.from_node_format(node_format)
+
+    def append_as_static_tensor(
+        self, node: Node, node_format: NodeFormat, tensor: Parameter
+    ):
         """
         Append node into ModelBuilder as tensor with data (static). Can be used for weights,
         permutations etc.
@@ -85,20 +76,21 @@ class AtenModelBuilderDirector(ModelBuilder):
         for op in ops_to_add:
             if op.builtin_options is not None:
                 op.opcode_index = self.op_code_index_for_op_type(
-                    op.builtin_options.operator_type,
-                    op.tmp_version
+                    op.builtin_options.operator_type, op.tmp_version
                 )
 
             elif op.custom_options is not None:
                 op.opcode_index = self.op_code_index_for_op_type(
                     op.custom_options.operator_type,
                     op.tmp_version,
-                    op.custom_options.custom_code
+                    op.custom_options.custom_code,
                 )
 
             self.check_and_append_operator(op)
 
-    def assign_model_io_to_subgraph_and_get_io_formats(self, graph_signature) -> dict[str, dict]:
+    def assign_model_io_to_subgraph_and_get_io_formats(
+        self, graph_signature
+    ) -> dict[str, dict]:
         """
         Assign model's inputs/outputs to SubGraph.
 
@@ -113,16 +105,20 @@ class AtenModelBuilderDirector(ModelBuilder):
         self.get_sub_graph().inputs = tflite_model.SubGraphInputs()
         for input_name in graph_signature.user_inputs:
             tensor = self.tensor_for_name(input_name)
-            assert input_name == tensor.name, ("Program's input name doesn't match with tensor name in TFLite. "
-                                               "Input was probably redirected.")
+            assert input_name == tensor.name, (
+                "Program's input name doesn't match with tensor name in TFLite. "
+                "Input was probably redirected."
+            )
             self.get_sub_graph().inputs.tmp_inputs.append(tensor)
             io_formats["inputs"][tensor.name] = tensor.tensor_format
 
         self.get_sub_graph().outputs = tflite_model.SubGraphOutputs()
         for output_name in graph_signature.user_outputs:
             tensor = self.tensor_for_name(output_name)
-            assert output_name == tensor.name, ("Program's output name doesn't match with tensor name in TFLite. "
-                                                "Output was probably redirected.")
+            assert output_name == tensor.name, (
+                "Program's output name doesn't match with tensor name in TFLite. "
+                "Output was probably redirected."
+            )
             self.get_sub_graph().outputs.tmp_outputs.append(tensor)
 
             io_formats["outputs"][tensor.name] = tensor.tensor_format

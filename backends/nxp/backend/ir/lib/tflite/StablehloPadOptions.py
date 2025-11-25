@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloPadOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class StablehloPadOptions(object):
     def GetRootAsStablehloPadOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def StablehloPadOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloPadOptions
     def Init(self, buf, pos):
@@ -33,7 +38,10 @@ class StablehloPadOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloPadOptions
@@ -60,7 +68,10 @@ class StablehloPadOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloPadOptions
@@ -87,7 +98,10 @@ class StablehloPadOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloPadOptions
@@ -109,50 +123,72 @@ class StablehloPadOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         return o == 0
 
+
 def StablehloPadOptionsStart(builder):
     builder.StartObject(3)
+
 
 def Start(builder):
     StablehloPadOptionsStart(builder)
 
+
 def StablehloPadOptionsAddEdgePaddingLow(builder, edgePaddingLow):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(edgePaddingLow), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        0, flatbuffers.number_types.UOffsetTFlags.py_type(edgePaddingLow), 0
+    )
+
 
 def AddEdgePaddingLow(builder, edgePaddingLow):
     StablehloPadOptionsAddEdgePaddingLow(builder, edgePaddingLow)
 
+
 def StablehloPadOptionsStartEdgePaddingLowVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartEdgePaddingLowVector(builder, numElems: int) -> int:
     return StablehloPadOptionsStartEdgePaddingLowVector(builder, numElems)
 
+
 def StablehloPadOptionsAddEdgePaddingHigh(builder, edgePaddingHigh):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(edgePaddingHigh), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(edgePaddingHigh), 0
+    )
+
 
 def AddEdgePaddingHigh(builder, edgePaddingHigh):
     StablehloPadOptionsAddEdgePaddingHigh(builder, edgePaddingHigh)
 
+
 def StablehloPadOptionsStartEdgePaddingHighVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartEdgePaddingHighVector(builder, numElems: int) -> int:
     return StablehloPadOptionsStartEdgePaddingHighVector(builder, numElems)
 
+
 def StablehloPadOptionsAddInteriorPadding(builder, interiorPadding):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(interiorPadding), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(interiorPadding), 0
+    )
+
 
 def AddInteriorPadding(builder, interiorPadding):
     StablehloPadOptionsAddInteriorPadding(builder, interiorPadding)
 
+
 def StablehloPadOptionsStartInteriorPaddingVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartInteriorPaddingVector(builder, numElems: int) -> int:
     return StablehloPadOptionsStartInteriorPaddingVector(builder, numElems)
 
+
 def StablehloPadOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloPadOptionsEnd(builder)

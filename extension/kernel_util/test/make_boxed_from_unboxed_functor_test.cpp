@@ -15,17 +15,17 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ArrayRef;
-using exec_aten::optional;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
-using exec_aten::TensorImpl;
+using executorch::aten::ArrayRef;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
+using executorch::aten::TensorImpl;
 using executorch::runtime::BoxedEvalueList;
 using executorch::runtime::Error;
 using executorch::runtime::EValue;
 using executorch::runtime::get_op_function_from_registry;
 using executorch::runtime::KernelRuntimeContext;
 using executorch::runtime::registry_has_op_function;
+using std::optional;
 
 Tensor& my_op_out(KernelRuntimeContext& ctx, const Tensor& a, Tensor& out) {
   (void)ctx;

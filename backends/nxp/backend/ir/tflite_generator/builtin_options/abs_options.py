@@ -5,10 +5,12 @@
 
 import flatbuffers as fb
 
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
-
 from executorch.backends.nxp.backend.ir.lib.tflite import AbsOptions
+
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 from executorch.backends.nxp.backend.ir.tflite_generator.meta import meta
 
 

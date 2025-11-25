@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class RngAlgorithm(object):
     DEFAULT = 0
     PHILOX = 1

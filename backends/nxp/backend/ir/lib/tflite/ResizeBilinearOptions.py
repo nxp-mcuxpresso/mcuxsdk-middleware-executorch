@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class ResizeBilinearOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class ResizeBilinearOptions(object):
     def GetRootAsResizeBilinearOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def ResizeBilinearOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # ResizeBilinearOptions
     def Init(self, buf, pos):
@@ -32,36 +37,48 @@ class ResizeBilinearOptions(object):
     def AlignCorners(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # ResizeBilinearOptions
     def HalfPixelCenters(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
+
 
 def ResizeBilinearOptionsStart(builder):
     builder.StartObject(4)
 
+
 def Start(builder):
     ResizeBilinearOptionsStart(builder)
+
 
 def ResizeBilinearOptionsAddAlignCorners(builder, alignCorners):
     builder.PrependBoolSlot(2, alignCorners, 0)
 
+
 def AddAlignCorners(builder, alignCorners):
     ResizeBilinearOptionsAddAlignCorners(builder, alignCorners)
+
 
 def ResizeBilinearOptionsAddHalfPixelCenters(builder, halfPixelCenters):
     builder.PrependBoolSlot(3, halfPixelCenters, 0)
 
+
 def AddHalfPixelCenters(builder, halfPixelCenters):
     ResizeBilinearOptionsAddHalfPixelCenters(builder, halfPixelCenters)
 
+
 def ResizeBilinearOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return ResizeBilinearOptionsEnd(builder)

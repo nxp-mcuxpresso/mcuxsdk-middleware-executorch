@@ -1,20 +1,16 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
+# Copyright 2024-25 Arm Limited and/or its affiliates.
 # All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-
-import glob
+import argparse
 import os
 import platform
 import re
-import shutil
 import subprocess
 import sys
-
-# Before doing anything, cd to the directory containing this script.
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
 def python_is_compatible():
@@ -62,49 +58,9 @@ def python_is_compatible():
     return True
 
 
-if not python_is_compatible():
-    sys.exit(1)
+# The pip repository that hosts torch packages.
+TORCH_URL = "https://download.pytorch.org/whl/test/cpu"
 
-# Parse options.
-EXECUTORCH_BUILD_PYBIND = "OFF"
-CMAKE_ARGS = os.getenv("CMAKE_ARGS", "")
-CMAKE_BUILD_ARGS = os.getenv("CMAKE_BUILD_ARGS", "")
-USE_PYTORCH_NIGHTLY = True
-
-for arg in sys.argv[1:]:
-    if arg == "--pybind":
-        EXECUTORCH_BUILD_PYBIND = "ON"
-    elif arg in ["coreml", "mps", "xnnpack"]:
-        if EXECUTORCH_BUILD_PYBIND == "ON":
-            arg_upper = arg.upper()
-            CMAKE_ARGS += f" -DEXECUTORCH_BUILD_{arg_upper}=ON"
-        else:
-            print(f"Error: {arg} must follow --pybind")
-            sys.exit(1)
-    elif arg == "--clean":
-        print("Cleaning build artifacts...")
-        print("Cleaning pip-out/...")
-        shutil.rmtree("pip-out/", ignore_errors=True)
-        dirs = glob.glob("cmake-out*/") + glob.glob("cmake-android-out/")
-        for d in dirs:
-            print(f"Cleaning {d}...")
-            shutil.rmtree(d, ignore_errors=True)
-        print("Done cleaning build artifacts.")
-        sys.exit(0)
-    elif arg == "--use-pt-pinned-commit":
-        # This option is used in CI to make sure that PyTorch build from the pinned commit
-        # is used instead of nightly. CI jobs wouldn't be able to catch regression from the
-        # latest PT commit otherwise
-        USE_PYTORCH_NIGHTLY = False
-    else:
-        print(f"Error: Unknown option {arg}")
-        sys.exit(1)
-
-# Use ClangCL on Windows.
-# ClangCL is an alias to Clang that configures it to work in an MSVC-compatible
-# mode. Using it on Windows to avoid compiler compatibility issues for MSVC.
-if os.name == "nt":
-    CMAKE_ARGS += " -T ClangCL"
 
 # Since ExecuTorch often uses main-branch features of pytorch, only the nightly
 # pip versions will have the required features.
@@ -112,100 +68,136 @@ if os.name == "nt":
 # NOTE: If a newly-fetched version of the executorch repo changes the value of
 # NIGHTLY_VERSION, you should re-run this script to install the necessary
 # package versions.
-NIGHTLY_VERSION = "dev20241218"
-
-# The pip repository that hosts nightly torch packages.
-TORCH_URL = "https://download.pytorch.org/whl/test/cpu"
-
-# pip packages needed by exir.
-EXIR_REQUIREMENTS = [
-    # Setting USE_PYTORCH_NIGHTLY to false to test the pinned PyTorch commit. Note
-    # that we don't need to set any version number there because they have already
-    # been installed on CI before this step, so pip won't reinstall them
-    "torch==2.6.0" if USE_PYTORCH_NIGHTLY else "torch",
-    ("torchvision==0.21.0" if USE_PYTORCH_NIGHTLY else "torchvision"),  # For testing.
-    "typing-extensions",
-]
-
-# pip packages needed to run examples.
-# TODO: Make each example publish its own requirements.txt
-EXAMPLES_REQUIREMENTS = [
-    "timm==1.0.7",
-    "torchaudio==2.6.0" if USE_PYTORCH_NIGHTLY else "torchaudio",
-    "torchsr==1.0.4",
-    "transformers==4.47.1",
-]
-
-# pip packages needed for development.
-DEVEL_REQUIREMENTS = [
-    "cmake>=3.19, <4.0.0",  # For building binary targets.
-    "pip>=23",  # For building the pip package.
-    "pyyaml",  # Imported by the kernel codegen tools.
-    "setuptools>=63",  # For building the pip package.
-    "tomli",  # Imported by extract_sources.py when using python < 3.11.
-    "wheel",  # For building the pip package archive.
-    "zstd",  # Imported by resolve_buck.py.
-]
-
-# Assemble the list of requirements to actually install.
-# TODO: Add options for reducing the number of requirements.
-REQUIREMENTS_TO_INSTALL = EXIR_REQUIREMENTS + DEVEL_REQUIREMENTS + EXAMPLES_REQUIREMENTS
-
-# Install the requirements. `--extra-index-url` tells pip to look for package
-# versions on the provided URL if they aren't available on the default URL.
-subprocess.run(
-    [
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        *REQUIREMENTS_TO_INSTALL,
-        "--extra-index-url",
-        TORCH_URL,
-    ],
-    check=True,
-)
-
-LOCAL_REQUIREMENTS = [
-    "third-party/ao",  # We need the latest kernels for fast iteration, so not relying on pypi.
-]
-
-# Install packages directly from local copy instead of pypi.
-# This is usually not recommended.
-subprocess.run(
-    [
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        *LOCAL_REQUIREMENTS,
-    ],
-    check=True,
-)
-
 #
-# Install executorch pip package. This also makes `flatc` available on the path.
-# The --extra-index-url may be necessary if pyproject.toml has a dependency on a
-# pre-release or nightly version of a torch package.
-#
+# NOTE: If you're changing, make the corresponding change in .ci/docker/ci_commit_pins/pytorch.txt
+# by picking the hash from the same date in https://hud.pytorch.org/hud/pytorch/pytorch/nightly/
+NIGHTLY_VERSION = "dev20250906"
 
-# Set environment variables
-os.environ["EXECUTORCH_BUILD_PYBIND"] = EXECUTORCH_BUILD_PYBIND
-os.environ["CMAKE_ARGS"] = CMAKE_ARGS
-os.environ["CMAKE_BUILD_ARGS"] = CMAKE_BUILD_ARGS
 
-# Run the pip install command
-subprocess.run(
-    [
-        sys.executable,
-        "-m",
-        "pip",
-        "install",
-        ".",
-        "--no-build-isolation",
-        "-v",
-        "--extra-index-url",
-        TORCH_URL,
-    ],
-    check=True,
-)
+def install_requirements(use_pytorch_nightly):
+    # Skip pip install on Intel macOS if using nightly.
+    if use_pytorch_nightly and is_intel_mac_os():
+        print(
+            "ERROR: Prebuilt PyTorch wheels are no longer available for Intel-based macOS.\n"
+            "Please build from source by following https://docs.pytorch.org/executorch/main/using-executorch-building-from-source.html",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    # pip packages needed by exir.
+    TORCH_PACKAGE = [
+        # Setting use_pytorch_nightly to false to test the pinned PyTorch commit. Note
+        # that we don't need to set any version number there because they have already
+        # been installed on CI before this step, so pip won't reinstall them
+        "torch==2.9.0" if use_pytorch_nightly else "torch",
+    ]
+
+    # Install the requirements for core ExecuTorch package.
+    # `--extra-index-url` tells pip to look for package
+    # versions on the provided URL if they aren't available on the default URL.
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-r",
+            "requirements-dev.txt",
+            *TORCH_PACKAGE,
+            "--extra-index-url",
+            TORCH_URL,
+        ],
+        check=True,
+    )
+
+    LOCAL_REQUIREMENTS = [
+        "third-party/ao",  # We need the latest kernels for fast iteration, so not relying on pypi.
+    ] + (
+        [
+            "extension/llm/tokenizers",  # TODO(larryliu0820): Setup a pypi package for this.
+        ]
+        if sys.platform != "win32"
+        else []
+    )  # TODO(gjcomer): Re-enable when buildable on Windows.
+
+    # Install packages directly from local copy instead of pypi.
+    # This is usually not recommended.
+    new_env = os.environ.copy()
+    if ("EXECUTORCH_BUILD_KERNELS_TORCHAO" not in new_env) or (
+        new_env["EXECUTORCH_BUILD_KERNELS_TORCHAO"] == "0"
+    ):
+        new_env["USE_CPP"] = "0"
+    else:
+        assert new_env["EXECUTORCH_BUILD_KERNELS_TORCHAO"] == "1"
+        new_env["USE_CPP"] = "1"
+        new_env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            # Without --no-build-isolation, setup.py can't find the torch module.
+            "--no-build-isolation",
+            *LOCAL_REQUIREMENTS,
+        ],
+        env=new_env,
+        check=True,
+    )
+
+
+def install_optional_example_requirements(use_pytorch_nightly):
+    print("Installing packages in requirements-examples.txt")
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-r",
+            "requirements-examples.txt",
+            "--extra-index-url",
+            TORCH_URL,
+            "--upgrade-strategy",
+            "only-if-needed",
+        ],
+        check=True,
+    )
+
+
+# Prebuilt binaries for Intel-based macOS are no longer available on PyPI; users must compile from source.
+# PyTorch stopped building macOS x86_64 binaries since version 2.3.0 (January 2024).
+def is_intel_mac_os():
+    # Returns True if running on Intel macOS.
+    return platform.system().lower() == "darwin" and platform.machine().lower() in (
+        "x86",
+        "x86_64",
+        "i386",
+    )
+
+
+def main(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--use-pt-pinned-commit",
+        action="store_true",
+        help="build from the pinned PyTorch commit instead of nightly",
+    )
+    parser.add_argument(
+        "--example",
+        action="store_true",
+        help="Also installs required packages for running example scripts.",
+    )
+    args = parser.parse_args(args)
+    use_pytorch_nightly = not bool(args.use_pt_pinned_commit)
+    install_requirements(use_pytorch_nightly)
+    if args.example:
+        install_optional_example_requirements(use_pytorch_nightly)
+
+
+if __name__ == "__main__":
+    # Before doing anything, cd to the directory containing this script.
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    if not python_is_compatible():
+        sys.exit(1)
+    main(sys.argv[1:])

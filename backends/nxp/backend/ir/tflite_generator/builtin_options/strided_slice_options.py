@@ -9,11 +9,14 @@
 Representation of the TFLite operator 'Slice'.
 """
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
-from executorch.backends.nxp.backend.ir.lib.tflite import StridedSliceOptions as libStridedSliceOptions
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
+import flatbuffers as fb
+from executorch.backends.nxp.backend.ir.lib.tflite import (
+    StridedSliceOptions as libStridedSliceOptions,
+)
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 
 
@@ -21,7 +24,9 @@ class StridedSlice(meta.BuiltinOptions):
     offset: bool
 
     def __init__(self, offset: bool = False) -> None:
-        super().__init__(BuiltinOptions.StridedSliceOptions, BuiltinOperator.STRIDED_SLICE)
+        super().__init__(
+            BuiltinOptions.StridedSliceOptions, BuiltinOperator.STRIDED_SLICE
+        )
         self.offset = offset
 
     def gen_tflite(self, builder: fb.Builder):

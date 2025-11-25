@@ -17,18 +17,22 @@ retry () {
 }
 
 clean_executorch_install_folders() {
-  ./install_requirements.sh --clean
+  ./install_executorch.sh --clean
+}
+
+update_tokenizers_git_submodule() {
+  echo "Updating tokenizers git submodule..."
+  git submodule update --init
+  pushd extension/llm/tokenizers
+  git submodule update --init
+  popd
 }
 
 install_executorch() {
   which pip
   # Install executorch, this assumes that Executorch is checked out in the
   # current directory.
-  if [[ "${1:-}" == "use-pt-pinned-commit" ]]; then
-    ./install_requirements.sh --pybind xnnpack --use-pt-pinned-commit
-  else
-    ./install_requirements.sh --pybind xnnpack
-  fi
+  ./install_executorch.sh "$@"
   # Just print out the list of packages for debugging
   pip list
 }
@@ -40,34 +44,14 @@ install_pip_dependencies() {
   popd || return
 }
 
-install_flatc_from_source() {
-  # NB: This function could be used to install flatbuffer from source
-  pushd third-party/flatbuffers || return
-
-  cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release
-  if [ "$(uname)" == "Darwin" ]; then
-    CMAKE_JOBS=$(( $(sysctl -n hw.ncpu) - 1 ))
-  else
-    CMAKE_JOBS=$(( $(nproc) - 1 ))
-  fi
-  cmake --build . -j "${CMAKE_JOBS}"
-
-  # Copy the flatc binary to conda path
-  EXEC_PATH=$(dirname "$(which python)")
-  cp flatc "${EXEC_PATH}"
-
-  popd || return
+install_domains() {
+  echo "Install torchvision and torchaudio"
+  pip install --no-use-pep517 --user "git+https://github.com/pytorch/audio.git@${TORCHAUDIO_VERSION}"
+  pip install --no-use-pep517 --user "git+https://github.com/pytorch/vision.git@${TORCHVISION_VERSION}"
 }
 
-install_arm() {
-  # NB: This function could be used to install Arm dependencies
-  # Setup arm example environment (including TOSA tools)
-  git config --global user.email "github_executorch@arm.com"
-  git config --global user.name "Github Executorch"
-  bash examples/arm/setup.sh --i-agree-to-the-contained-eula
-
-  # Test tosa_reference flow
-  source examples/arm/ethos-u-scratch/setup_path.sh
+install_pytorch_and_domains() {
+  pip install torch==2.9.0 torchvision torchaudio --index-url https://download.pytorch.org/whl/test/cpu
 }
 
 build_executorch_runner_buck2() {
@@ -82,9 +66,12 @@ build_executorch_runner_cmake() {
   mkdir "${CMAKE_OUTPUT_DIR}"
 
   pushd "${CMAKE_OUTPUT_DIR}" || return
-  # This command uses buck2 to gather source files and buck2 could crash flakily
-  # on MacOS
-  retry cmake -DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}" -DCMAKE_BUILD_TYPE=Release ..
+  if [[ $1 == "Debug" ]]; then
+      CXXFLAGS="-fsanitize=address,undefined"
+  else
+      CXXFLAGS=""
+  fi
+  CXXFLAGS="$CXXFLAGS" retry cmake -DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}" -DCMAKE_BUILD_TYPE="${1:-Release}" ..
   popd || return
 
   if [ "$(uname)" == "Darwin" ]; then
@@ -99,7 +86,7 @@ build_executorch_runner() {
   if [[ $1 == "buck2" ]]; then
     build_executorch_runner_buck2
   elif [[ $1 == "cmake" ]]; then
-    build_executorch_runner_cmake
+    build_executorch_runner_cmake "$2"
   else
     echo "Invalid build tool $1. Only buck2 and cmake are supported atm"
     exit 1
@@ -107,14 +94,14 @@ build_executorch_runner() {
 }
 
 cmake_install_executorch_lib() {
+  build_type="${1:-Release}"
   echo "Installing libexecutorch.a and libportable_kernels.a"
   clean_executorch_install_folders
-  retry cmake -DBUCK2="$BUCK" \
-          -DCMAKE_INSTALL_PREFIX=cmake-out \
-          -DCMAKE_BUILD_TYPE=Release \
+  retry cmake -DCMAKE_INSTALL_PREFIX=cmake-out \
+          -DCMAKE_BUILD_TYPE=${build_type} \
           -DPYTHON_EXECUTABLE="$PYTHON_EXECUTABLE" \
           -Bcmake-out .
-  cmake --build cmake-out -j9 --target install --config Release
+  cmake --build cmake-out -j9 --target install --config ${build_type}
 }
 
 download_stories_model_artifacts() {
@@ -140,4 +127,53 @@ do_not_use_nightly_on_ci() {
     echo "Unexpected torch version. Expected binary built from source, got ${TORCH_VERSION}"
     exit 1
   fi
+}
+
+
+parse_args() {
+  local args=("$@")
+  local i
+  local BUILD_TOOL=""
+  local BUILD_MODE=""
+  local EDITABLE=""
+  for ((i=0; i<${#args[@]}; i++)); do
+    case "${args[$i]}" in
+      --build-tool)
+        BUILD_TOOL="${args[$((i+1))]}"
+        i=$((i+1))
+        ;;
+      --build-mode)
+        BUILD_MODE="${args[$((i+1))]}"
+        i=$((i+1))
+        ;;
+      --editable)
+        EDITABLE="${args[$((i+1))]}"
+        i=$((i+1))
+        ;;
+      *)
+        echo "Invalid argument: ${args[$i]}"
+        exit 1
+        ;;
+    esac
+  done
+
+  if [ -z "$BUILD_TOOL" ]; then
+    echo "Missing build tool (require buck2 or cmake), exiting..."
+    exit 1
+  elif ! [[ $BUILD_TOOL =~ ^(cmake|buck2)$ ]]; then
+    echo "Require buck2 or cmake for --build-tool, got ${BUILD_TOOL}, exiting..."
+    exit 1
+  fi
+  BUILD_MODE="${BUILD_MODE:-Release}"
+  if ! [[ "$BUILD_MODE" =~ ^(Debug|Release)$ ]]; then
+    echo "Unsupported build mode ${BUILD_MODE}, options are Debug or Release."
+    exit 1
+  fi
+  EDITABLE="${EDITABLE:-false}"
+  if ! [[ $EDITABLE =~ ^(true|false)$ ]]; then
+    echo "Require true or false for --editable, got ${EDITABLE}, exiting..."
+    exit 1
+  fi
+
+  echo "$BUILD_TOOL $BUILD_MODE $EDITABLE"
 }

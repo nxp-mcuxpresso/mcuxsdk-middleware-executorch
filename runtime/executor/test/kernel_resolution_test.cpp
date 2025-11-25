@@ -25,8 +25,8 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
 using executorch::runtime::Error;
 using executorch::runtime::EValue;
 using executorch::runtime::Kernel;
@@ -36,6 +36,7 @@ using executorch::runtime::Method;
 using executorch::runtime::Program;
 using executorch::runtime::register_kernel;
 using executorch::runtime::Result;
+using executorch::runtime::Span;
 using executorch::runtime::TensorMeta;
 using executorch::runtime::testing::ManagedMemoryManager;
 using torch::executor::util::FileDataLoader;
@@ -73,7 +74,9 @@ class KernelResolutionTest : public ::testing::Test {
 TEST_F(KernelResolutionTest, InitExecutionPlanSuccess) {
   // register kernel with fallback kernel key
   Kernel kernel_1 = Kernel(
-      "aten::add.out", {}, [](KernelRuntimeContext& context, EValue** stack) {
+      "aten::add.out",
+      {},
+      [](KernelRuntimeContext& context, Span<EValue*> stack) {
         (void)context;
         *(stack[0]) = Scalar(100);
       });
@@ -97,7 +100,7 @@ TEST_F(KernelResolutionTest, ResolveKernelKeySuccess) {
   // args are Float with dim order (0, 1)
 
   // Construct a kernel key with the following meta:
-  // exec_aten::DimOrderType contiguous[] = {0, 1};
+  // executorch::aten::DimOrderType contiguous[] = {0, 1};
   // TensorMeta float_contiguous[] = {
   //     TensorMeta(ScalarType::Float, contiguous),
   //     TensorMeta(ScalarType::Float, contiguous),
@@ -105,7 +108,9 @@ TEST_F(KernelResolutionTest, ResolveKernelKeySuccess) {
   //     TensorMeta(ScalarType::Float, contiguous)};
   KernelKey key = KernelKey("v1/6;0,1|6;0,1|6;0,1|6;0,1");
   Kernel kernel_1 = Kernel(
-      "aten::add.out", key, [](KernelRuntimeContext& context, EValue** stack) {
+      "aten::add.out",
+      key,
+      [](KernelRuntimeContext& context, Span<EValue*> stack) {
         (void)context;
         *(stack[0]) = Scalar(100);
       });

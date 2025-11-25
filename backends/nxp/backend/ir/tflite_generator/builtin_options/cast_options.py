@@ -4,11 +4,12 @@
 # LICENSE file in the root directory of this source tree.
 
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+import flatbuffers as fb
 from executorch.backends.nxp.backend.ir.lib.tflite import CastOptions as libCastOptions
-from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import BuiltinOperator
+from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator import (
+    BuiltinOperator,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions import BuiltinOptions
 from executorch.backends.nxp.backend.ir.lib.tflite.TensorType import TensorType
 

@@ -16,6 +16,10 @@ from executorch.backends.xnnpack.partition.xnnpack_partitioner import (
     XnnpackDynamicallyQuantizedPartitioner,
     XnnpackPartitioner,
 )
+from executorch.backends.xnnpack.quantizer.xnnpack_quantizer import (
+    get_symmetric_quantization_config,
+    XNNPACKQuantizer,
+)
 from executorch.backends.xnnpack.utils.configs import (
     get_transform_passes,
     get_xnnpack_edge_compile_config,
@@ -66,15 +70,11 @@ from torch.ao.quantization.quantize_fx import (
     _convert_to_reference_decomposed_fx,
     prepare_fx,
 )
-
-from torch.ao.quantization.quantize_pt2e import convert_pt2e, prepare_pt2e
-from torch.ao.quantization.quantizer.xnnpack_quantizer import (
-    get_symmetric_quantization_config,
-    XNNPACKQuantizer,
-)
-from torch.export import export_for_training
+from torch.export import export
 
 from torch.testing import FileCheck
+
+from torchao.quantization.pt2e.quantize_pt2e import convert_pt2e, prepare_pt2e
 
 
 def randomize_bn(num_features: int, dimensionality: int = 2) -> torch.nn.Module:
@@ -317,10 +317,7 @@ class TestXNNPACK(unittest.TestCase):
         module.eval()
         # program capture
 
-        m = export_for_training(
-            module,
-            example_inputs,
-        ).module()
+        m = export(module, example_inputs, strict=True).module()
 
         quantizer = XNNPACKQuantizer()
         quantization_config = get_symmetric_quantization_config()

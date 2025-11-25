@@ -10,9 +10,16 @@ import logging
 from typing import Optional, Sequence, Union
 
 import torch
-from executorch.exir.pass_base import ExportPass, NodeMetadata, ProxyValue
+from executorch.exir.pass_base import (
+    Argument,
+    ExportPass,
+    NodeMetadata,
+    PassResult,
+    ProxyValue,
+)
+from torch._dispatch.python import enable_python_dispatcher
 from torch._subclasses import FakeTensor, FakeTensorMode
-from torch.fx.node import Argument, Target
+from torch.fx.node import Target
 from torch.utils import _pytree as pytree
 
 
@@ -42,7 +49,10 @@ class GraphBuilder(ExportPass):
         self.tracer: ExportPass.ExportTracer = self.ExportTracer(
             self, torch.fx.graph.CodeGen()
         )
-        self.fake_tensor_mode = FakeTensorMode(allow_fallback_kernels=False)
+        self.fake_tensor_mode = FakeTensorMode(
+            allow_fallback_kernels=False,
+            allow_non_fake_inputs=True,
+        )
         self.tracer.fake_tensor_mode = self.fake_tensor_mode
 
         # This will be called to create nodes in tracer.
@@ -56,13 +66,13 @@ class GraphBuilder(ExportPass):
     ) -> ProxyValue:
         if not isinstance(fake_tensor, FakeTensor):
             fake_tensor = self.fake_tensor_mode.from_tensor(fake_tensor)
-        logging.info(f"Creating placeholder {target} => {fake_tensor.shape}")
+        logging.debug(f"Creating placeholder {target} => {fake_tensor.shape}")
         placeholder = super().placeholder(target, fake_tensor, NodeMetadata({}))
         return placeholder
 
     # pyre-ignore[14]: Inconsistent override.
     def output(self, results: list[ProxyValue]) -> ProxyValue:
-        logging.info(f"Creating outputs {results}")
+        logging.debug(f"Creating outputs {results}")
         return super().output(results, NodeMetadata({}))
 
     def get_graph_module(self) -> torch.fx.GraphModule:
@@ -80,6 +90,27 @@ class GraphBuilder(ExportPass):
         if kwargs is None:
             kwargs = {}
         return super().call_operator(op, args, kwargs, meta)
+
+    def call_submodule(
+        self, graph_module: torch.fx.GraphModule, inputs: tuple[Argument, ...]
+    ) -> PassResult:
+        return ExportPass().call(graph_module)
+
+    def call_getitem(
+        self, value: ProxyValue, key: int, meta: Optional[NodeMetadata] = None
+    ) -> ProxyValue:
+        return super().call_getitem(value, key, meta or NodeMetadata({}))
+
+    def _fx(
+        self,
+        kind: str,
+        target: torch.fx.node.Target,
+        args: tuple[Argument, ...],
+        kwargs: dict[str, Argument],
+        meta: NodeMetadata,
+    ) -> ProxyValue:
+        with self.fake_tensor_mode, enable_python_dispatcher():
+            return super()._fx(kind, target, args, kwargs, meta)
 
 
 def single_op_builder(

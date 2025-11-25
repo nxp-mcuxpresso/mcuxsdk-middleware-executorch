@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class StablehloPrecisionConfig(object):
     DEFAULT = 0
     HIGH = 1

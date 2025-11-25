@@ -11,13 +11,14 @@ import numpy as np
 import torch
 from executorch.backends.qualcomm.utils.constants import QCOM_AXIS_ORDER, QCOM_DATA
 
-from .node_visitor import NodeVisitor, register_node_visitor
+from .node_visitor import NodeVisitor
+from .node_visitor_manager import register_node_visitor
 from .qnn_constants import OpSplit, QNN_OP_PACKAGE_NAME_QTI_AISW
 
 
 @register_node_visitor
 class SplitWithSizes(NodeVisitor):
-    target = ["aten.split_with_sizes.default"]
+    target = ["aten.split_with_sizes.default", "aten.split_with_sizes_copy.default"]
 
     def __init__(self, *args) -> None:
         super().__init__(*args)
@@ -28,15 +29,15 @@ class SplitWithSizes(NodeVisitor):
         nodes_to_wrappers: Dict[torch.fx.Node, PyQnnWrapper.TensorWrapper],
     ) -> PyQnnWrapper.PyQnnOpWrapper:
 
-        input_node = node.args[0]
+        input_node = self.get_node(node.args[0])
         input_tensor = self.get_tensor(input_node, node)
 
         input_tensor_wrapper = self.define_tensor(
             input_node,
+            node,
             input_tensor,
             PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
             nodes_to_wrappers,
-            is_input_tensor=True,
         )
         input_tensor_wrappers = [input_tensor_wrapper]
 
@@ -46,10 +47,10 @@ class SplitWithSizes(NodeVisitor):
             output_tensor = self.get_tensor(node, node, index)
             output_tensor_wrapper = self.define_tensor(
                 node,
+                node,
                 output_tensor,
                 PyQnnWrapper.Qnn_TensorType_t.QNN_TENSOR_TYPE_NATIVE,
                 nodes_to_wrappers,
-                is_input_tensor=False,
                 wrapper_idx=index,
             )
             output_tensor_wrappers.append(output_tensor_wrapper)
@@ -64,9 +65,13 @@ class SplitWithSizes(NodeVisitor):
             split_indices.append(sum)
 
         split_indices_shape = [len(split_indices)]
-        dim = cast(int, node.args[2])
-        if dim < 0:
-            dim = dim % len(input_tensor.shape)
+
+        if len(node.args) > 2:
+            dim = cast(int, node.args[2])
+            if dim < 0:
+                dim = dim % len(input_tensor.shape)
+        else:
+            dim = 0
 
         if QCOM_AXIS_ORDER in node.meta:
             dim = node.meta[QCOM_AXIS_ORDER].index(dim)

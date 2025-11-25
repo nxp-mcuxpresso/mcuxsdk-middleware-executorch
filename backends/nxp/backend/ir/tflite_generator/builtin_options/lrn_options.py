@@ -11,12 +11,11 @@
 Representation of the TFLite operator 'LocalResponseNormalization'.
 """
 
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOperator as libBuiltinOperator
 import executorch.backends.nxp.backend.ir.lib.tflite.BuiltinOptions as libBuiltinOptions
 import executorch.backends.nxp.backend.ir.lib.tflite.LocalResponseNormalizationOptions as libLocalResponseNormalizationOptions
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
+import flatbuffers as fb
 
 
 class LRN(meta.BuiltinOptions):
@@ -26,8 +25,10 @@ class LRN(meta.BuiltinOptions):
     beta: float
 
     def __init__(self, radius: int, bias: float, alpha: float, beta: float) -> None:
-        super().__init__(libBuiltinOptions.BuiltinOptions.LocalResponseNormalizationOptions,
-                         libBuiltinOperator.BuiltinOperator.LOCAL_RESPONSE_NORMALIZATION)
+        super().__init__(
+            libBuiltinOptions.BuiltinOptions.LocalResponseNormalizationOptions,
+            libBuiltinOperator.BuiltinOperator.LOCAL_RESPONSE_NORMALIZATION,
+        )
         self.radius = radius
         self.bias = bias
         self.alpha = alpha

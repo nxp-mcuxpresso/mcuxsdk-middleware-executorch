@@ -1,68 +1,46 @@
-# ExecuTorch NXP Backend examples
+# ExecuTorch Neutron Backend examples
+This directory contains examples demonstrating the use of ExecuTorch AoT flow to convert a PyTorch model to ExecuTorch
+format and delegate the model computation to eIQ Neutron NPU using the eIQ Neutron Backend.
 
-This directory contains models and scripts to run a Neutron delegated PyTorch model with ExecuTorch.
+## Layout
+* `experimental/` - contains CifarNet model example.
+* `models` - demo models instantiation used in examples
+* `aot_neutron_compile.py` - script with end-to-end ExecuTorch AoT Neutron Backend workflow.
+* `README.md` - this file.
+* `run_aot_example.sh` - utility script to launch _aot_neutron_compile.py_. Primarily for CI purpose.
+* `setup.sh` - setup script to install NeutronBackend dependencies.
 
-## Directory structure
+## Setup
+Please finish tutorial [Setting up ExecuTorch](https://pytorch.org/executorch/main/getting-started-setup).
 
-```bash
-nxp
-├── cifar_net                       # CifarNet10 model.
-├── models                          # Models directory.
-│   ├── mlperf_tiny                 # MLPerf Tiny model directory.
-│   ├── model_manager.py            # Model manager for model and dataset handling.
-│   └── utils.py                    # Model manager utilities.
-├── aot_neutron_compile.py          # Script shows end-to-end workflow for compiling and running on Neutron.
-└── README.md                       # This file.
+Run the setup.sh script to install the neutron-converter:
+```commandline
+$ ./examples/nxp/setup.sh
 ```
 
-## Examples
+## Supported models
+* CifarNet
+* MobileNetV2
 
-Here is described a workflow how to generate a Neutron-delegated `.pte` ExecuTorch model from an example model 
-in `torch.nn.Module` format. Resulting ExecuTorch model is ready to deploy on NXP Neutron enabled devices.
-We support several example models. To run these examples, we will use `aot_neutron_compile.py`.
+## PyTorch Model Delegation to Neutron Backend
+First we will start with an example script converting the model. This example show the CifarNet model preparation. 
+It is the same model which is part of the `example_cifarnet` in 
+[MCUXpresso SDK](https://www.nxp.com/design/design-center/software/development-software/mcuxpresso-software-and-tools-/mcuxpresso-software-development-kit-sdk:MCUXpresso-SDK).
 
-#### Steps to run:
+The NXP MCUXpresso software and tools offer comprehensive development solutions designed to help accelerate embedded 
+system development of applications based on MCUs from NXP. The MCUXpresso SDK includes a flexible set of peripheral 
+drivers designed to speed up and simplify development of embedded applications.
 
-1. Build `quantized_ops_aot_lib` package
+The steps are expected to be executed from the `executorch` root folder.
 
-    To run quantization we need to pass shared library `libquantized_ops_aot_lib.so`. First, we need to build
-    `quantized_ops_aot_lib` package. To build it, we need to set the CMake arguments:
-    `-DEXECUTORCH_BUILD_KERNELS_QUANTIZED=ON` and `-DEXECUTORCH_BUILD_KERNELS_QUANTIZED_AOT=ON`.
-
-2. Prepare calibration data (for MLPerf Tiny models)
-
-    Clone [MLPerf Tiny](https://github.com/mlcommons/tiny) repository and follow 
-    `benchmark/experimental/training_torch/README.md` to prepare calibration data for selected model. Copy created 
-    calibration data file for the model to `executorch/data/calibration_data/<model_name_dir>`.
-
-3. Prepare `PYTHONPATH` environment variable
-
-    You need to export the `PYTHONPATH` to point to the root of the "executorch" directory:
-    ```bash
-    $ cd executorch
-    $ export PYTHONPATH=` cd ..; pwd`
-    $ echo $PYTHONPATH
+1. Run the `aot_neutron_compile.py` example with the `cifar10` model 
+    ```commandline
+    $ python -m examples.nxp.aot_neutron_compile --quantize \
+        --delegate --neutron_converter_flavor SDK_25_06 -m cifar10 
     ```
 
-4. Run `aot_neutron_compile.py` script
-
-    Run the script with following arguments: `--model_name` - specify model from a list of available models, `--so_library` 
-    - specify path to `libquantized_ops_aot_lib.so` library from step 1. Quantization and delegation are controlled by
-    `--quantize` and `--delegate` flags, turned off by default.
-    
-    Supported models:
-    - cifar10
-    - visual_wake_words
-    - keyword_spotting
-    - image_classification 
-    - anomaly_detection
-   
-    ```bash
-    $ python -m examples.nxp.aot_neutron_compile --model_name <model_name>  path/to/libquantized_ops_aot_lib.so --quantize --quantize
-    ```
-
-5. Run the model
-
-    ```bash
-    $ <path-to-executorch-build>/executor_runner -model_path examples/nxp/<model_name>.pte
-    ```
+2. It will generate you `cifar10_nxp_delegate.pte` file which can be used with the MCUXpresso SDK `cifarnet_example` 
+project, presented [here](https://mcuxpresso.nxp.com/mcuxsdk/latest/html/middleware/eiq/executorch/docs/nxp/topics/example_applications.html#how-to-build-and-run-executorch-cifarnet-example).
+This project will guide you through the process of deploying your PTE model to the device.
+To get the MCUXpresso SDK follow this [guide](https://mcuxpresso.nxp.com/mcuxsdk/latest/html/middleware/eiq/executorch/docs/nxp/topics/getting_mcuxpresso.html),
+use the MCUXpresso SDK v25.06.00. 

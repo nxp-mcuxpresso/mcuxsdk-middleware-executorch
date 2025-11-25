@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class BidirectionalSequenceRNNOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class BidirectionalSequenceRNNOptions(object):
     def GetRootAsBidirectionalSequenceRNNOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def BidirectionalSequenceRNNOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def BidirectionalSequenceRNNOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # BidirectionalSequenceRNNOptions
     def Init(self, buf, pos):
@@ -32,7 +39,9 @@ class BidirectionalSequenceRNNOptions(object):
     def TimeMajor(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # BidirectionalSequenceRNNOptions
@@ -46,48 +55,72 @@ class BidirectionalSequenceRNNOptions(object):
     def MergeOutputs(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # BidirectionalSequenceRNNOptions
     def AsymmetricQuantizeInputs(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
+
 
 def BidirectionalSequenceRNNOptionsStart(builder):
     builder.StartObject(4)
 
+
 def Start(builder):
     BidirectionalSequenceRNNOptionsStart(builder)
+
 
 def BidirectionalSequenceRNNOptionsAddTimeMajor(builder, timeMajor):
     builder.PrependBoolSlot(0, timeMajor, 0)
 
+
 def AddTimeMajor(builder, timeMajor):
     BidirectionalSequenceRNNOptionsAddTimeMajor(builder, timeMajor)
 
-def BidirectionalSequenceRNNOptionsAddFusedActivationFunction(builder, fusedActivationFunction):
+
+def BidirectionalSequenceRNNOptionsAddFusedActivationFunction(
+    builder, fusedActivationFunction
+):
     builder.PrependInt8Slot(1, fusedActivationFunction, 0)
 
+
 def AddFusedActivationFunction(builder, fusedActivationFunction):
-    BidirectionalSequenceRNNOptionsAddFusedActivationFunction(builder, fusedActivationFunction)
+    BidirectionalSequenceRNNOptionsAddFusedActivationFunction(
+        builder, fusedActivationFunction
+    )
+
 
 def BidirectionalSequenceRNNOptionsAddMergeOutputs(builder, mergeOutputs):
     builder.PrependBoolSlot(2, mergeOutputs, 0)
 
+
 def AddMergeOutputs(builder, mergeOutputs):
     BidirectionalSequenceRNNOptionsAddMergeOutputs(builder, mergeOutputs)
 
-def BidirectionalSequenceRNNOptionsAddAsymmetricQuantizeInputs(builder, asymmetricQuantizeInputs):
+
+def BidirectionalSequenceRNNOptionsAddAsymmetricQuantizeInputs(
+    builder, asymmetricQuantizeInputs
+):
     builder.PrependBoolSlot(3, asymmetricQuantizeInputs, 0)
 
+
 def AddAsymmetricQuantizeInputs(builder, asymmetricQuantizeInputs):
-    BidirectionalSequenceRNNOptionsAddAsymmetricQuantizeInputs(builder, asymmetricQuantizeInputs)
+    BidirectionalSequenceRNNOptionsAddAsymmetricQuantizeInputs(
+        builder, asymmetricQuantizeInputs
+    )
+
 
 def BidirectionalSequenceRNNOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return BidirectionalSequenceRNNOptionsEnd(builder)

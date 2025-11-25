@@ -28,14 +28,26 @@ ShaderInfo::ShaderInfo(
     const uint32_t* const spirv_bin,
     const uint32_t size,
     std::vector<VkDescriptorType>  layout,
-    const utils::uvec3 tile_size)
+    const utils::uvec3 tile_size,
+    const bool requires_shader_int16_ext,
+    const bool requires_16bit_storage_ext,
+    const bool requires_8bit_storage_ext,
+    const bool requires_integer_dot_product_ext,
+    const bool requires_shader_int64_ext,
+    const bool requires_shader_float64_ext)
     : src_code{
           spirv_bin,
           size,
       },
       kernel_name{std::move(name)},
       kernel_layout{std::move(layout)},
-      out_tile_size(tile_size) {
+      out_tile_size(tile_size),
+      requires_shader_int16(requires_shader_int16_ext),
+      requires_16bit_storage(requires_16bit_storage_ext),
+      requires_8bit_storage(requires_8bit_storage_ext),
+      requires_integer_dot_product(requires_integer_dot_product_ext),
+      requires_shader_int64(requires_shader_int64_ext),
+      requires_shader_float64(requires_shader_float64_ext) {
 }
 
 bool operator==(const ShaderInfo& _1, const ShaderInfo& _2) {
@@ -53,10 +65,11 @@ ShaderLayout::ShaderLayout(
     const ShaderLayout::Signature& signature)
     : device_(device), handle_{VK_NULL_HANDLE} {
   std::vector<VkDescriptorSetLayoutBinding> bindings;
+  bindings.reserve(signature.size());
 
   uint32_t binding_num = 0u;
   for (const VkDescriptorType type : signature) {
-    bindings.push_back({
+    bindings.emplace_back(VkDescriptorSetLayoutBinding{
         binding_num++, // binding
         type, // descriptorType
         1u, // descriptorCount

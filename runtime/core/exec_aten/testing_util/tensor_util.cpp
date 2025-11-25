@@ -10,22 +10,60 @@
 #include <cstring>
 #include <ostream>
 
+#include <c10/util/irange.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_factory.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_util.h>
 #include <executorch/runtime/core/exec_aten/util/scalar_type_util.h>
 #include <executorch/runtime/core/exec_aten/util/tensor_util.h>
 
-using exec_aten::BFloat16;
-using exec_aten::Half;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::BFloat16;
+using executorch::aten::Half;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 
 namespace executorch {
 namespace runtime {
 namespace testing {
 
 namespace {
+
+/**
+ * Returns true if the two elements are close according to the description on
+ * `tensors_are_close()`.
+ *
+ * T must be a floating point type. Non-floating point data should be compared
+ * directly.
+ */
+template <typename T>
+bool element_is_close(const T a, const T b, double rtol, double atol) {
+  if constexpr (c10::is_reduced_floating_point_v<T>) {
+    // MSVC complains about ambiguous overloads, so explicitly cast to float to
+    // compare.
+    return element_is_close(
+        static_cast<float>(a), static_cast<float>(b), rtol, atol);
+  } else {
+    if (std::isnan(a) && std::isnan(b)) {
+      // NaN == NaN
+    } else if (!std::isfinite(a) && !std::isfinite(b) && ((a > 0) == (b > 0))) {
+      // -Inf == -Inf
+      // +Inf == +Inf
+    } else if (rtol == 0 && atol == 0) {
+      // Exact comparison; avoid unnecessary math.
+      if (a != b) {
+        return false;
+      }
+    } else {
+      auto allowed_error = atol + std::abs(rtol * b);
+      auto actual_error = std::abs(a - b);
+      if (!std::isfinite(actual_error) || actual_error > allowed_error) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+}
 
 /**
  * Returns true if the two arrays are close according to the description on
@@ -50,27 +88,12 @@ bool data_is_close(
   if (a == b) {
     return true;
   }
-  for (size_t i = 0; i < numel; i++) {
+  for (const auto i : c10::irange(numel)) {
     const auto ai = a[i];
     const auto bi = b[i];
 
-    if (std::isnan(ai) && std::isnan(bi)) {
-      // NaN == NaN
-    } else if (
-        !std::isfinite(ai) && !std::isfinite(bi) && ((ai > 0) == (bi > 0))) {
-      // -Inf == -Inf
-      // +Inf == +Inf
-    } else if (rtol == 0 && atol == 0) {
-      // Exact comparison; avoid unnecessary math.
-      if (ai != bi) {
-        return false;
-      }
-    } else {
-      auto allowed_error = atol + std::abs(rtol * bi);
-      auto actual_error = std::abs(ai - bi);
-      if (!std::isfinite(actual_error) || actual_error > allowed_error) {
-        return false;
-      }
+    if (!element_is_close(ai, bi, rtol, atol)) {
+      return false;
     }
   }
   return true;
@@ -79,6 +102,9 @@ bool data_is_close(
 double default_atol_for_type(ScalarType t) {
   if (t == ScalarType::Half) {
     return internal::kDefaultHalfAtol;
+  }
+  if (t == ScalarType::BFloat16) {
+    return internal::kDefaultBFloat16Atol;
   }
   return internal::kDefaultAtol;
 }
@@ -189,16 +215,16 @@ bool tensor_data_is_close(
 }
 
 bool tensor_lists_are_close(
-    const exec_aten::Tensor* tensors_a,
+    const executorch::aten::Tensor* tensors_a,
     size_t num_tensors_a,
-    const exec_aten::Tensor* tensors_b,
+    const executorch::aten::Tensor* tensors_b,
     size_t num_tensors_b,
     double rtol,
     std::optional<double> opt_atol) {
   if (num_tensors_a != num_tensors_b) {
     return false;
   }
-  for (size_t i = 0; i < num_tensors_a; i++) {
+  for (const auto i : c10::irange(num_tensors_a)) {
     if (!tensors_are_close(tensors_a[i], tensors_b[i], rtol, opt_atol)) {
       return false;
     }
@@ -242,7 +268,7 @@ template <typename T>
 std::ostream& print_data(std::ostream& os, const T* data, size_t numel) {
   // TODO(dbort): Make this smarter: show dimensions, listen to strides,
   // break up or truncate data when it's huge
-  for (auto i = 0; i < numel; i++) {
+  for (const auto i : c10::irange(numel)) {
     os << data[i];
     if (i < numel - 1) {
       os << ", ";
@@ -251,6 +277,17 @@ std::ostream& print_data(std::ostream& os, const T* data, size_t numel) {
   return os;
 }
 
+template <typename T>
+std::ostream&
+print_data(std::ostream& os, const etensor::complex<T>* data, size_t numel) {
+  for (const auto i : c10::irange(numel)) {
+    os << data[i].real_ << " + " << data[i].imag_ << "j";
+    if (i < numel - 1) {
+      os << ", ";
+    }
+  }
+  return os;
+}
 /**
  * Prints the elements of `data` to the stream as comma-separated strings.
  *
@@ -262,7 +299,7 @@ template <>
 std::ostream& print_data(std::ostream& os, const uint8_t* data, size_t numel) {
   // TODO(dbort): Make this smarter: show dimensions, listen to strides,
   // break up or truncate data when it's huge
-  for (auto i = 0; i < numel; i++) {
+  for (const auto i : c10::irange(numel)) {
     os << (uint64_t)data[i];
     if (i < numel - 1) {
       os << ", ";
@@ -278,7 +315,7 @@ std::ostream& print_data(std::ostream& os, const uint8_t* data, size_t numel) {
  */
 std::ostream& operator<<(std::ostream& os, const Tensor& t) {
   os << "ETensor(sizes={";
-  for (auto dim = 0; dim < t.dim(); dim++) {
+  for (const auto dim : c10::irange(t.dim())) {
     os << t.size(dim);
     if (dim < t.dim() - 1) {
       os << ", ";
@@ -294,6 +331,7 @@ std::ostream& operator<<(std::ostream& os, const Tensor& t) {
 
   switch (t.scalar_type()) {
     ET_FORALL_REAL_TYPES_AND3(Half, Bool, BFloat16, PRINT_CASE)
+    ET_FORALL_COMPLEX_TYPES(PRINT_CASE)
     default:
       ET_CHECK_MSG(
           false,

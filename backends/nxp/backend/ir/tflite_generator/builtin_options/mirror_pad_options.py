@@ -5,7 +5,11 @@
 
 import flatbuffers
 
-from executorch.backends.nxp.backend.ir.lib.tflite import BuiltinOptions, BuiltinOperator, MirrorPadOptions
+from executorch.backends.nxp.backend.ir.lib.tflite import (
+    BuiltinOperator,
+    BuiltinOptions,
+    MirrorPadOptions,
+)
 from executorch.backends.nxp.backend.ir.lib.tflite.MirrorPadMode import MirrorPadMode
 from executorch.backends.nxp.backend.ir.tflite_generator.meta import meta
 
@@ -37,11 +41,15 @@ from executorch.backends.nxp.backend.ir.tflite_generator.meta import meta
 #  [2. 1. 0. 1. 0. 0.]
 #  [2. 1. 0. 1. 0. 0.]]
 
+
 class MirrorPad(meta.BuiltinOptions):
     mode: MirrorPadMode
 
     def __init__(self, mode: MirrorPadMode = MirrorPadMode.REFLECT) -> None:
-        super().__init__(BuiltinOptions.BuiltinOptions.MirrorPadOptions, BuiltinOperator.BuiltinOperator.MIRROR_PAD)
+        super().__init__(
+            BuiltinOptions.BuiltinOptions.MirrorPadOptions,
+            BuiltinOperator.BuiltinOperator.MIRROR_PAD,
+        )
         self.mode = mode
 
     def gen_tflite(self, builder: flatbuffers.Builder):

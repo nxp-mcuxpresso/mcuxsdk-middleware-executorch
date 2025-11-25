@@ -7,6 +7,7 @@
  */
 
 #include <executorch/kernels/test/FunctionHeaderWrapper.h> // Declares the operator
+#include <executorch/kernels/test/ScalarOverflowTestMacros.h>
 #include <executorch/kernels/test/TestUtil.h>
 #include <executorch/kernels/test/supported_features.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
@@ -17,10 +18,10 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::IntArrayRef;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::IntArrayRef;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::TensorFactory;
 
 class OpScalarTensorOutTest : public OperatorTest {
@@ -70,6 +71,14 @@ class OpScalarTensorOutTest : public OperatorTest {
     Tensor out = tf.ones(sizes);
 
     ET_EXPECT_KERNEL_FAILURE(context_, op_scalar_tensor_out(value, out));
+  }
+
+  template <ScalarType DTYPE>
+  void expect_bad_scalar_value_dies(const Scalar& bad_value) {
+    TensorFactory<DTYPE> tf;
+    Tensor out = tf.zeros({});
+
+    ET_EXPECT_KERNEL_FAILURE(context_, op_scalar_tensor_out(bad_value, out));
   }
 };
 
@@ -131,3 +140,5 @@ TEST_F(OpScalarTensorOutTest, HalfSupport) {
   op_scalar_tensor_out(INFINITY, out);
   EXPECT_TENSOR_CLOSE(out, tf.make({}, {INFINITY}));
 }
+
+GENERATE_SCALAR_OVERFLOW_TESTS(OpScalarTensorOutTest)

@@ -8,6 +8,8 @@ import torch
 from executorch.exir.pass_base import ExportPass, PassResult
 from torch.fx.experimental.proxy_tensor import make_fx
 
+from .utils import merge_decomposed_graph
+
 
 class DecomposeEinsum(ExportPass):
     """
@@ -28,36 +30,20 @@ class DecomposeEinsum(ExportPass):
 
                 with graph.inserting_before(node):
                     # remap is used to map original node values to new node values,
-                    # which ensures that reference to nodes are correclty updated in the new graph
+                    # which ensures that reference to nodes are correctly updated in the new graph
                     remap = {}
                     # Different from other nodes, einsum args[0] is the einsum equation,
                     # while input nodes are stored in args[1]
                     for i, arg in enumerate(node.args[1]):
                         remap[f"arg1_{i+1}"] = arg
 
-                    for decomposed_node in decomposed_module.graph.nodes:
-                        # This is the arg[0] equation string, which is not required anymore after decomposition
-                        if "arg0" in decomposed_node.name:
-                            continue
-
-                        # no need to copy existent 'output'
-                        if decomposed_node.op == "output":
-                            for user in node.users.copy():
-                                # remap
-                                user.replace_input_with(
-                                    node,
-                                    remap[decomposed_node.args[0][0]],
-                                )
-                        # no need to copy existent placeholders
-                        elif decomposed_node.op == "placeholder":
-                            # replace node map from string to graph node
-                            remap[decomposed_node] = remap.pop(decomposed_node.name)
-                        else:
-                            remap[decomposed_node] = graph.node_copy(
-                                decomposed_node,
-                                arg_transform=lambda x, remap=remap: remap[x],
-                            )
-
+                    merge_decomposed_graph(
+                        remap=remap,
+                        target_node=node,
+                        target_graph=graph,
+                        decomposed_graph_module=decomposed_module,
+                        predicate=lambda decomp_node: "arg0" not in decomp_node.name,
+                    )
                     graph.erase_node(node)
 
         graph.eliminate_dead_code()

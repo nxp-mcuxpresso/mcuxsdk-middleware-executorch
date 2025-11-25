@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class OperatorCode(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class OperatorCode(object):
     def GetRootAsOperatorCode(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def OperatorCodeBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # OperatorCode
     def Init(self, buf, pos):
@@ -56,38 +61,52 @@ class OperatorCode(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def OperatorCodeStart(builder):
     builder.StartObject(4)
+
 
 def Start(builder):
     OperatorCodeStart(builder)
 
+
 def OperatorCodeAddDeprecatedBuiltinCode(builder, deprecatedBuiltinCode):
     builder.PrependInt8Slot(0, deprecatedBuiltinCode, 0)
+
 
 def AddDeprecatedBuiltinCode(builder, deprecatedBuiltinCode):
     OperatorCodeAddDeprecatedBuiltinCode(builder, deprecatedBuiltinCode)
 
+
 def OperatorCodeAddCustomCode(builder, customCode):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(customCode), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(customCode), 0
+    )
+
 
 def AddCustomCode(builder, customCode):
     OperatorCodeAddCustomCode(builder, customCode)
 
+
 def OperatorCodeAddVersion(builder, version):
     builder.PrependInt32Slot(2, version, 1)
+
 
 def AddVersion(builder, version):
     OperatorCodeAddVersion(builder, version)
 
+
 def OperatorCodeAddBuiltinCode(builder, builtinCode):
     builder.PrependInt32Slot(3, builtinCode, 0)
+
 
 def AddBuiltinCode(builder, builtinCode):
     OperatorCodeAddBuiltinCode(builder, builtinCode)
 
+
 def OperatorCodeEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return OperatorCodeEnd(builder)

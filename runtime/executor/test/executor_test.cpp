@@ -17,20 +17,21 @@
 #include <executorch/runtime/platform/runtime.h>
 #include <executorch/test/utils/DeathTest.h>
 
-using exec_aten::IntArrayRef;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::SizesType;
-using exec_aten::Tensor;
+using executorch::aten::IntArrayRef;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::SizesType;
+using executorch::aten::Tensor;
+using executorch::ET_RUNTIME_NAMESPACE::get_op_function_from_registry;
+using executorch::ET_RUNTIME_NAMESPACE::Kernel;
+using executorch::ET_RUNTIME_NAMESPACE::KernelRuntimeContext;
+using executorch::ET_RUNTIME_NAMESPACE::OpFunction;
+using executorch::ET_RUNTIME_NAMESPACE::register_kernel;
+using executorch::ET_RUNTIME_NAMESPACE::registry_has_op_function;
 using executorch::runtime::Error;
 using executorch::runtime::EValue;
-using executorch::runtime::get_op_function_from_registry;
-using executorch::runtime::Kernel;
-using executorch::runtime::KernelRuntimeContext;
-using executorch::runtime::OpFunction;
-using executorch::runtime::register_kernel;
-using executorch::runtime::registry_has_op_function;
 using executorch::runtime::Result;
+using executorch::runtime::Span;
 using executorch::runtime::testing::TensorFactory;
 
 namespace pytree = ::executorch::extension::pytree;
@@ -80,7 +81,7 @@ TEST_F(ExecutorTest, TensorHalf) {
   ASSERT_EQ(a.numel(), 4);
   ASSERT_EQ(a.scalar_type(), ScalarType::Half);
 
-  auto data_p = a.const_data_ptr<exec_aten::Half>();
+  auto data_p = a.const_data_ptr<executorch::aten::Half>();
   ASSERT_NEAR(
       data_p[0], 1.0f, toleranceFloat16(fmax(fabs(1.0f), fabs(data_p[0]))));
   ASSERT_NEAR(
@@ -165,7 +166,7 @@ TEST_F(ExecutorTest, EValueToScalar) {
   ASSERT_EQ(s.to<int64_t>(), 2);
 }
 
-void test_op(KernelRuntimeContext& /*unused*/, EValue** /*unused*/) {}
+void test_op(KernelRuntimeContext& /*unused*/, Span<EValue*> /*unused*/) {}
 
 TEST_F(ExecutorTest, OpRegistration) {
   auto s1 = register_kernel(Kernel("test", test_op));
@@ -182,7 +183,7 @@ TEST_F(ExecutorTest, OpRegistration) {
 TEST_F(ExecutorTest, OpRegistrationWithContext) {
   auto op = Kernel(
       "test_op_with_context",
-      [](KernelRuntimeContext& context, EValue** values) {
+      [](KernelRuntimeContext& context, Span<EValue*> values) {
         (void)context;
         *(values[0]) = Scalar(100);
       });

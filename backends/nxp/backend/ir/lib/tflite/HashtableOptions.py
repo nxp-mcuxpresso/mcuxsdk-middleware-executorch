@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class HashtableOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,12 @@ class HashtableOptions(object):
     def GetRootAsHashtableOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
     def HashtableOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # HashtableOptions
     def Init(self, buf, pos):
@@ -49,32 +54,42 @@ class HashtableOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
         return 0
 
+
 def HashtableOptionsStart(builder):
     builder.StartObject(3)
+
 
 def Start(builder):
     HashtableOptionsStart(builder)
 
+
 def HashtableOptionsAddTableId(builder, tableId):
     builder.PrependInt32Slot(0, tableId, 0)
+
 
 def AddTableId(builder, tableId):
     HashtableOptionsAddTableId(builder, tableId)
 
+
 def HashtableOptionsAddKeyDtype(builder, keyDtype):
     builder.PrependInt8Slot(1, keyDtype, 0)
+
 
 def AddKeyDtype(builder, keyDtype):
     HashtableOptionsAddKeyDtype(builder, keyDtype)
 
+
 def HashtableOptionsAddValueDtype(builder, valueDtype):
     builder.PrependInt8Slot(2, valueDtype, 0)
+
 
 def AddValueDtype(builder, valueDtype):
     HashtableOptionsAddValueDtype(builder, valueDtype)
 
+
 def HashtableOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return HashtableOptionsEnd(builder)

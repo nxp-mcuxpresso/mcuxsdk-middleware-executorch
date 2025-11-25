@@ -2,6 +2,7 @@
 
 # namespace: tflite
 
+
 class SparseIndexVector(object):
     NONE = 0
     Int32Vector = 1

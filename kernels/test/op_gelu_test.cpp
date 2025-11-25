@@ -16,16 +16,16 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::ScalarType;
-using exec_aten::string_view;
-using exec_aten::Tensor;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
+using std::string_view;
 using torch::executor::testing::SupportedFeatures;
 using torch::executor::testing::TensorFactory;
 
 class OpGeluTest : public OperatorTest {
  protected:
   Tensor&
-  op_gelu_out(const Tensor& self, string_view approximate, Tensor& out) {
+  op_gelu_out(const Tensor& self, std::string_view approximate, Tensor& out) {
     return torch::executor::aten::gelu_outf(context_, self, approximate, out);
   }
 
@@ -68,6 +68,14 @@ class OpGeluTest : public OperatorTest {
 
 TEST_F(OpGeluTest, FloatTensors) {
   test_gelu_execution<ScalarType::Float>();
+}
+
+TEST_F(OpGeluTest, HalfTensors) {
+  test_gelu_execution<ScalarType::Half>();
+}
+
+TEST_F(OpGeluTest, BFloat16Tensors) {
+  test_gelu_execution<ScalarType::BFloat16>();
 }
 
 TEST_F(OpGeluTest, DoubleTensors) {

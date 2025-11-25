@@ -1,18 +1,18 @@
-# Copyright 2024-2025 NXP
+# Copyright 2024 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
 from typing import Optional
 
-from torch.fx import Node
-
 from executorch.backends.nxp.backend.ir import logger as logger
-from executorch.backends.nxp.backend.ir.tflite_generator import tflite_model as tflite_model
+from executorch.backends.nxp.backend.ir.tflite_generator import (
+    tflite_model as tflite_model,
+)
 
 
 def _buffer_has_data(t_buffer: tflite_model.Buffer) -> Optional[bool]:
-    """ Determine if given buffer has any data in it. """
+    """Determine if given buffer has any data in it."""
 
     try:
         if t_buffer.data is None:
@@ -28,7 +28,7 @@ def _buffer_has_data(t_buffer: tflite_model.Buffer) -> Optional[bool]:
 
 
 def tensor_has_data(t_tensor: tflite_model.Tensor) -> bool:
-    """ Determine if given TFLite tensor has any data. """
+    """Determine if given TFLite tensor has any data."""
 
     if t_tensor.tmp_buffer is None:
         return False
@@ -41,18 +41,10 @@ def tensor_has_data(t_tensor: tflite_model.Tensor) -> bool:
 
 
 def all_tensors_are_static(*list_of_tensors) -> bool:
-    """ Return True, if all tensors in 'list_of_tensors' have data stored in them.
+    """Return True, if all tensors in 'list_of_tensors' have data stored in them.
 
     :param list_of_tensors: List of TFLite tensors to check.
     :return: True, if all tensors are static. False, if at least 1 is not static.
     """
 
     return all(tensor_has_data(t) for t in list_of_tensors)
-
-
-def get_name_of_node_output(node: Node, output_index: int) -> str:
-    return node.name + f'_<getitem_extracted_output_{output_index}>'
-
-
-def get_input_shape(node: Node, input_index: int) -> list[int]:
-    return list(node.all_input_nodes[input_index].meta['val'].shape)

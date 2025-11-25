@@ -4,10 +4,12 @@
 
 import flatbuffers
 from flatbuffers.compat import import_numpy
+
 np = import_numpy()
 
+
 class StablehloScatterOptions(object):
-    __slots__ = ['_tab']
+    __slots__ = ["_tab"]
 
     @classmethod
     def GetRootAs(cls, buf, offset=0):
@@ -20,9 +22,14 @@ class StablehloScatterOptions(object):
     def GetRootAsStablehloScatterOptions(cls, buf, offset=0):
         """This method is deprecated. Please switch to GetRootAs."""
         return cls.GetRootAs(buf, offset)
+
     @classmethod
-    def StablehloScatterOptionsBufferHasIdentifier(cls, buf, offset, size_prefixed=False):
-        return flatbuffers.util.BufferHasIdentifier(buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed)
+    def StablehloScatterOptionsBufferHasIdentifier(
+        cls, buf, offset, size_prefixed=False
+    ):
+        return flatbuffers.util.BufferHasIdentifier(
+            buf, offset, b"\x54\x46\x4C\x33", size_prefixed=size_prefixed
+        )
 
     # StablehloScatterOptions
     def Init(self, buf, pos):
@@ -32,7 +39,9 @@ class StablehloScatterOptions(object):
     def IndicesAreSorted(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # StablehloScatterOptions
@@ -40,7 +49,10 @@ class StablehloScatterOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloScatterOptions
@@ -67,7 +79,10 @@ class StablehloScatterOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloScatterOptions
@@ -94,7 +109,10 @@ class StablehloScatterOptions(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             a = self._tab.Vector(o)
-            return self._tab.Get(flatbuffers.number_types.Int64Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8))
+            return self._tab.Get(
+                flatbuffers.number_types.Int64Flags,
+                a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 8),
+            )
         return 0
 
     # StablehloScatterOptions
@@ -127,7 +145,9 @@ class StablehloScatterOptions(object):
     def UniqueIndices(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
-            return bool(self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos))
+            return bool(
+                self._tab.Get(flatbuffers.number_types.BoolFlags, o + self._tab.Pos)
+            )
         return False
 
     # StablehloScatterOptions
@@ -137,74 +157,112 @@ class StablehloScatterOptions(object):
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
         return 0
 
+
 def StablehloScatterOptionsStart(builder):
     builder.StartObject(7)
+
 
 def Start(builder):
     StablehloScatterOptionsStart(builder)
 
+
 def StablehloScatterOptionsAddIndicesAreSorted(builder, indicesAreSorted):
     builder.PrependBoolSlot(0, indicesAreSorted, 0)
+
 
 def AddIndicesAreSorted(builder, indicesAreSorted):
     StablehloScatterOptionsAddIndicesAreSorted(builder, indicesAreSorted)
 
+
 def StablehloScatterOptionsAddUpdateWindowDims(builder, updateWindowDims):
-    builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(updateWindowDims), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        1, flatbuffers.number_types.UOffsetTFlags.py_type(updateWindowDims), 0
+    )
+
 
 def AddUpdateWindowDims(builder, updateWindowDims):
     StablehloScatterOptionsAddUpdateWindowDims(builder, updateWindowDims)
 
+
 def StablehloScatterOptionsStartUpdateWindowDimsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartUpdateWindowDimsVector(builder, numElems: int) -> int:
     return StablehloScatterOptionsStartUpdateWindowDimsVector(builder, numElems)
 
+
 def StablehloScatterOptionsAddInsertedWindowDims(builder, insertedWindowDims):
-    builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(insertedWindowDims), 0)
+    builder.PrependUOffsetTRelativeSlot(
+        2, flatbuffers.number_types.UOffsetTFlags.py_type(insertedWindowDims), 0
+    )
+
 
 def AddInsertedWindowDims(builder, insertedWindowDims):
     StablehloScatterOptionsAddInsertedWindowDims(builder, insertedWindowDims)
 
+
 def StablehloScatterOptionsStartInsertedWindowDimsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
+
 
 def StartInsertedWindowDimsVector(builder, numElems: int) -> int:
     return StablehloScatterOptionsStartInsertedWindowDimsVector(builder, numElems)
 
-def StablehloScatterOptionsAddScatterDimsToOperandDims(builder, scatterDimsToOperandDims):
-    builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(scatterDimsToOperandDims), 0)
+
+def StablehloScatterOptionsAddScatterDimsToOperandDims(
+    builder, scatterDimsToOperandDims
+):
+    builder.PrependUOffsetTRelativeSlot(
+        3, flatbuffers.number_types.UOffsetTFlags.py_type(scatterDimsToOperandDims), 0
+    )
+
 
 def AddScatterDimsToOperandDims(builder, scatterDimsToOperandDims):
-    StablehloScatterOptionsAddScatterDimsToOperandDims(builder, scatterDimsToOperandDims)
+    StablehloScatterOptionsAddScatterDimsToOperandDims(
+        builder, scatterDimsToOperandDims
+    )
+
 
 def StablehloScatterOptionsStartScatterDimsToOperandDimsVector(builder, numElems):
     return builder.StartVector(8, numElems, 8)
 
+
 def StartScatterDimsToOperandDimsVector(builder, numElems: int) -> int:
     return StablehloScatterOptionsStartScatterDimsToOperandDimsVector(builder, numElems)
+
 
 def StablehloScatterOptionsAddIndexVectorDim(builder, indexVectorDim):
     builder.PrependInt64Slot(4, indexVectorDim, 0)
 
+
 def AddIndexVectorDim(builder, indexVectorDim):
     StablehloScatterOptionsAddIndexVectorDim(builder, indexVectorDim)
+
 
 def StablehloScatterOptionsAddUniqueIndices(builder, uniqueIndices):
     builder.PrependBoolSlot(5, uniqueIndices, 0)
 
+
 def AddUniqueIndices(builder, uniqueIndices):
     StablehloScatterOptionsAddUniqueIndices(builder, uniqueIndices)
 
-def StablehloScatterOptionsAddUpdateComputationSubgraphIndex(builder, updateComputationSubgraphIndex):
+
+def StablehloScatterOptionsAddUpdateComputationSubgraphIndex(
+    builder, updateComputationSubgraphIndex
+):
     builder.PrependInt32Slot(6, updateComputationSubgraphIndex, 0)
 
+
 def AddUpdateComputationSubgraphIndex(builder, updateComputationSubgraphIndex):
-    StablehloScatterOptionsAddUpdateComputationSubgraphIndex(builder, updateComputationSubgraphIndex)
+    StablehloScatterOptionsAddUpdateComputationSubgraphIndex(
+        builder, updateComputationSubgraphIndex
+    )
+
 
 def StablehloScatterOptionsEnd(builder):
     return builder.EndObject()
+
 
 def End(builder):
     return StablehloScatterOptionsEnd(builder)

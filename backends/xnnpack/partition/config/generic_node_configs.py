@@ -4,20 +4,27 @@
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
+# pyre-unsafe
+
 import logging
 from typing import cast, List, Optional
 
+import numpy as np
 import torch
 from executorch.backends.xnnpack.partition.config.xnnpack_config import (
     ConfigPrecisionType,
     XNNPartitionerConfig,
 )
-from executorch.backends.xnnpack.utils.quant_utils import is_dequant, is_quant
+from executorch.backends.xnnpack.utils.quant_utils import (
+    is_dequant,
+    is_quant,
+    tag_as_implicit_q_dq,
+)
 from executorch.backends.xnnpack.utils.utils import get_input_node
 from executorch.exir.backend.canonical_partitioners.config_partitioner import (
     format_target_name,
 )
-from executorch.exir.backend.utils import WhyNoPartition
+from executorch.exir.backend.utils import is_shape_dynamic, WhyNoPartition
 from torch.export import ExportedProgram
 
 logger = logging.getLogger(__name__)
@@ -51,10 +58,12 @@ class GenericNodePartitionerConfig(XNNPartitionerConfig):
 
             quantized_deps.extend(node.all_input_nodes)
 
-            # check if quantized pattern has fused activation
+            # ensure the node has only one user to enforce quantized pattern
+            # (dq -> node -> fused act (optional) -> q)
             if len(node.users) != 1:
                 return deps
 
+            # check if quantized pattern has fused activation
             node_output = list(node.users)[0]
             if (
                 node_output.op == "call_function"
@@ -69,6 +78,15 @@ class GenericNodePartitionerConfig(XNNPartitionerConfig):
                 # Expected node --> fused_act (optional) --> dequant
                 return deps
 
+            # Tag input nodes (dq nodes) as implicit q/dq nodes
+            for dq_input in node.all_input_nodes:
+                if is_dequant(dq_input):
+                    tag_as_implicit_q_dq(dq_input)
+
+            # Tag node_output (q node) as an implicit q/dq node
+            if is_quant(node_output):
+                tag_as_implicit_q_dq(node_output)
+
             quantized_deps.append(node_output)
 
         return deps + quantized_deps
@@ -80,12 +98,22 @@ class QuantizedPerTensorConfig(GenericNodePartitionerConfig):
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.STATIC_QUANT]
 
+    def get_node_and_deps(
+        self, node: torch.fx.Node, ep: ExportedProgram
+    ) -> List[torch.fx.Node]:
+        return [node]
+
 
 class DeQuantizedPerTensorConfig(GenericNodePartitionerConfig):
     target_name = "dequantize_per_tensor.default"
 
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.STATIC_QUANT]
+
+    def get_node_and_deps(
+        self, node: torch.fx.Node, ep: ExportedProgram
+    ) -> List[torch.fx.Node]:
+        return [node]
 
 
 class HardtanhConfig(GenericNodePartitionerConfig):
@@ -103,6 +131,17 @@ class AddConfig(GenericNodePartitionerConfig):
 
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.FP32, ConfigPrecisionType.STATIC_QUANT]
+
+    def check_constraints(self, node: torch.fx.Node, ep: ExportedProgram) -> bool:
+        if not self.check_common_constraints(node, ep):
+            return False
+        # No support for add nodes with alpha != 1
+        if "alpha" in node.kwargs and not np.isclose(
+            node.kwargs["alpha"], 1.0, atol=1e-9, rtol=1e-9
+        ):
+            why(node, reason="Add node doesn't support alpha != 1")
+            return False
+        return True
 
 
 class ReLUConfig(GenericNodePartitionerConfig):
@@ -172,17 +211,17 @@ class CatConfig(GenericNodePartitionerConfig):
 
     def check_constraints(self, node: torch.fx.Node, ep: ExportedProgram) -> bool:
         """
-        Only support concatenation of 2 - 4 tensors
+        Only support concatenation of 2 - 5 tensors
         """
         if not self.check_common_constraints(node, ep):
             return False
 
         num_tensors = len(node.all_input_nodes)
 
-        if not (num_tensors >= 2 and num_tensors <= 4):
+        if not (num_tensors >= 2):
             why(
                 node,
-                reason=f"only support concatenation of 2 - 4 tensors, got {num_tensors} tensors",
+                reason=f"only support concatenation of > 2 tensors, got {num_tensors} tensors",
             )
             return False
 
@@ -282,15 +321,27 @@ class MaxPool2dConfig(GenericNodePartitionerConfig):
 
     def check_constraints(self, node: torch.fx.Node, ep: ExportedProgram) -> bool:
         """
-        XNNPACK's maxpool2d does not support ceil mode
+        XNNPACK's maxpool2d does not support ceil mode and requires stride <= kernel_size
         """
         if not self.check_common_constraints(node, ep):
             return False
 
+        kernel_size = node.args[1]
+        stride = node.args[2]
         is_ceil_mode = len(node.args) >= 6 and cast(bool, node.args[5])
-        if is_ceil_mode:
-            why(node, reason="ceil mode is not supported")
+
+        # Ceil mode is supported via op padding, which must be statically known.
+        if is_ceil_mode and is_shape_dynamic(node):
+            why(node, reason="ceil mode is not supported for dynamic shapes")
             return False
+
+        if stride[0] > kernel_size[0] or stride[1] > kernel_size[1]:  # pyre-ignore[16]
+            why(
+                node,
+                reason=f"stride ({stride}) must be less than or equal to kernel size ({kernel_size})",
+            )
+            return False
+
         return True
 
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
@@ -310,10 +361,7 @@ class UpsampleBilinear2dConfig(GenericNodePartitionerConfig):
         if not self.check_common_constraints(node, ep):
             return False
 
-        is_output_dynamic = "val" in node.meta and any(
-            isinstance(d, torch.SymInt) for d in node.meta["val"].shape
-        )
-        if is_output_dynamic:
+        if is_shape_dynamic(node):
             why(node, reason="dynamic output sizes are not supported")
             return False
         return True
@@ -325,8 +373,22 @@ class UpsampleBilinear2dConfig(GenericNodePartitionerConfig):
         return torch.ops.aten.upsample_bilinear2d.vec
 
 
+class ExpConfig(GenericNodePartitionerConfig):
+    target_name = "exp.default"
+
+    def supported_precision_types(self) -> List[ConfigPrecisionType]:
+        return [ConfigPrecisionType.FP32]
+
+
 class FloorConfig(GenericNodePartitionerConfig):
     target_name = "floor.default"
+
+    def supported_precision_types(self) -> List[ConfigPrecisionType]:
+        return [ConfigPrecisionType.FP32]
+
+
+class GeluConfig(GenericNodePartitionerConfig):
+    target_name = "gelu.default"
 
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.FP32]
@@ -338,12 +400,58 @@ class HardswishConfig(GenericNodePartitionerConfig):
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.FP32]
 
+    def get_original_aten(self) -> Optional[torch._ops.OpOverload]:
+        return torch.ops.aten.hardswish.default
+
 
 class LeakyReLUConfig(GenericNodePartitionerConfig):
     target_name = "leaky_relu.default"
 
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.FP32]
+
+
+class LogConfig(GenericNodePartitionerConfig):
+    target_name = "log.default"
+
+    def supported_precision_types(self) -> List[ConfigPrecisionType]:
+        return [ConfigPrecisionType.FP32]
+
+
+class TanhConfig(GenericNodePartitionerConfig):
+    target_name = "tanh.default"
+
+    def supported_precision_types(self) -> List[ConfigPrecisionType]:
+        return [ConfigPrecisionType.FP32]
+
+
+class ToDimOrderCopyConfig(GenericNodePartitionerConfig):
+    target_name = "_to_dim_order_copy.default"
+
+    def check_constraints(self, node: torch.fx.Node, ep: ExportedProgram) -> bool:
+        """
+        Only support dim order conversion partitioning, not DType conversions
+        """
+        if not self.check_common_constraints(node, ep):
+            return False
+
+        # Get input node and compare dtypes
+        input_node = get_input_node(node, 0)
+        input_dtype = input_node.meta["val"].dtype
+        output_dtype = node.meta["val"].dtype
+
+        # Return False if doing dtype conversion
+        if input_dtype != output_dtype:
+            why(
+                node,
+                reason=f"dtype conversion from {input_dtype} to {output_dtype} is not supported",
+            )
+            return False
+
+        return True
+
+    def supported_precision_types(self) -> List[ConfigPrecisionType]:
+        return [ConfigPrecisionType.FP32, ConfigPrecisionType.STATIC_QUANT]
 
 
 class MeanDimConfig(GenericNodePartitionerConfig):
@@ -471,8 +579,30 @@ class SquareRootConfig(GenericNodePartitionerConfig):
         return [ConfigPrecisionType.FP32]
 
 
+class ReciprocalSquareRootConfig(GenericNodePartitionerConfig):
+    target_name = "rsqrt.default"
+
+    def supported_precision_types(self) -> List[ConfigPrecisionType]:
+        return [ConfigPrecisionType.FP32]
+
+
 class ConstantPadConfig(GenericNodePartitionerConfig):
     target_name = "constant_pad_nd.default"
+
+    def check_constraints(self, node: torch.fx.Node, ep: ExportedProgram) -> bool:
+        """
+        XNNPACK does not support cropping with negative padding sizes.
+        """
+        if not self.check_common_constraints(node, ep):
+            return False
+
+        # Check for negative padding values
+        padding = cast(List[int], node.args[1])
+        if any(p < 0 for p in padding):
+            why(node, reason="XNNPACK does not support negative padding values")
+            return False
+
+        return True
 
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.FP32]
@@ -484,6 +614,17 @@ class SubConfig(GenericNodePartitionerConfig):
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.FP32, ConfigPrecisionType.STATIC_QUANT]
 
+    def check_constraints(self, node: torch.fx.Node, ep: ExportedProgram) -> bool:
+        if not self.check_common_constraints(node, ep):
+            return False
+        # No support for sub nodes with alpha != 1
+        if "alpha" in node.kwargs and not np.isclose(
+            node.kwargs["alpha"], 1.0, atol=1e-9, rtol=1e-9
+        ):
+            why(node, reason="Sub node doesn't support alpha != 1")
+            return False
+        return True
+
 
 class BMMConfig(GenericNodePartitionerConfig):
     """
@@ -492,36 +633,6 @@ class BMMConfig(GenericNodePartitionerConfig):
     """
 
     target_name = "bmm.default"
-
-    def supported_precision_types(self) -> List[ConfigPrecisionType]:
-        return [ConfigPrecisionType.FP32]
-
-
-class SDPAConfig(GenericNodePartitionerConfig):
-    target_name = "scaled_dot_product_attention.default"
-
-    def check_constraints(self, node: torch.fx.Node, ep: ExportedProgram) -> bool:
-        """
-        Requires Mask to have Rank 2
-        """
-        if not self.check_common_constraints(node, ep):
-            return False
-
-        if len(node.all_input_nodes) < 4:
-            return False
-        mask_node = node.all_input_nodes[3]
-        mask_rank = mask_node.meta["val"].dim()
-        if mask_rank != 2:
-            why(
-                node,
-                reason=f"mask must have rank 2, got mask of rank {mask_rank}",
-            )
-            return False
-
-        return True
-
-    def get_original_aten(self) -> Optional[torch._ops.OpOverload]:
-        return torch.ops.aten.scaled_dot_product_attention.default
 
     def supported_precision_types(self) -> List[ConfigPrecisionType]:
         return [ConfigPrecisionType.FP32]

@@ -2,5 +2,6 @@
 
 # namespace: tflite
 
+
 class CustomOptionsFormat(object):
     FLEXBUFFERS = 0

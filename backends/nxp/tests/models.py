@@ -1,28 +1,37 @@
-# Copyright 2024-2025 NXP
+# Copyright (c) 2024-2025 NXP
+# All rights reserved.
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Collection, Union, Callable
+from typing import Callable, Collection, Union
 
 import torch
 
 
 class Conv1dModule(torch.nn.Module):
-    def __init__(self, bias: bool = True,
-                 dilation: Union[int, tuple[int, int]] = 1,
-                 in_channels: int = 4,
-                 kernel_size: Union[int, tuple[int, int]] = 3,
-                 out_channels: int = 8,
-                 padding: Union[str, int, Collection[int]] = 0,
-                 stride: Union[int, tuple[int, int]] = 2,
-                 group: int = 1
-                 ):
+    def __init__(
+        self,
+        bias: bool = True,
+        dilation: Union[int, tuple[int, int]] = 1,
+        in_channels: int = 4,
+        kernel_size: Union[int, tuple[int, int]] = 3,
+        out_channels: int = 8,
+        padding: Union[str, int, Collection[int]] = 0,
+        stride: Union[int, tuple[int, int]] = 2,
+        group: int = 1,
+    ):
         super().__init__()
 
         self.conv = torch.nn.Conv1d(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-            stride=stride, padding=padding, dilation=dilation, bias=bias, groups=group
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            bias=bias,
+            groups=group,
         )
 
     def forward(self, x):
@@ -30,20 +39,57 @@ class Conv1dModule(torch.nn.Module):
 
 
 class Conv2dModule(torch.nn.Module):
-    def __init__(self, bias: bool = True,
-                 dilation: Union[int, tuple[int, int]] = 1,
-                 in_channels: int = 4,
-                 kernel_size: Union[int, tuple[int, int]] = 3,
-                 out_channels: int = 8,
-                 padding: Union[str, int, Collection[int]] = 0,
-                 stride: Union[int, tuple[int, int]] = 2,
-                 group: int = 1
-                 ):
+    def __init__(
+        self,
+        bias: bool = True,
+        dilation: Union[int, tuple[int, int]] = 1,
+        in_channels: int = 4,
+        kernel_size: Union[int, tuple[int, int]] = 3,
+        out_channels: int = 8,
+        padding: Union[str, int, Collection[int]] = 0,
+        stride: Union[int, tuple[int, int]] = 2,
+        group: int = 1,
+    ):
         super().__init__()
 
         self.conv = torch.nn.Conv2d(
-            in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size,
-            stride=stride, padding=padding, dilation=dilation, bias=bias, groups=group
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            bias=bias,
+            groups=group,
+        )
+
+    def forward(self, x):
+        return self.conv(x)
+
+
+class Conv3dModule(torch.nn.Module):
+    def __init__(
+        self,
+        bias: bool = True,
+        dilation: Union[int, tuple[int, int]] = 1,
+        in_channels: int = 4,
+        kernel_size: Union[int, tuple[int, int]] = 3,
+        out_channels: int = 8,
+        padding: Union[str, int, Collection[int]] = 0,
+        stride: Union[int, tuple[int, int]] = 2,
+        group: int = 1,
+    ):
+        super().__init__()
+
+        self.conv = torch.nn.Conv3d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            dilation=dilation,
+            bias=bias,
+            groups=group,
         )
 
     def forward(self, x):
@@ -54,7 +100,9 @@ class Conv2dAndMaxPool2DModule(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.conv = torch.nn.Conv2d(in_channels=8, out_channels=32, kernel_size=5, bias=True)
+        self.conv = torch.nn.Conv2d(
+            in_channels=8, out_channels=32, kernel_size=5, bias=True
+        )
         self.maxpool = torch.nn.MaxPool2d(kernel_size=2, stride=2)
 
     def forward(self, x):
@@ -99,8 +147,13 @@ class ConvWithSigmoid(torch.nn.Module):
     def __init__(self, conv_in_channels: int = 3):
         super().__init__()
         self.block = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=conv_in_channels, out_channels=3, kernel_size=(2, 2), stride=(2, 2)),
-            torch.nn.Sigmoid()
+            torch.nn.Conv2d(
+                in_channels=conv_in_channels,
+                out_channels=3,
+                kernel_size=(2, 2),
+                stride=(2, 2),
+            ),
+            torch.nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -173,9 +226,11 @@ class ConstantPadNDModule(torch.nn.Module):
 
     def forward(self, x):
         if self.constant is None:
-            return torch.nn.functional.pad(x, tuple(self.paddings), 'constant')
+            return torch.nn.functional.pad(x, tuple(self.paddings), "constant")
         else:
-            return torch.nn.functional.pad(x, tuple(self.paddings), 'constant', self.constant)
+            return torch.nn.functional.pad(
+                x, tuple(self.paddings), "constant", self.constant
+            )
 
 
 class ConstantPadNDConvModule(torch.nn.Module):
@@ -220,7 +275,10 @@ class AvgPool2dModule(torch.nn.Module):
         super().__init__()
 
         self.avg_pool = torch.nn.AvgPool2d(
-            kernel_size=3, stride=2, padding=padding, count_include_pad=count_include_pad
+            kernel_size=3,
+            stride=2,
+            padding=padding,
+            count_include_pad=count_include_pad,
         )
 
     def forward(self, x):
@@ -233,7 +291,10 @@ class AvgPool2dConvModule(torch.nn.Module):
 
         self.conv = Conv2dModule()
         self.avg_pool = torch.nn.AvgPool2d(
-            kernel_size=3, stride=1, padding=padding, count_include_pad=count_include_pad
+            kernel_size=3,
+            stride=1,
+            padding=padding,
+            count_include_pad=count_include_pad,
         )
 
     def forward(self, x):
@@ -290,7 +351,9 @@ class Conv2dWithActivation(torch.nn.Module):
     def __init__(self, activation: torch.nn.Module | Callable, in_channels: int = 3):
         super().__init__()
 
-        self.conv = torch.nn.Conv2d(in_channels=in_channels, out_channels=64, kernel_size=(3, 3))
+        self.conv = torch.nn.Conv2d(
+            in_channels=in_channels, out_channels=64, kernel_size=(3, 3)
+        )
         self.activation = activation
 
     def forward(self, x):
@@ -317,7 +380,20 @@ class Conv2dPermuteModule(torch.nn.Module):
 
     def forward(self, x):
         x = self.conv(x)
-        return torch.permute(x, [0, 2, 1])
+        return torch.permute(x, [0, 2, 1, 3])
+
+
+class Conv2dReLUMaxPoolModule(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv = torch.nn.Conv2d(3, 64, 2, bias=False)
+        self.relu = torch.nn.ReLU()
+        self.pool = torch.nn.MaxPool2d(2, 2)
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.relu(x)
+        return self.pool(x)
 
 
 class AddTensorModule(torch.nn.Module):

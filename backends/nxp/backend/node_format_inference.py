@@ -1,4 +1,4 @@
-# Copyright 2024-2025 NXP
+# Copyright 2024 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -6,11 +6,10 @@
 import logging
 from enum import Enum
 
+from executorch.exir.dialects._ops import ops as exir_ops
+
 from torch import Node
 from torch.export import ExportedProgram
-
-# (TODO Lukas) Can we found ops somewhere else?
-from executorch.exir.dialects._ops import ops as exir_ops
 
 logger = logging.getLogger(__name__)
 
@@ -42,9 +41,7 @@ class NodeFormatInference:
 
     # A set of Edge Aten ops, which have the ability to change the format (for example - input nodes
     # are channels first but output is formatless).
-    ops_that_can_change_tensor_format = {
-        exir_ops.edge.aten.view_copy.default
-    }
+    ops_that_can_change_tensor_format = {exir_ops.edge.aten.view_copy.default}
 
     _node_format_mapping: dict[Node, NodeFormat]
 
@@ -61,8 +58,12 @@ class NodeFormatInference:
 
         self._nodes = edge_program.graph.nodes
         self._node_format_mapping = {}
-        self._node_inputs = {node: node.all_input_nodes for node in edge_program.graph.nodes}
-        self._node_outputs = {node: list(node.users.keys()) for node in edge_program.graph.nodes}
+        self._node_inputs = {
+            node: node.all_input_nodes for node in edge_program.graph.nodes
+        }
+        self._node_outputs = {
+            node: list(node.users.keys()) for node in edge_program.graph.nodes
+        }
 
         self._type_changed_during_last_run = False
 
@@ -85,20 +86,24 @@ class NodeFormatInference:
             self._handle_node_which_uses_channels_first_format(node)
         elif op_type in self.ops_that_can_change_tensor_format:
             if op_type == exir_ops.edge.aten.view_copy.default:  # view_copy
-                self._assign_format_to_node(self._node_outputs[node][0], NodeFormat.FORMATLESS)
+                self._assign_format_to_node(
+                    self._node_outputs[node][0], NodeFormat.FORMATLESS
+                )
             else:
-                logger.error(f"Node format inference for node type: {op_type} not found!")
+                logger.error(
+                    f"Node format inference for node type: {op_type} not found!"
+                )
         else:
             self._handle_node_which_can_use_any_node_format(node)
 
     def _infer_format_based_on_io_ranks(self, node: Node):
-        """ Determine the format of the output tensor of given "reshape style operator" based on the ranks of its input
-             and output.
+        """Determine the format of the output tensor of given "reshape style operator" based on the ranks of its input
+        and output.
         """
         # noinspection PyBroadException
         try:
-            main_input_rank = len(node.all_input_nodes[0].meta['val'].shape)
-            main_output_rank = len(node.meta['val'].shape)
+            main_input_rank = len(node.all_input_nodes[0].meta["val"].shape)
+            main_output_rank = len(node.meta["val"].shape)
 
             if main_output_rank == main_input_rank:
                 # Operator maintains the number of dimensions -> try to propagate the format.
@@ -115,8 +120,8 @@ class NodeFormatInference:
             self._assign_format_to_node(node, NodeFormat.FORMATLESS)
 
     def _match_formats_of_nodes(self, node_1, node_2):
-        """ If one of 'node_1' or 'node_2' is channels first, make the other channels first as well.
-             If neither is channels first, make them both formatless.
+        """If one of 'node_1' or 'node_2' is channels first, make the other channels first as well.
+        If neither is channels first, make them both formatless.
         """
 
         format_1 = self._get_node_format(node_1)
@@ -173,7 +178,7 @@ class NodeFormatInference:
             else:
                 self._assign_format_to_node(ancestor_node, NodeFormat.FORMATLESS)
 
-        # (TODO Lukas): It is expected here, that CHANNELS_FIRST node always produces CHANNELS_FIRST output.
+        # (TODO Lukas Sztefek): It is expected here, that CHANNELS_FIRST node always produces CHANNELS_FIRST output.
         # Validate the assumption.
         self._assign_format_to_node(node, NodeFormat.CHANNELS_FIRST)
 
@@ -200,7 +205,9 @@ class NodeFormatInference:
                     self._assign_format_to_node(processed_node, NodeFormat.FORMATLESS)
                 else:
                     # Node has more than 2D output -> make it channels first
-                    self._assign_format_to_node(processed_node, NodeFormat.CHANNELS_FIRST)
+                    self._assign_format_to_node(
+                        processed_node, NodeFormat.CHANNELS_FIRST
+                    )
                     self._propagate_channels_first_format_up(processed_node)
 
     def _propagate_channels_first_format_up(self, node: Node):
@@ -222,7 +229,7 @@ class NodeFormatInference:
 
         node_value_meta = node.meta["val"]
 
-        # (TODO Lukas): Some nodes contains multiple value metadata (MaxPool, ...). Find out why.
+        # (TODO Lukas Sztefek): Some nodes contains multiple value metadata (MaxPool, ...). Find out why.
         if isinstance(node_value_meta, tuple):
             node_value_meta = node_value_meta[0]
         elif isinstance(node_value_meta, list):
@@ -241,7 +248,9 @@ class NodeFormatInference:
 
         input_nodes = self._node_inputs[node]
         return any(
-            self._get_node_format(ancestor_node).is_channels_first() for ancestor_node in input_nodes)
+            self._get_node_format(ancestor_node).is_channels_first()
+            for ancestor_node in input_nodes
+        )
 
     def _get_node_format(self, node):
         return self._node_format_mapping.get(node, NodeFormat.NONE)

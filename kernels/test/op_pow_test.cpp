@@ -15,9 +15,9 @@
 #include <gtest/gtest.h>
 
 using namespace ::testing;
-using exec_aten::Scalar;
-using exec_aten::ScalarType;
-using exec_aten::Tensor;
+using executorch::aten::Scalar;
+using executorch::aten::ScalarType;
+using executorch::aten::Tensor;
 using torch::executor::testing::TensorFactory;
 
 class OpPowTest : public OperatorTest {
@@ -52,6 +52,19 @@ TEST_F(OpPowTest, TensorTensorSanityCheck) {
 
   EXPECT_TENSOR_EQ(out, ret);
   EXPECT_TENSOR_EQ(out, tf.make({2, 2}, {16, 16, 16, 16}));
+}
+
+TEST_F(OpPowTest, TensorTensorSanityCheckLargerNoBroadcasting) {
+  TensorFactory<ScalarType::Float> tf;
+  Tensor self = tf.full({18}, 2);
+  Tensor exp = tf.full({18}, 4);
+  Tensor out = tf.zeros({18});
+  Tensor out_expected = tf.full({18}, 16);
+
+  Tensor ret = op_pow_tensor_tensor_out(self, exp, out);
+
+  EXPECT_TENSOR_EQ(out, ret);
+  EXPECT_TENSOR_EQ(out_expected, out);
 }
 
 TEST_F(OpPowTest, TensorTensorSanityCheck2) {

@@ -8,10 +8,13 @@
 
 Representation of the TFLite operator 'BatchMatMul'.
 """
-import flatbuffers as fb
-
 import executorch.backends.nxp.backend.ir.tflite_generator.meta.meta as meta
-from executorch.backends.nxp.backend.ir.lib.tflite import BuiltinOperator, BuiltinOptions, BatchMatMulOptions
+import flatbuffers as fb
+from executorch.backends.nxp.backend.ir.lib.tflite import (
+    BatchMatMulOptions,
+    BuiltinOperator,
+    BuiltinOptions,
+)
 
 
 class BatchMatMul(meta.BuiltinOptions):
@@ -19,9 +22,13 @@ class BatchMatMul(meta.BuiltinOptions):
     adj_y: bool
     asymmetric_quantize_inputs: bool
 
-    def __init__(self, adj_x: bool, adj_y: bool, asymmetric_quantize_inputs: bool) -> None:
-        super().__init__(BuiltinOptions.BuiltinOptions.BatchMatMulOptions,
-                         BuiltinOperator.BuiltinOperator.BATCH_MATMUL)
+    def __init__(
+        self, adj_x: bool, adj_y: bool, asymmetric_quantize_inputs: bool
+    ) -> None:
+        super().__init__(
+            BuiltinOptions.BuiltinOptions.BatchMatMulOptions,
+            BuiltinOperator.BuiltinOperator.BATCH_MATMUL,
+        )
         self.adj_x = adj_x
         self.adj_y = adj_y
         self.asymmetric_quantize_inputs = asymmetric_quantize_inputs
@@ -31,6 +38,8 @@ class BatchMatMul(meta.BuiltinOptions):
 
         BatchMatMulOptions.AddAdjX(builder, self.adj_x)
         BatchMatMulOptions.AddAdjY(builder, self.adj_y)
-        BatchMatMulOptions.AddAsymmetricQuantizeInputs(builder, self.asymmetric_quantize_inputs)
+        BatchMatMulOptions.AddAsymmetricQuantizeInputs(
+            builder, self.asymmetric_quantize_inputs
+        )
 
         return BatchMatMulOptions.End(builder)
