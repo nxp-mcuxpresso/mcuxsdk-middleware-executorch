@@ -58,14 +58,12 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.executorch.neutron)
   )
   mcux_add_library(
     BASE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../../
-    # LIBS third-party/neutron/rt700/armgcc/libNeutronDriver.a third-party/neutron/rt700/armgcc/libNeutronFirmware.a
     LIBS ../neutron/rt700/cm33/libNeutronDriver.a ../neutron/rt700/cm33/libNeutronFirmware.a
     TOOLCHAINS armgcc mcux
     DEVICE_IDS MIMXRT798S
   )
   mcux_add_library(
     BASE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../../
-    # LIBS third-party/neutron/rt700/xcc/libNeutronDriver.a third-party/neutron/rt700/xcc/libNeutronFirmware.a    
     LIBS ../neutron/rt700/hifi4/libNeutronDriver.a ../neutron/rt700/hifi4/libNeutronFirmware.a
     TOOLCHAINS xcc xtensa
     DEVICE_IDS MIMXRT798S
@@ -81,7 +79,7 @@ if (CONFIG_MCUX_COMPONENT_middleware.eiq.executorch.binary)
   )
   mcux_add_library(
     BASE_PATH ${CMAKE_CURRENT_LIST_DIR}/../../../../
-    LIBS lib/hifi4/xcc/rt798s/libexecutorch.a
+    LIBS lib/hifi4/xcc/imxrt700/libexecutorch.a
     TOOLCHAINS xcc xtensa
     CORE_IDS hifi4
     DEVICE_IDS MIMXRT798S
