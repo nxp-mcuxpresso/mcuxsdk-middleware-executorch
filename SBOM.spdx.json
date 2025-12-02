@@ -2,38 +2,42 @@
   "SPDXID": "SPDXRef-DOCUMENT",
   "spdxVersion": "SPDX-2.3",
   "creationInfo": {
-    "created": "2025-06-19T05:53:25Z",
+    "created": "2025-12-02T06:41:47Z",
     "creators": [
       "Organization: NXP"
     ],
-    "licenseListVersion": "3.20"
+    "licenseListVersion": "3.26"
   },
-  "name": "mcuxsdk-middleware-executorch-v25.06.00",
+  "name": "mcuxsdk-middleware-executorch-v25.12.00",
   "dataLicense": "CC0-1.0",
-  "documentNamespace": "https://nxp.com/spdx/2d296b59-87ba-433a-be9c-496f2f8f4742",
+  "documentNamespace": "https://nxp.com/spdx/fc64e9fb-28d7-4366-9f83-e100f56c2aa4",
   "packages": [
     {
-      "SPDXID": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742",
-      "name": "mcuxsdk-middleware-executorch",
-      "versionInfo": "v25.06.00",
-      "licenseConcluded": "(BSD-3-Clause)",
-      "licenseDeclared": "(BSD-3-Clause)",
-      "downloadLocation": "https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-executorch ",
-      "originator": "Organization: NXP",
-      "supplier": "NOASSERTION",
-      "externalRefs": [],
-      "filesAnalyzed": false
-    },
-    {
-      "SPDXID": "SPDXRef-package-ac3a8e01-281d-4d6f-8653-6f3859583e30",
+      "SPDXID": "SPDXRef-package-e1fa1050-03bc-4005-bf4f-d33edbce9946",
       "name": "executorch",
-      "versionInfo": "0.5.0",
+      "versionInfo": "1.0.0",
       "licenseConcluded": "BSD-3-Clause",
       "licenseDeclared": "NOASSERTION",
-      "downloadLocation": "https://pypi.org/project/executorch/0.5.0",
-      "originator": "Organization: executorch",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: pytorch",
       "supplier": "NOASSERTION",
-      "externalRefs": [],
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:pypi_package:executorch:1.0.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:github/pytorch/executorch@v1.0.0",
+          "referenceType": "purl"
+        },
+        {
+          "referenceCategory": "OTHER",
+          "referenceLocator": "2165a48c-f2c4-49b6-9c45-ca81edd2467b",
+          "referenceType": "BlackDuck-ComponentOrigin"
+        }
+      ],
       "filesAnalyzed": false
     },
     {
@@ -43,18 +47,13 @@
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "homepage": "http://google.github.io/flatbuffers/",
-      "downloadLocation": "https://bodhi.fedoraproject.org/updates/mingw64-flatbuffers-24.3.25-4.fc41",
+      "downloadLocation": "https://bodhi.fedoraproject.org/updates/flatbuffers-devel-24.3.25-17.fc41",
       "originator": "Organization: fedora",
       "supplier": "NOASSERTION",
       "externalRefs": [
         {
-          "referenceCategory": "SECURITY",
-          "referenceLocator": "cpe:2.3:a:crates_package:flatbuffers:24.3.25:*:*:*:*:*:*:*",
-          "referenceType": "cpe23Type"
-        },
-        {
           "referenceCategory": "OTHER",
-          "referenceLocator": "b531bc4c-b24f-45af-8d67-4c5f70ff7da0",
+          "referenceLocator": "db41a35c-85a9-40ef-99c7-60e95489a74f",
           "referenceType": "BlackDuck-ComponentOrigin"
         },
         {
@@ -64,28 +63,45 @@
         },
         {
           "referenceCategory": "PACKAGE-MANAGER",
-          "referenceLocator": "pkg:rpm/fedora/flatbuffers-devel@24.3.25-8.fc42?arch=x86_64",
+          "referenceLocator": "pkg:rpm/fedora/flatbuffers-devel@24.3.25-17.fc41?arch=aarch64",
           "referenceType": "purl"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:crates_package:flatbuffers:24.3.25:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
         }
       ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-fc64e9fb-28d7-4366-9f83-e100f56c2aa4",
+      "name": "mcuxsdk-middleware-executorch",
+      "versionInfo": "v25.12.00",
+      "licenseConcluded": "(BSD-3-Clause)",
+      "licenseDeclared": "(BSD-3-Clause)",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
       "filesAnalyzed": false
     }
   ],
   "relationships": [
     {
-      "spdxElementId": "SPDXRef-DOCUMENT",
-      "relationshipType": "DESCRIBES",
-      "relatedSpdxElement": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742"
+      "spdxElementId": "SPDXRef-package-fc64e9fb-28d7-4366-9f83-e100f56c2aa4",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-e1fa1050-03bc-4005-bf4f-d33edbce9946"
     },
     {
-      "spdxElementId": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742",
+      "spdxElementId": "SPDXRef-package-fc64e9fb-28d7-4366-9f83-e100f56c2aa4",
       "relationshipType": "CONTAINS",
       "relatedSpdxElement": "SPDXRef-package-ea42da12-a79c-4daf-a2fd-3290fee26c5c"
     },
     {
-      "spdxElementId": "SPDXRef-package-2d296b59-87ba-433a-be9c-496f2f8f4742",
-      "relationshipType": "CONTAINS",
-      "relatedSpdxElement": "SPDXRef-package-ac3a8e01-281d-4d6f-8653-6f3859583e30"
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-package-fc64e9fb-28d7-4366-9f83-e100f56c2aa4"
     }
   ]
 }
