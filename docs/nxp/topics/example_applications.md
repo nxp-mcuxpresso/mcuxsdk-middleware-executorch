@@ -16,11 +16,16 @@ For details on how to build and run the example applications with supported tool
 The example needs ExecuTorch Runtime Library and Neutron Libraries.
 
 ExecuTorch Runtime Library: 
-* `middleware/eiq/executorch/lib/cm33/armgcc/libexecutorch.a`
+* `middleware/eiq/executorch/lib/cm33/armgcc/libexecutorch.a` for Cortex-M33 Core
+* `middleware/eiq/executorch/lib/hifi4/xcc/imxrt700/libexecutorch.a` for HiFi4 Core
 
-Neutron Libraries:          
-* `middleware/eiq/executorch/third-party/neutron/rt700/libNeutronDriver.a` and 
-* `middleware/eiq/executorch/third-party/neutron/rt700/libNeutronFirmware.a`
+Neutron Libraries:
+* Cortex-M33
+  * `/middleware/eiq/neutron/rt700/cm33/libNeutronDriver.a` and 
+  * `/middleware/eiq/neutron/rt700/cm33/libNeutronFirmware.a`
+* HiFi4 DSP
+    * `/middleware/eiq/neutron/rt700/hifi4/libNeutronDriver.a` and
+    * `/middleware/eiq/neutron/rt700/hifi4/libNeutronFirmware.a`
 
 In the example the model and the input image is already embedded into the program and ready to build and deploy to i.MX RT700, so you can continue right to the [building and deployment ](#build-deploy-and-run) section. 
 
@@ -100,7 +105,7 @@ If you want to build a new ExecuTorch Runtime Library, follow the commands as be
 1. When using ARMGCC toolchain, the example application can be built as below.
 ```commandline
 $ boards/mimxrt700evk/eiq_examples/executorch_lib/cm33_core0/armgcc$ ./build_release.sh
-$ boards/mimxrt700evk/eiq_examples/executorch_lib/cm33_core0/armgcc$ cp release/libexecutorch_lib_cm33_core0.a.a ../../../../../../middleware/eiq/executorch/lib/cm33/armgcc/libexecutorch.a
+$ boards/mimxrt700evk/eiq_examples/executorch_lib/cm33_core0/armgcc$ cp release/libexecutorch_lib_cm33_core0.a ../../../../../../middleware/eiq/executorch/lib/cm33/armgcc/libexecutorch.a
 ```
 
 2. When using MCUXpresso IDE, the example applications can be imported through the SDK Import Wizard as shown in the above [Figure 5](example_applications.md#FIG_IDEIMPORTWIZARD).
