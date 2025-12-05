@@ -2,7 +2,7 @@
 
 ExecuTorch is an end-to-end solution for enabling on-device inference capabilities across mobile and edge devices including wearables, embedded devices and microcontrollers. It is part of the PyTorch Edge ecosystem and enables efficient deployment of PyTorch models to edge devices. For more information, see https://pytorch.org/executorch-overview.
 
-The MCUXpresso Software Development Kit \(MCUXpresso SDK\) provides a comprehensive software package with a pre-integrated ExecuTorch based on version v0.5.0 with initial support for Neutron Backend. Neutron Backend enables acceleration of ML models on the [eIQ® Neutron Neural Processing Unit (NPU)](https://www.nxp.com/applications/technologies/ai-and-machine-learning/eiq-neutron-npu:EIQ-NEUTRON-NPU).
+The MCUXpresso Software Development Kit \(MCUXpresso SDK\) provides a comprehensive software package with a pre-integrated ExecuTorch based on version v1.0.0 which includes the Neutron Backend. Neutron Backend enables acceleration of ML models on the [eIQ® Neutron Neural Processing Unit (NPU)](https://www.nxp.com/applications/technologies/ai-and-machine-learning/eiq-neutron-npu:EIQ-NEUTRON-NPU).
 
 This document describes the steps required to download and start using the ExecuTorch. Additionally, the document describes the steps required to create an application for running pre-trained models.
 
@@ -49,7 +49,7 @@ $ git submodule update --init --recursive
 
 3. Build and install the ExecuTorch and its dependencies:
 ```commandline
-$ ./install_requirements.sh
+$ ./install_executorch.sh
 ```
 > [!WARNING]
 > The `install_requirements.sh` installs the CPU version of `torch` from `https://download.pytorch.org/whl/cpu`. If you are behind corporate proxy, it might have issues accessing it and you will see warnings like: 
@@ -70,9 +70,14 @@ The eIQ Neutron Backend uses the Neutron Converter to convert the ExecuTorch pro
 #### Installation
 The Neutron Converter is available as a Python package and can be installed by the `pip` command from eiq.nxp.com/repository:
 ```commandline
-pip install --index-url https://eiq.nxp.com/repository neutron_converter_SDK_25_09==1.0.0
+pip install --index-url https://eiq.nxp.com/repository neutron_converter_SDK_25_12==1.0.0
 ```
-The Neutron Converter is used internally by the ExecuTorch, and it is tied to the particular BSP you are using - the suffix of the python package name. In the code snippet above the flavor is the `SDK_25_09`.
+Or you can use the prepared setup script: 
+```commandline
+./examples/nxp/setup.sh
+```
+
+The Neutron Converter is used internally by the ExecuTorch, and it is tied to the particular BSP you are using - the suffix of the python package name. In the code snippet above the flavor is the `SDK_25_12`.
 In the [aot_neutron_convert.py](../../../examples/nxp/aot_neutron_compile.py) example script by the `--neutron_converter_flavor` parameter. 
 
 ### MCUXpresso SDK
