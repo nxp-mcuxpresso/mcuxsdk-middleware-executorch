@@ -1,8 +1,8 @@
 # MCUXpresso SDK Example applications
 
-The MCUXpresso SDK provides a set of projects and example application with the eIQ ExecuTorch. For details, see [Table 1](example_applications.md#TABLE_LISTOFEXAMPLEAPP).
-
-The eIQ ExecuTorch library is provided with a set of example applications. For details, see [Table 1](example_applications.md#TABLE_LISTOFEXAMPLEAPP). The applications demonstrate the usage of the library in several use cases.
+The MCUXpresso SDK provides a set of projects and example application with the eIQ ExecuTorch. These demonstrate the functionality of the ExecuTorch
+with the Neutron Backend, or enable to build the executorch library itself, 
+if code changes or customization is needed. See table bellow:
 
 |Name| Description                                                                                                                                                                                                                                                                                                                                    |Availability|
 |----|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------|
@@ -80,17 +80,22 @@ and again copy the array data and size in the  `image_data.h`
 Note, the `img0` is the image picturing a cat, what is a class number 3. 
 
 #### Build, Deploy and Run
-1. When using ARMGCC toolchain, the example application can be built as below. After building the example application, download it to the target with JLink as shown in [Figure 3](example_applications.md#FIG_ARMGCCJLINKCOMMAND), an output message displays on the connected terminal as [Figure 4](example_applications.md#FIG_ARMGCCOUTPUT).
+1. When using ARMGCC toolchain, the example application can be built as below:
 ```commandline
 $ boards/mimxrt700evk/eiq_examples/executorch_cifarnet/cm33_core0/armgcc$ ./build_flash_release.sh
 ```
-![](../images/figure3.png "ARMGCC jlink command") ![](../images/figure4.png "ARMGCC output")
 
-2. When using MCUXpresso IDE, the example applications can be imported through the SDK Import Wizard as shown in [Figure 5](example_applications.md#FIG_IDEIMPORTWIZARD).
+After building the example application, download it to the target with JLink as shown in figure bellow. 
+![](../images/figure3.png "ARMGCC jlink command")
+
+The output message displays on the connected terminal:
+![](../images/figure4.png "ARMGCC output")
+
+2. When using MCUXpresso IDE, the example applications can be imported through the SDK Import Wizard:
 
 ![](../images/figure5.png "MCUXpresso SDK import projects wizard")
 
-After building the example application and downloading it to the target, the execution stops in the *main* function. When the execution resumes, an output message displays on the connected terminal. For example, [Figure 6](example_applications.md#FIG_IDECOUTPUT) shows the output of the `executorch_cifarnet` example application.
+After building the example application and downloading it to the target, the execution stops in the *main* function. When the execution resumes, an output message displays on the connected terminal. For example, bellow figure shows the output of the `executorch_cifarnet` example application:
 
 ![](../images/figure6.png "IDE output")
 
@@ -108,7 +113,9 @@ $ boards/mimxrt700evk/eiq_examples/executorch_lib/cm33_core0/armgcc$ ./build_rel
 $ boards/mimxrt700evk/eiq_examples/executorch_lib/cm33_core0/armgcc$ cp release/libexecutorch_lib_cm33_core0.a ../../../../../../middleware/eiq/executorch/lib/cm33/armgcc/libexecutorch.a
 ```
 
-2. When using MCUXpresso IDE, the example applications can be imported through the SDK Import Wizard as shown in the above [Figure 5](example_applications.md#FIG_IDEIMPORTWIZARD).
+2. When using MCUXpresso IDE, you can import the project directly to the IDE through the SDK Import Wizard. The project can be found under `eiq_examples`:
+
+![](../images/figure5.png "MCUXpresso SDK import projects wizard")
 
 After building the example application, copy the new library `mimxrt700evk_executorch_lib_cm33_core0\Debug\libmimxrt700evk_executorch_lib_cm33_core0.a` to replace the default Runtime library `mimxrt700evk_executorch_cifarnet_cm33_core0\eiq\executorch\lib\cm33\armgcc\libexecutorch.a`.
 
