@@ -140,7 +140,6 @@ PORTABLE_KERNELS_SRCS = [
     "kernels/portable/cpu/op_le.cpp",
     "kernels/portable/cpu/op_leaky_relu.cpp",
     "kernels/portable/cpu/op_lift_fresh_copy.cpp",
-    "kernels/portable/cpu/op_linear_scratch_example.cpp",
     "kernels/portable/cpu/op_log.cpp",
     "kernels/portable/cpu/op_log10.cpp",
     "kernels/portable/cpu/op_log1p.cpp",
@@ -337,6 +336,10 @@ EXTENSION_FLAT_TENSOR_SRCS = [
     "extension/flat_tensor/serialize/flat_tensor_header.cpp",
 ]
 
+EXTENSION_MEMORY_ALLOCATOR_SRCS = [
+    "extension/memory_allocator/cpu_caching_malloc_allocator.cpp",
+]
+
 EXTENSION_MODULE_SRCS = [
     "extension/module/module.cpp",
 ]
@@ -469,6 +472,7 @@ XNNPACK_BACKEND_BUCK_SRCS = [
     "runtime/XNNHeader.cpp",
     "runtime/XNNPACKBackend.cpp",
     "runtime/XNNWeightsCache.cpp",
+    "runtime/XNNWorkspaceManager.cpp",
     "runtime/profiling/XNNProfiler.cpp",
 ]
 

@@ -32,10 +32,10 @@ As part of the .pte file creation process, ExecuTorch identifies portions of the
 
 Commonly used hardware backends are listed below. For mobile, consider using XNNPACK for Android and XNNPACK or Core ML for iOS. To create a .pte file for a specific backend, pass the appropriate partitioner class to `to_edge_transform_and_lower`. See the appropriate backend documentation and the [Export and Lowering](#export-and-lowering) section below for more information.
 
-- [XNNPACK (CPU)](backends-xnnpack.md)
-- [Core ML (iOS)](backends-coreml.md)
-- [Metal Performance Shaders (iOS GPU)](backends-mps.md)
-- [Vulkan (Android GPU)](backends-vulkan.md)
+- [XNNPACK (CPU)](backends/xnnpack/xnnpack-overview.md)
+- [Core ML (iOS)](backends/coreml/coreml-overview.md)
+- [Metal Performance Shaders (iOS GPU)](backends/mps/mps-overview.md)
+- [Vulkan (Android GPU)](backends/vulkan/vulkan-overview.md)
 - [Qualcomm NPU](backends-qualcomm.md)
 - [MediaTek NPU](backends-mediatek.md)
 - [Arm Ethos-U NPU](backends-arm-ethos-u.md)
@@ -176,7 +176,7 @@ In the above example, `"x"` corresponds to the parameter name in `Model.forward`
 
 ExecuTorch uses the shape bounds both to optimize the model and to plan memory for model execution. For this reason, it is advised to set the dimension upper bounds to no higher than needed, as higher bounds increase memory consumption.
 
-For more complex use cases, dynamic shape specification allows for mathematical relationships between dimensions. For more information on dynamic shape specification, see [Expressing Dynamism](https://pytorch.org/docs/stable/export.html#expressing-dynamism).
+For more complex use cases, dynamic shape specification allows for mathematical relationships between dimensions. For more information on dynamic shape specification, see [Expressing Dynamism](https://docs.pytorch.org/docs/stable/user_guide/torch_compiler/export.html#expressing-dynamism).
 
 ## Testing the Model
 
@@ -280,7 +280,7 @@ decode_ep = torch.export.export(DecodeWrapper(model), ...)
 
 ## Next Steps
 
-The PyTorch and ExecuTorch export and lowering APIs provide a high level of customizability to meet the needs of diverse hardware and models. See [torch.export](https://pytorch.org/docs/main/export.html) and [Export API Reference](export-to-executorch-api-reference.rst) for more information.
+The PyTorch and ExecuTorch export and lowering APIs provide a high level of customizability to meet the needs of diverse hardware and models. See [torch.export](https://docs.pytorch.org/docs/stable/user_guide/torch_compiler/export.html) and [Export API Reference](export-to-executorch-api-reference.rst) for more information.
 
 For advanced use cases, see the following:
 - [Quantization Overview](quantization-overview.md) for information on quantizing models to reduce inference time and memory footprint.

@@ -125,8 +125,9 @@ def extract_artifacts_from_neutron_node(
     output_indices = []
     graph_outputs = sub_graph.OutputsAsNumpy()
     payload_version = 0
+    # Ignore the extra outputs: scratch and eventually also profile and debug
     node_outputs = neutron_node.OutputsAsNumpy()[:-1]
-    if (len(graph_outputs) == len(node_outputs)-2):
+    if len(graph_outputs) == len(node_outputs) - 2:
         payload_version = 1
         node_outputs = node_outputs[:-2]
     for tensor_idx in node_outputs:

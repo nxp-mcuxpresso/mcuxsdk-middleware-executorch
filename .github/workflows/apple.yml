@@ -38,14 +38,27 @@ jobs:
         id: set_version
         shell: bash
         run: |
-          VERSION="1.0.0"
+          VERSION="1.1.0"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+      - name: Guardrail
+        if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/release/1.1' }}
+        shell: bash
+        run: |
+          VERSION="${{ steps.set_version.outputs.version }}"
+          BRANCH="swiftpm-${VERSION}"
+
+          if git ls-remote --exit-code "https://github.com/${{ github.repository }}" "refs/heads/${BRANCH}" > /dev/null 2>&1; then
+            echo "Branch '${BRANCH}' already exists!"
+            echo "Aborting workflow to prevent overwriting S3 binaries. The branch existence indicates this version was already published with specific checksums."
+            echo "Please delete the remote branch '${BRANCH}' and re-run this workflow."
+            exit 1
+          fi
 
   build-demo-ios:
     name: build-demo-ios
     # NB: Don't run this on fork PRs because they won't have access to the secret and would fail anyway
     if: ${{ !github.event.pull_request.head.repo.fork }}
-    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.9
+    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.10
     secrets: inherit
     with:
       runner: macos-14-xlarge
@@ -115,7 +128,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    uses: pytorch/test-infra/.github/workflows/mobile_job.yml@release/2.9
+    uses: pytorch/test-infra/.github/workflows/mobile_job.yml@release/2.10
     with:
       device-type: ios
       # For iOS testing, the runner just needs to call AWS Device Farm, so there is no need to run this on macOS
@@ -133,7 +146,7 @@ jobs:
   build-frameworks-ios:
     name: build-frameworks-ios
     needs: set-version
-    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.9
+    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.10
     with:
       runner: macos-14-xlarge
       python-version: '3.11'
@@ -185,7 +198,7 @@ jobs:
     runs-on: ubuntu-22.04
     needs: [build-frameworks-ios, set-version]
     timeout-minutes: 30
-    environment: ${{ github.ref == 'refs/heads/release/1.0' && 'cherry-pick-bot' || '' }}
+    environment: ${{ github.ref == 'refs/heads/release/1.1' && 'cherry-pick-bot' || '' }}
     permissions:
       id-token: write
       contents: write
@@ -210,7 +223,7 @@ jobs:
           name: executorch-frameworks-ios
           path: ${{ runner.temp }}/frameworks-ios/
       - name: Only push to S3 when running the workflow manually from main branch
-        if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/release/1.0' }}
+        if: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/release/1.1' }}
         shell: bash
         run: |
           echo "UPLOAD_ON_MAIN=1" >> "${GITHUB_ENV}"
@@ -272,7 +285,7 @@ jobs:
     name: build-benchmark-app
     # NB: Don't run this on fork PRs because they won't have access to the secret and would fail anyway
     if: ${{ !github.event.pull_request.head.repo.fork }}
-    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.9
+    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.10
     secrets: inherit
     with:
       runner: macos-14-xlarge

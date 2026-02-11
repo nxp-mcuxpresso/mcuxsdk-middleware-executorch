@@ -77,7 +77,6 @@ def test_multihead_attention_u55_INT(test_data: input_t1):
         [],
         [],
         use_to_edge_transform_and_lower=True,
-        run_on_fvp=True,
         # TODO: Per-channel quantization is broken (MLETORCH-1144)
         per_channel_quantization=False,
     )
@@ -98,7 +97,6 @@ def test_multihead_attention_u85_INT(test_data: input_t1):
         [],
         [],
         use_to_edge_transform_and_lower=True,
-        run_on_fvp=True,
         # TODO: Per-channel quantization is broken (MLETORCH-1144)
         per_channel_quantization=False,
     )
@@ -110,14 +108,14 @@ def test_multihead_attention_u85_INT(test_data: input_t1):
     test_suite,
 )
 @common.SkipIfNoModelConverter
-def test_multihead_attention_vgf_FP(test_data: input_t1):
+def test_multihead_attention_vgf_no_quant(test_data: input_t1):
     test_data_vals, module = test_data()
     pipeline = VgfPipeline[input_t1](
         module,
         (*test_data_vals, *test_data_vals, *test_data_vals),
         [],
         [],
-        tosa_version="TOSA-1.0+FP",
+        quantize=False,
     )
     pipeline.run()
 
@@ -127,15 +125,14 @@ def test_multihead_attention_vgf_FP(test_data: input_t1):
     test_suite,
 )
 @common.SkipIfNoModelConverter
-def test_multihead_attention_vgf_INT(test_data: input_t1):
+def test_multihead_attention_vgf_quant(test_data: input_t1):
     test_data_vals, module = test_data()
     pipeline = VgfPipeline[input_t1](
         module,
         (*test_data_vals, *test_data_vals, *test_data_vals),
         [],
         [],
-        tosa_version="TOSA-1.0+INT",
-        # TODO: Per-channel quantization is broken (MLETORCH-1144)
         per_channel_quantization=False,
+        quantize=True,
     )
     pipeline.run()

@@ -36,10 +36,7 @@ def define_common_targets():
     runtime.python_library(
         name = "decompose_sdpa",
         srcs = ["decompose_sdpa.py"],
-        visibility = [
-            "//executorch/backends/...",
-            "@EXECUTORCH_CLIENTS",
-        ],
+        visibility = ["PUBLIC"],
         deps = [
             "//caffe2:torch",
             "//executorch/exir:pass_base",
@@ -64,38 +61,6 @@ def define_common_targets():
     runtime.python_library(
         name = "fuse_conv_with_clamp",
         srcs = ["fuse_conv_with_clamp.py"],
-        visibility = [
-            "//executorch/backends/...",
-        ],
-        deps = [
-            ":utils",
-            "//caffe2:torch",
-            "//executorch/backends/vulkan:custom_ops_lib",
-            "//executorch/exir:pass_base",
-            "//executorch/exir:sym_util",
-            "//executorch/exir/dialects:lib",
-        ],
-    )
-
-    runtime.python_library(
-        name = "fuse_clamps",
-        srcs = ["fuse_clamps.py"],
-        visibility = [
-            "//executorch/backends/...",
-        ],
-        deps = [
-            ":utils",
-            "//caffe2:torch",
-            "//executorch/backends/vulkan:custom_ops_lib",
-            "//executorch/exir:pass_base",
-            "//executorch/exir:sym_util",
-            "//executorch/exir/dialects:lib",
-        ],
-    )
-
-    runtime.python_library(
-        name = "fuse_clamp_with_binary_op",
-        srcs = ["fuse_clamp_with_binary_op.py"],
         visibility = [
             "//executorch/backends/...",
         ],
@@ -139,10 +104,7 @@ def define_common_targets():
     runtime.python_library(
         name = "remove_clone_ops",
         srcs = ["remove_clone_ops.py"],
-        visibility = [
-            "//executorch/backends/...",
-            "@EXECUTORCH_CLIENTS",
-        ],
+        visibility = ["PUBLIC"],
         deps = [
             "//caffe2:torch",
             "//executorch/exir:pass_base",
@@ -196,12 +158,7 @@ def define_common_targets():
     runtime.python_library(
         name = "duplicate_dynamic_quant_chain",
         srcs = ["duplicate_dynamic_quant_chain.py"],
-        visibility = [
-            "//executorch/backends/...",
-            "//executorch/examples/...",
-            "//executorch/extension/llm/...",
-            "@EXECUTORCH_CLIENTS",
-        ],
+        visibility = ["PUBLIC"],
         deps = [
             "//caffe2:torch",
         ],
@@ -212,9 +169,7 @@ def define_common_targets():
         srcs = [
             "convert_dtype_pass.py",
         ],
-        visibility = [
-            "//executorch/backends/...",
-        ],
+        visibility = ["PUBLIC"],
         deps = [
             "//caffe2:torch",
             "//executorch/exir:pass_base",
