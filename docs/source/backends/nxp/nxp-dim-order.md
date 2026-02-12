@@ -82,11 +82,11 @@ exported_program = torch.export.export(model, example_inputs)
 A full example of this use case can be found in the
 [aot_neutron_compile.py](https://github.com/pytorch/executorch/blob/main/examples/nxp/aot_neutron_compile.py). The
 following command will create the `cifar10_nxp_delegate.pte` model, which takes channels first inputs, contains no
-transpositions, and can be run on the `i.MX RT700` board using the __MCUXpresso SDK 25.06__. For details on the
+transpositions, and can be run on the `i.MX RT700` board using the __MCUXpresso SDK 26.03__. For details on the
 installation see {doc}`nxp-overview`.
 
 ```
 python -m examples.nxp.aot_neutron_compile --quantize \
-    --delegate --neutron_converter_flavor SDK_25_09 -m cifar10 \
+    --delegate --neutron_converter_flavor SDK_26_03 -m cifar10 \
     --use_channels_last_dim_order
 ```
