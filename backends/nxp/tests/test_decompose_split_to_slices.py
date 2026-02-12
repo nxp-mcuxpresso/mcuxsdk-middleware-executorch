@@ -272,7 +272,7 @@ def test_decompose_gru_with_split_full_pipeline(
     mocker, input_shape, size_or_sections, dim
 ):
     # The delegation of slices will not work in older versions, thus making the tests fail.
-    if neutron_converter_flavor == "SDK_25_09":
+    if neutron_converter_flavor <= "SDK_25_09":
         pytest.skip("Neutron Software must be version 2.2.1 or higher.")
 
     converter_spy = mocker.spy(EdgeProgramToIRConverter, "convert_program")
