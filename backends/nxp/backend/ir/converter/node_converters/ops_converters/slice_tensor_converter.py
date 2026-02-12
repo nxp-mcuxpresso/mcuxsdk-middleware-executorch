@@ -1,4 +1,4 @@
-# Copyright 2025 NXP
+# Copyright 2025-2026 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -33,7 +33,7 @@ class SliceTensorConverter(NodeConverter):
     ) -> bool:
         # Provisional solution - slice conversion works for neutron software 2.2.1+
         neutron_flavor = neutron_target_spec.neutron_target.__module__.split(".")[0]
-        if neutron_flavor != "neutron_converter_SDK_25_12":
+        if neutron_flavor < "neutron_converter_SDK_25_12":
             return False
 
         input_shape = input_tensor(node, 0).shape

@@ -1,4 +1,4 @@
-# Copyright 2025 NXP
+# Copyright 2025-2026 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -88,7 +88,7 @@ def test_slice_tensor_quant_conversion(mocker, x_input_shape, dims, starts, ends
         ends=ends,
     )
 
-    if neutron_converter_flavor == "SDK_25_09":
+    if neutron_converter_flavor <= "SDK_25_09":
         pytest.skip("Neutron Software must be version 2.2.1 or higher.")
 
     converter_spy = mocker.spy(EdgeProgramToIRConverter, "convert_program")
@@ -133,7 +133,7 @@ def test_slice_tensor_quant_conversion(mocker, x_input_shape, dims, starts, ends
 def test_slice_tensor_w_conv_quant_conversion(
     mocker, x_input_shape, dims, starts, ends
 ):
-    if neutron_converter_flavor == "SDK_25_09":
+    if neutron_converter_flavor <= "SDK_25_09":
         pytest.skip("Neutron Software must be version 2.2.1 or higher.")
 
     model = SliceTensorConvModule(dims=dims, starts=starts, ends=ends)
