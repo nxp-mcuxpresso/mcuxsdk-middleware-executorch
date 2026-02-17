@@ -8,7 +8,8 @@ First we will start with an example script converting the model. This example sh
 As the `aot_neutron_compile.py` is already installed as part of the ExecuTorch installation we will run it from there 
 ```commandline
 $ python -m examples.nxp.aot_neutron_compile --quantize \
-        --delegate --neutron_converter_flavor SDK_26_03 -m cifar10
+        --delegate --remove-quant-io-ops --use_channels_last_dim_order \
+        --neutron_converter_flavor SDK_26_03 -m cifar10
 ```
 
 2. It will generate you `cifar10_nxp_delegate.pte` file which can be used with the MXUXpresso SDK `cifarnet_example` project. 

@@ -49,27 +49,22 @@ import torchvision
 import numpy as np
 
 batch_size = 1
-
-transform = torchvision.transforms.Compose([
-  torchvision.transforms.ToTensor(),
-  torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-])
-
+transform = torchvision.transforms.PILToTensor()
 test_set = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transform)
 test_loader = torch.utils.data.DataLoader(test_set, batch_size=batch_size, shuffle=False, num_workers=0)
-
 index = 0
 num_images = 10
 for data in test_loader:
-  images, labels = data
-  for image, label in zip(images,labels):
-    arr = image.numpy().astype(np.float32)
-    arr.tofile("img" + str(index) + "_" + str(int(label)) + ".bin")
-    index = index + 1
+    images, labels = data
+    for image, label in zip(images, labels):
+        img_np = image.permute(1, 2, 0).contiguous().numpy() # Convert to HWC and numpy
+        arr = (img_np - 128).astype(np.int8) # Center and cast to int8
+        arr.tofile(f"img{index}_{label}.bin") # Save to file
+        index += 1
+        if index >= num_images:
+            break
     if index >= num_images:
-      break
-  if index >= num_images:
-    break
+        break
 ```
 This generates the `num_images` count of images from Cifar10 dataset, as input tensors for the cifar10 model and store them in corresponding `.bin` files. Then we use the xxd command to get the C array data and size: 
 ```commandline
@@ -95,13 +90,7 @@ The output message displays on the connected terminal:
 
 ![](../images/figure5.png "MCUXpresso SDK import projects wizard")
 
-After building the example application and downloading it to the target, the execution stops in the *main* function. When the execution resumes, an output message displays on the connected terminal. For example, bellow figure shows the output of the `executorch_cifarnet` example application:
-
-![](../images/figure6.png "IDE output")
-
-In case of missing probabilities in the printed output, add PRINTF_FLOAT_ENABLE=1 to the Preprocessor settings for C++ and C compiler:
-
-![](../images/figure7.png "FP output enable")
+After building the example application and downloading it to the target, the execution stops in the *main* function. When the execution resumes, an output message displays on the connected terminal. The output of the `executorch_cifarnet` example will be the same as the output shown above for the ARM GCC toolchain.
 
 ### How to build `executorch_lib` example
 
