@@ -64,14 +64,14 @@ $else:
 #include "broadcasting_utils.h"
 #include "indexing_utils.h"
 
+$if MASK_PADDING:
+  #define MASK_PADDING
+
 layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z_id = 2) in;
 
 ${layout_declare_spec_const(C, "int", "out_layout", "DEFAULT_LAYOUT")}
 ${layout_declare_spec_const(C, "int", "in_layout", "DEFAULT_LAYOUT")}
 ${layout_declare_spec_const(C, "int", "other_layout", "DEFAULT_LAYOUT")}
-${layout_declare_spec_const(C, "int", "clamp_type", "0")}
-${layout_declare_spec_const(C, "float", "min_val", "0")}
-${layout_declare_spec_const(C, "float", "max_val", "0")}
 
 $if STORAGE == "buffer":
   const lowp ivec4 out_dim_order = unhash_dim_order(out_layout);
@@ -93,25 +93,11 @@ void main() {
 
   // Simple case; no broadcasting
   if (are_equal(inp, other)) {
-    T in_val = T(t_in[out_bufi]);
-    T other_val = T(t_other[out_bufi]);
-    if (clamp_type == 1) {
-      in_val = T(clamp(in_val, T(min_val), T(max_val)));
-    }
-    else if (clamp_type == 2) {
-      other_val = T(clamp(other_val, T(min_val), T(max_val)));
-    }
-    T out_val = T(op(in_val, other_val, T(alpha)));
-    if (clamp_type == 3) {
-      out_val = T(clamp(out_val, T(min_val), T(max_val)));
-    }
-    t_out[out_bufi] = out_val;
-
+    t_out[out_bufi] = T(op(t_in[out_bufi], t_other[out_bufi], T(alpha)));
     return;
   }
 
-  TensorIndex outp_tidx;
-  linear_idx_to_tensor_idx(outp, out_bufi, outp_tidx);
+  TensorIndex outp_tidx = linear_idx_to_tensor_idx(outp, out_bufi);
 
   TensorIndex inp_tidx = outp_tidx;
   clamp_tensor_idx(inp, inp_tidx);
@@ -122,19 +108,7 @@ void main() {
   uint inp_bufi = tensor_idx_to_linear_idx(inp, inp_tidx);
   uint other_bufi = tensor_idx_to_linear_idx(other, other_tidx);
 
-  T in_val = T(t_in[inp_bufi]);
-  T other_val = T(t_other[other_bufi]);
-  if (clamp_type == 1) {
-    in_val = T(clamp(in_val, T(min_val), T(max_val)));
-  }
-  else if (clamp_type == 2) {
-    other_val = T(clamp(other_val, T(min_val), T(max_val)));
-  }
-  T out_val = T(op(in_val, other_val, T(alpha)));
-  if (clamp_type == 3) {
-    out_val = T(clamp(out_val, T(min_val), T(max_val)));
-  }
-  t_out[out_bufi] = out_val;
+  t_out[out_bufi] = T(op(t_in[inp_bufi], t_other[other_bufi], T(alpha)));
 }
 
 #else // USING_TEXTURE
@@ -154,20 +128,12 @@ void main() {
     // read axis mapped texel
     tidx_to_pos(in_idx, in_sizes, in_axis_map, packed_dim)));
 
-  if (clamp_type == 1) {
-    in_texel = clamp(in_texel, VEC4_T(min_val), VEC4_T(max_val));
-  }
-
   // broadcast on logical sizes
   ivec4 other_idx = broadcast_indices(tidx, other_sizes);
   VEC4_T other_texel = VEC4_T(load_texel(
     t_other,
     // read axis mapped texel
     tidx_to_pos(other_idx, other_sizes, other_axis_map, packed_dim)));
-
-  if (clamp_type == 2) {
-    in_texel = clamp(other_texel, VEC4_T(min_val), VEC4_T(max_val));
-  }
 
   // Check boolean broadcast flags; we use ivec2 instead of bvec2 for alignment.
   if (broadcast_params.x > 0) {
@@ -177,20 +143,29 @@ void main() {
     other_texel = other_texel.xxxx;
   }
 
-  if (clamp_type != 3) {
-    write_texel_lpos(
-      t_out,
-      lpos,
-      VEC4_OUT_T(op(in_texel, other_texel, alpha)),
-      out_axis_map);
+  VEC4_OUT_T out_texel = VEC4_OUT_T(op(in_texel, other_texel, alpha));
+
+#ifdef MASK_PADDING
+  // Handle padding elements in the last texel to prevent NaN propagation.
+  // When the packed dimension size is not a multiple of 4, the last texel
+  // will have padding elements. For division operations, padding elements
+  // (which are 0/0) can produce NaN values that propagate through reductions.
+  const int nspill = mod4(out_sizes[packed_dim]);
+
+  if (nspill > 0) {
+    const int texels_per_batch = divup4(out_sizes[packed_dim]);
+    const bool is_last_texel = (lpos[packed_dim] % texels_per_batch) == (texels_per_batch - 1);
+
+    if (is_last_texel) {
+      // Explicitly set padding elements to 0 to avoid NaN
+      [[unroll]] for (int i = nspill; i < 4; i++) {
+        out_texel[i] = 0;
+      }
+    }
   }
-  else {
-    write_texel_lpos(
-      t_out,
-      lpos,
-      VEC4_OUT_T(clamp(VEC4_OUT_T(op(in_texel, other_texel, alpha)), min_val, max_val)),
-      out_axis_map);
-  }
+#endif
+
+  write_texel_lpos(t_out, lpos, out_texel, out_axis_map);
 }
 
 #endif

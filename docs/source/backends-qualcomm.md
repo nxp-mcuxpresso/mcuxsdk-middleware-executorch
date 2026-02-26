@@ -27,7 +27,7 @@ Qualcomm AI Engine Direct is also referred to as QNN in the source and documenta
 is designed to provide unified, low-level APIs for AI development.
 
 Developers can interact with various accelerators on Qualcomm SoCs with these set of APIs, including
-Kryo CPU, Adreno GPU, and Hexagon processors. More details can be found [here](https://docs.qualcomm.com/bundle/publicresource/topics/80-63442-50/overview.html).
+Kryo CPU, Adreno GPU, and Hexagon processors. More details can be found [here](https://docs.qualcomm.com/bundle/publicresource/topics/80-63442-10/overview.html).
 
 Currently, this ExecuTorch Backend can delegate AI computations to Hexagon processors through Qualcomm AI Engine Direct APIs.
 
@@ -36,24 +36,30 @@ Currently, this ExecuTorch Backend can delegate AI computations to Hexagon proce
 
 ### Host OS
 
-The Linux host operating system that QNN Backend is verified with is Ubuntu 22.04 LTS x64
-at the moment of updating this tutorial.
-In addition, it is also confirmed to work on Windows Subsystem for Linux (WSL) with Ubuntu 22.04.
-Usually, we verified the backend on the same OS version which QNN is verified with.
-The version is documented in QNN SDK.
+The QNN Backend is currently verified on the following Linux host operating systems:
+
+- **Ubuntu 22.04 LTS (x64)**
+- **CentOS Stream 9**
+- **Windows Subsystem for Linux (WSL)** with Ubuntu 22.04
+
+In general, we verify the backend on the same OS versions that the QNN SDK is officially validated against.  
+The exact supported versions are documented in the QNN SDK.
 
 #### Windows (WSL) Setup
+
 To install Ubuntu 22.04 on WSL, run the following command in PowerShell or Windows Terminal:
-``` bash
+
+```bash
 wsl --install -d ubuntu 22.04
 ```
+
 This command will install WSL and set up Ubuntu 22.04 as the default Linux distribution.
 
 For more details and troubleshooting, refer to the official Microsoft WSL installation guide:
 👉 [Install WSL | Microsoft Learn](https://learn.microsoft.com/en-us/windows/wsl/install)
 
 ### Hardware:
-You will need an Android smartphone with adb-connected running on one of below Qualcomm SoCs:
+You will need an Android / Linux device with adb-connected running on one of below Qualcomm SoCs:
  - SA8295
  - SM8450 (Snapdragon 8 Gen 1)
  - SM8475 (Snapdragon 8 Gen 1+)
@@ -62,17 +68,20 @@ You will need an Android smartphone with adb-connected running on one of below Q
  - SM8750 (Snapdragon 8 Elite)
  - SSG2115P
  - SSG2125P
- - SXR1230P
+ - SXR1230P (Linux Embedded)
  - SXR2230P
  - SXR2330P
+ - QCM6490
+ - QCS9100
 
 This example is verified with SM8550 and SM8450.
 
 ### Software:
 
  - Follow ExecuTorch recommended Python version.
- - A compiler to compile AOT parts, e.g., the GCC compiler comes with Ubuntu LTS.
+ - A compiler to compile AOT parts, e.g., the GCC compiler comes with Ubuntu LTS. g++ version need to be 13 or higher.
  - [Android NDK](https://developer.android.com/ndk). This example is verified with NDK 26c.
+ - (Optional) Target toolchain for linux embedded platform.
  - [Qualcomm AI Engine Direct SDK](https://developer.qualcomm.com/software/qualcomm-ai-engine-direct-sdk)
    - Click the "Get Software" button to download the latest version of the QNN SDK.
    - Although newer versions are available, we have verified and recommend using QNN 2.37.0 for stability.
@@ -130,8 +139,11 @@ The above script is actively used. It is updated more frequently than this tutor
 An example usage is
 ```bash
 cd $EXECUTORCH_ROOT
+# android target
 ./backends/qualcomm/scripts/build.sh
-# or
+# (optional) linux embedded target
+./backends/qualcomm/scripts/build.sh --enable_linux_embedded
+# for release build
 ./backends/qualcomm/scripts/build.sh --release
 ```
 
@@ -272,7 +284,10 @@ I 00:00:00.364875 executorch:qnn_executor_runner.cpp:425] Write etdump to etdump
 The model is merely executed. If we want to feed real inputs and get model outputs, we can use
 ```bash
 cd $EXECUTORCH_ROOT
+# android
 python -m examples.qualcomm.scripts.deeplab_v3 -b build-android -m SM8550 --download -s <device_serial>
+# (optional) linux embedded
+python -m examples.qualcomm.scripts.deeplab_v3 -b build-oe-linux -m SXR1230P --download -s <device_serial> -t aarch64-oe-linux-gcc-9.3
 ```
 The `<device_serial>` can be found by `adb devices` command.
 
@@ -281,6 +296,145 @@ After the above command, pre-processed inputs and outputs are put in `$EXECUTORC
 The command-line arguments are written in [utils.py](https://github.com/pytorch/executorch/blob/main/examples/qualcomm/utils.py#L139).
 The model, inputs, and output location are passed to `qnn_executorch_runner` by `--model_path`, `--input_list_path`, and `--output_folder_path`.
 
+### Run [Android LlamaDemo](https://github.com/meta-pytorch/executorch-examples/tree/main/llm/android/LlamaDemo) with QNN backend
+
+`$DEMO_APP` refers to the root of the executorch android demo, i.e., the directory containing `build.gradle.kts`.
+
+***Step 1***: Rebuild ExecuTorch AAR
+
+```bash
+# Build the AAR
+cd $EXECUTORCH_ROOT
+export BUILD_AAR_DIR=$EXECUTORCH_ROOT/aar-out
+./scripts/build_android_library.sh
+```
+
+***Step 2***: Copy AAR to Android Project
+
+```bash
+cp $EXECUTORCH_ROOT/aar-out/executorch.aar \
+   $DEMO_APP/app/libs/executorch.aar
+```
+
+***Step 3***: Build Android APK
+
+```bash
+cd $DEMO_APP
+./gradlew clean assembleDebug -PuseLocalAar=true
+```
+
+***Step 4***: Install on Device
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+***Step 5***: Push model
+
+```bash
+adb shell mkdir -p /data/local/tmp/llama
+adb push model.pte /data/local/tmp/llama
+adb push tokenizer.bin /data/local/tmp/llama
+```
+
+***Step 6***: Run the Llama Demo
+
+- Open the App on Android
+- Select `QUALCOMM` backend
+- Select `model.pte` Model
+- Select `tokenizer.bin` Tokenizer
+- Select Model Type
+- Click LOAD MODEL
+- It should show `Successfully loaded model.`
+
+
+#### Verification Steps
+
+***Step 1***. Verify AAR Contains Your Changes
+
+```bash
+# Check for debug strings in the AAR
+unzip -p $DEMO_APP/app/libs/executorch.aar jni/arm64-v8a/libexecutorch.so | \
+  strings | grep "QNN"   # Replace "QNN" with your actual debug string if needed
+```
+
+If found, your changes are in the AAR.
+
+***Step 2***. Verify APK Contains Correct Libraries
+
+```bash
+# Check QNN library version in APK
+cd $DEMO_APP
+unzip -l app/build/outputs/apk/debug/app-debug.apk | grep "libQnnHtp.so"
+```
+
+Expected size for QNN 2.37.0: ~2,465,440 bytes
+
+***Step 3***. Monitor Logs During Model Loading
+
+```bash
+adb logcat -c
+adb logcat | grep -E "ExecuTorch"
+```
+
+#### Common Issues and Solutions
+
+##### Issue 1: Error 18 (InvalidArgument)
+
+- **Cause**: Wrong parameter order in Runner constructor or missing QNN config
+
+- **Solution**: Check `$EXECUTORCH_ROOT/examples/qualcomm/oss_scripts/llama/runner/runner.h` for the correct constructor signature.
+
+##### Issue 2: Error 1 (Internal) with QNN API Version Mismatch
+
+- **Symptoms**:
+
+    ```
+    W [Qnn ExecuTorch]: Qnn API version 2.33.0 is mismatched
+    E [Qnn ExecuTorch]: Using newer context binary on old SDK
+    E [Qnn ExecuTorch]: Can't create context from binary. Error 5000
+    ```
+
+- **Cause**: Model compiled with QNN SDK version X but APK uses QNN runtime version Y
+
+- **Solution**:
+    - Update `build.gradle.kts` with matching QNN runtime version
+
+    > **Note:** The version numbers below (`2.33.0` and `2.37.0`) are examples only. Please check for the latest compatible QNN runtime version or match your QNN SDK version to avoid API mismatches.
+
+    **Before**:
+    ```kotlin
+    implementation("com.qualcomm.qti:qnn-runtime:2.33.0")
+    ```
+    
+    **After**:
+    ```kotlin
+    implementation("com.qualcomm.qti:qnn-runtime:2.37.0")
+    ```
+
+    - Or recompile model with matching QNN SDK version
+
+##### Issue 3: Native Code Changes Not Applied
+
+- **Symptoms**:
+    - Debug logs don't appear
+    - Behavior doesn't change
+
+- **Cause**:
+    - Gradle using Maven dependency instead of local AAR
+
+- **Solution**:
+    - Always build with `-PuseLocalAar=true` flag
+
+##### Issue 4: Logs Not Appearing
+
+- **Cause**: Wrong logging tag filter
+
+- **Solution**: QNN uses "ExecuTorch" tag:
+
+    ```bash
+    adb logcat | grep "ExecuTorch"
+    ```
 
 ## Supported model list
 

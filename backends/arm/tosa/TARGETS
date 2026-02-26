@@ -1,6 +1,15 @@
 load("@fbsource//xplat/executorch/build:runtime_wrapper.bzl", "runtime")
 
 runtime.python_library(
+    name = "schemas",
+    srcs = ["schemas/__init__.py"],
+    resources = [
+        "schemas/tosa_1.0.fbs",
+    ],
+    visibility = ["PUBLIC"],
+)
+
+runtime.python_library(
     name = "mapping",
     srcs = [
         "mapping.py",
@@ -9,20 +18,6 @@ runtime.python_library(
         "fbsource//third-party/tosa_tools:serializer",
         "//caffe2:torch",
         ":specification",
-    ],
-)
-runtime.python_library(
-    name = "quant_utils",
-    srcs = [
-        "quant_utils.py",
-    ],
-    deps = [
-        "fbsource//third-party/pypi/numpy:numpy",
-        "fbsource//third-party/tosa_tools:serializer",
-        "fbsource//third-party/tosa_tools:tosa",
-        "//executorch/backends/arm:constants",
-        ":mapping",
-        "//executorch/exir/dialects:lib",
     ],
 )
 runtime.python_library(
@@ -41,7 +36,6 @@ runtime.python_library(
         "utils.py",
     ],
     deps = [
-        ":quant_utils",
         "//executorch/backends/arm/operators:node_visitor",
     ],
 )

@@ -11,6 +11,7 @@ package org.pytorch.executorch.extension.llm;
 import com.facebook.jni.HybridData;
 import com.facebook.jni.annotations.DoNotStrip;
 import java.io.File;
+import java.util.List;
 import org.pytorch.executorch.ExecuTorchRuntime;
 import org.pytorch.executorch.annotations.Experimental;
 
@@ -33,14 +34,22 @@ public class LlmModule {
 
   @DoNotStrip
   private static native HybridData initHybrid(
-      int modelType, String modulePath, String tokenizerPath, float temperature, String dataPath);
+      int modelType,
+      String modulePath,
+      String tokenizerPath,
+      float temperature,
+      List<String> dataFiles);
 
   /**
    * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature, and
-   * data path.
+   * dataFiles.
    */
   public LlmModule(
-      int modelType, String modulePath, String tokenizerPath, float temperature, String dataPath) {
+      int modelType,
+      String modulePath,
+      String tokenizerPath,
+      float temperature,
+      List<String> dataFiles) {
     ExecuTorchRuntime runtime = ExecuTorchRuntime.getRuntime();
 
     File modelFile = new File(modulePath);
@@ -51,12 +60,27 @@ public class LlmModule {
     if (!tokenizerFile.canRead() || !tokenizerFile.isFile()) {
       throw new RuntimeException("Cannot load tokenizer path " + tokenizerPath);
     }
-    mHybridData = initHybrid(modelType, modulePath, tokenizerPath, temperature, dataPath);
+
+    mHybridData = initHybrid(modelType, modulePath, tokenizerPath, temperature, dataFiles);
+  }
+
+  /**
+   * Constructs a LLM Module for a model with given type, model path, tokenizer, temperature, and
+   * data path.
+   */
+  public LlmModule(
+      int modelType, String modulePath, String tokenizerPath, float temperature, String dataPath) {
+    this(
+        modelType,
+        modulePath,
+        tokenizerPath,
+        temperature,
+        dataPath != null ? List.of(dataPath) : List.of());
   }
 
   /** Constructs a LLM Module for a model with given model path, tokenizer, temperature. */
   public LlmModule(String modulePath, String tokenizerPath, float temperature) {
-    this(MODEL_TYPE_TEXT, modulePath, tokenizerPath, temperature, null);
+    this(MODEL_TYPE_TEXT, modulePath, tokenizerPath, temperature, List.of());
   }
 
   /**
@@ -64,12 +88,12 @@ public class LlmModule {
    * path.
    */
   public LlmModule(String modulePath, String tokenizerPath, float temperature, String dataPath) {
-    this(MODEL_TYPE_TEXT, modulePath, tokenizerPath, temperature, dataPath);
+    this(MODEL_TYPE_TEXT, modulePath, tokenizerPath, temperature, List.of(dataPath));
   }
 
   /** Constructs a LLM Module for a model with given path, tokenizer, and temperature. */
   public LlmModule(int modelType, String modulePath, String tokenizerPath, float temperature) {
-    this(modelType, modulePath, tokenizerPath, temperature, null);
+    this(modelType, modulePath, tokenizerPath, temperature, List.of());
   }
 
   /** Constructs a LLM Module for a model with the given LlmModuleConfig */
@@ -163,8 +187,10 @@ public class LlmModule {
       LlmCallback llmCallback,
       boolean echo) {
     prefillPrompt(prompt);
-    prefillImages(image, width, height, channels);
-    return generate("", llmCallback, echo);
+    if (image != null) {
+      prefillImages(image, width, height, channels);
+    }
+    return generate(prompt, seqLen, llmCallback, echo);
   }
 
   /**

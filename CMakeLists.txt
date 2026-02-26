@@ -99,28 +99,6 @@ announce_configured_options(CCACHE_PROGRAM)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Setup RPATH. See
-# https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
-# Use separate rpaths during build and install phases
-set(CMAKE_SKIP_BUILD_RPATH OFF)
-# Don't use the install-rpath during the build phase
-set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-# Automatically add all linked folders that are NOT in the build directory to
-# the rpath (per library?)
-#
-# TODO: Doesn't work for us right now because we are not installing .so's into
-# the correct locations. For example we have libcustom_ops_aot_lib.so depending
-# on _portable_lib.so, which was eventually put under
-# <site-packages>/executorch/extension/pybindings/ but this rpath is not
-# automatically added because at build time it seems `portable_lib` is being
-# built under the same directory, so no extra rpath is being added. To properly
-# fix this we need to install `portable_lib` into the correct path.
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
-# ------------------------------ OPTIONS -------------------------------------
-# WARNING: Please don't add example specific options in this CMakeLists.txt.
-# Instead please use `find_package(executorch REQUIRED)` in the example
-# directory and add a new executable in the example `CMakeLists.txt`.
-
 if(NOT EXECUTORCH_ENABLE_LOGGING)
   # Avoid pulling in the logging strings, which can be large. Note that this
   # will set the compiler flag for all targets in this directory, and for all
@@ -139,6 +117,10 @@ endif()
 
 if(EXECUTORCH_ENABLE_EVENT_TRACER)
   add_definitions(-DET_EVENT_TRACER_ENABLED)
+endif()
+
+if(EXECUTORCH_ENABLE_BUNDLE_IO)
+  add_definitions(-DET_BUNDLE_IO_ENABLED)
 endif()
 
 # -ffunction-sections -fdata-sections: breaks function and data into sections so
@@ -226,7 +208,7 @@ if(EXECUTORCH_BUILD_CPUINFO)
   install(
     TARGETS cpuinfo
     EXPORT ExecuTorchTargets
-    DESTINATION lib
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES
     DESTINATION ${_common_include_directories}
   )
@@ -281,7 +263,7 @@ if(EXECUTORCH_BUILD_PTHREADPOOL)
   install(
     TARGETS pthreadpool pthreadpool_interface fxdiv
     EXPORT ExecuTorchTargets
-    DESTINATION lib
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES
     DESTINATION ${_common_include_directories}
   )
@@ -296,7 +278,16 @@ if(EXECUTORCH_BUILD_TESTS)
 endif()
 
 # TODO(dbort): Fix these warnings and remove this flag.
-set(_common_compile_options -Wno-deprecated-declarations -fPIC)
+list(APPEND _common_compile_options $<$<CXX_COMPILER_ID:MSVC>:/wd4996>
+     $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-deprecated-declarations>
+)
+# Set default CMAKE_POSITION_INDEPENDENT_CODE behavior if ON or not set
+# (default) (and not for MSVC compiler)
+if(NOT DEFINED CMAKE_POSITION_INDEPENDENT_CODE
+   OR CMAKE_POSITION_INDEPENDENT_CODE
+)
+  list(APPEND _common_compile_options $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-fPIC>)
+endif()
 
 # Let files say "include <executorch/path/to/header.h>".
 # TODO(#6475): This requires/assumes that the repo lives in a directory named
@@ -599,6 +590,25 @@ endif()
 
 if(EXECUTORCH_BUILD_CORTEX_M)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/backends/cortex_m)
+  list(APPEND _executorch_backends coretex_m_backend)
+endif()
+
+# Build common AOTI functionality if needed by CUDA or Metal backends
+if(EXECUTORCH_BUILD_CUDA OR EXECUTORCH_BUILD_METAL)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/backends/aoti)
+endif()
+
+if(EXECUTORCH_BUILD_CUDA)
+  # Build CUDA-specific AOTI functionality
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/backends/cuda)
+  # Add aoti_cuda_backend to backends - it transitively includes aoti_cuda_shims
+  # and cuda_platform
+  list(APPEND _executorch_backends aoti_cuda_backend)
+endif()
+
+if(EXECUTORCH_BUILD_METAL)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/backends/apple/metal)
+  list(APPEND _executorch_backends metal_backend)
 endif()
 
 if(EXECUTORCH_BUILD_EXTENSION_APPLE)
@@ -667,15 +677,6 @@ if(EXECUTORCH_BUILD_EXTENSION_LLM)
   list(APPEND _executorch_extensions tokenizers)
 endif()
 
-if(EXECUTORCH_BUILD_EXTENSION_LLM_RUNNER)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/llm/runner)
-  list(APPEND _executorch_extensions extension_llm_runner)
-endif()
-
-if(EXECUTORCH_BUILD_EXTENSION_LLM_APPLE)
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/llm/apple)
-endif()
-
 if(EXECUTORCH_BUILD_EXTENSION_RUNNER_UTIL)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/runner_util)
   install(
@@ -734,7 +735,7 @@ if(EXECUTORCH_BUILD_KERNELS_TORCHAO)
   install(
     TARGETS torchao_ops_executorch torchao_kernels_aarch64
     EXPORT ExecuTorchTargets
-    DESTINATION lib
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES
     DESTINATION ${_common_include_directories}
   )
@@ -745,7 +746,7 @@ if(EXECUTORCH_BUILD_KERNELS_TORCHAO)
     install(
       TARGETS kleidiai
       EXPORT ExecuTorchTargets
-      DESTINATION lib
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}
       INCLUDES
       DESTINATION ${_common_include_directories}
     )
@@ -755,9 +756,6 @@ endif()
 
 if(EXECUTORCH_BUILD_PYBIND)
 
-  # Add codegen tools subdirectory for selective_build pybind module
-  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/codegen/tools)
-
   if(NOT EXECUTORCH_BUILD_EXTENSION_DATA_LOADER)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/data_loader)
   endif()
@@ -765,6 +763,9 @@ if(EXECUTORCH_BUILD_PYBIND)
   if(NOT EXECUTORCH_BUILD_DEVTOOLS)
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/devtools)
   endif()
+
+  # Add codegen tools subdirectory for selective_build pybind module
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/codegen/tools)
 
   # Create bundled_module target only for pybindings when bundled_program exists
   # This target has hard dependencies on devtools generated headers
@@ -786,7 +787,10 @@ if(EXECUTORCH_BUILD_PYBIND)
       bundled_module PUBLIC ${_common_include_directories}
     )
     target_compile_options(
-      bundled_module PUBLIC -Wno-deprecated-declarations -fPIC
+      bundled_module
+      PUBLIC $<$<CXX_COMPILER_ID:MSVC>:/wd4996>
+             $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-deprecated-declarations
+             -fPIC>
     )
   endif()
 
@@ -806,6 +810,9 @@ if(EXECUTORCH_BUILD_PYBIND)
       util
       torch
   )
+
+  # RPATH for _portable_lib.so
+  set(_portable_lib_rpath "$ORIGIN/../../../torch/lib")
 
   if(EXECUTORCH_BUILD_EXTENSION_MODULE)
     # Always use static linking for pybindings to avoid runtime symbol
@@ -841,6 +848,7 @@ if(EXECUTORCH_BUILD_PYBIND)
 
   if(EXECUTORCH_BUILD_QNN)
     list(APPEND _dep_libs qnn_executorch_backend)
+    string(APPEND _portable_lib_rpath ":$ORIGIN/../../backends/qualcomm")
   endif()
 
   if(EXECUTORCH_BUILD_ENN)
@@ -858,8 +866,14 @@ if(EXECUTORCH_BUILD_PYBIND)
   endif()
 
   # compile options for pybind
-  set(_pybind_compile_options -Wno-deprecated-declarations -fPIC -frtti
-                              -fexceptions
+  set(_pybind_compile_options
+      $<$<CXX_COMPILER_ID:MSVC>:/EHsc
+      /GR
+      /wd4996>
+      $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wno-deprecated-declarations
+      -fPIC
+      -frtti
+      -fexceptions>
   )
 
   # util lib
@@ -886,18 +900,20 @@ if(EXECUTORCH_BUILD_PYBIND)
   target_compile_options(portable_lib PUBLIC ${_pybind_compile_options})
   target_link_libraries(portable_lib PRIVATE ${_dep_libs})
 
-  # Set RPATH to find PyTorch libraries relative to the installation location
-  # This goes from executorch/extension/pybindings up to site-packages, then to
-  # torch/lib
+  # Set RPATH to find PyTorch and backend libraries relative to the installation
+  # location. This goes from executorch/extension/pybindings up to
+  # site-packages, then to torch/lib. If QNN is enabled, also add
+  # backends/qualcomm/. Don't do this to APPLE, as it will error out on the
+  # following error:
+  #
   if(APPLE)
-    set_target_properties(
-      portable_lib PROPERTIES BUILD_RPATH "@loader_path/../../../torch/lib"
-                              INSTALL_RPATH "@loader_path/../../../torch/lib"
-    )
+    # Skip setting @loader_path for APPLE, since it causes error like ld:
+    # duplicate LC_RPATH '@loader_path' in '<site-packages>/torch/lib/
+    # libtorch_cpu.dylib'
   else()
     set_target_properties(
-      portable_lib PROPERTIES BUILD_RPATH "$ORIGIN/../../../torch/lib"
-                              INSTALL_RPATH "$ORIGIN/../../../torch/lib"
+      portable_lib PROPERTIES BUILD_RPATH "${_portable_lib_rpath}"
+                              INSTALL_RPATH "${_portable_lib_rpath}"
     )
   endif()
 
@@ -919,6 +935,20 @@ endif()
 if(EXECUTORCH_BUILD_EXTENSION_TRAINING)
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/training)
   list(APPEND _executorch_extensions extension_training)
+endif()
+
+if(EXECUTORCH_BUILD_EXTENSION_LLM_RUNNER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/llm/runner)
+  list(APPEND _executorch_extensions extension_llm_runner)
+endif()
+
+if(EXECUTORCH_BUILD_EXTENSION_ASR_RUNNER)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/asr/runner)
+  list(APPEND _executorch_extensions extension_asr_runner)
+endif()
+
+if(EXECUTORCH_BUILD_EXTENSION_LLM_APPLE)
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/extension/llm/apple)
 endif()
 
 if(EXECUTORCH_BUILD_KERNELS_LLM)
@@ -1016,7 +1046,7 @@ if(NOT EXECUTORCH_SELECT_OPS_YAML STREQUAL ""
   install(
     TARGETS executorch_selected_kernels
     EXPORT ExecuTorchTargets
-    DESTINATION lib
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
   )
 else()
   # No selective build - link the full library.
@@ -1038,6 +1068,10 @@ if(EXECUTORCH_BUILD_EXECUTOR_RUNNER)
                             extension_runner_util gflags executorch_backends
   )
 
+  if(EXECUTORCH_BUILD_EXTENSION_FLAT_TENSOR)
+    list(APPEND _executor_runner_libs extension_flat_tensor)
+  endif()
+
   if(EXECUTORCH_BUILD_KERNELS_OPTIMIZED)
     list(APPEND _executor_runner_libs optimized_native_cpu_ops_lib)
   elseif(EXECUTORCH_BUILD_CADENCE)
@@ -1057,6 +1091,10 @@ if(EXECUTORCH_BUILD_EXECUTOR_RUNNER)
 
   if(EXECUTORCH_ENABLE_EVENT_TRACER)
     list(APPEND _executor_runner_libs etdump flatccrt)
+  endif()
+
+  if(EXECUTORCH_ENABLE_BUNDLE_IO)
+    list(APPEND _executor_runner_libs bundled_program)
   endif()
 
   add_executable(executor_runner ${_executor_runner__srcs})

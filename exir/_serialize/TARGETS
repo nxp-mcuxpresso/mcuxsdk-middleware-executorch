@@ -10,7 +10,6 @@ runtime.cxx_python_extension(
         "bindings.cpp",
     ],
     visibility = [
-        "//executorch/backends/fb/qnnpack/...",
         "//executorch/backends/vulkan/...",
         "//executorch/backends/xnnpack/...",
         "//executorch/devtools/bundled_program/...",
@@ -45,25 +44,10 @@ runtime.python_library(
     # Currently serialization API should only be used in some dedicated targets,
     # to avoid ODR violation when linking with another Flatbuffers library.
     # Please ask before changing this.
-    visibility = [
-        "//executorch/backends/...",
-        "//executorch/codegen/...",
-        "//executorch/devtools:lib",
-        "//executorch/devtools/bundled_program/serialize:lib",
-        "//executorch/devtools/bundled_program/tests/...",
-        "//executorch/devtools/experimental/...",
-        "//executorch/examples/async_exec:emit_program_lib",
-        "//executorch/exir/...",
-        "//executorch/exir/tests/...",
-        "//executorch/extension/...",
-        "//executorch/extension/pybindings/test:test",
-        "//executorch/extension/pybindings/test:test-library",
-        "//executorch/profiler/...",
-        "//executorch/test/...",
-        "@EXECUTORCH_CLIENTS",
-    ],
+    visibility = ["PUBLIC"],
     deps = [
         "//executorch/exir:schema",
         "//executorch/exir:tensor",
+        "//executorch/exir:tensor_layout",
     ],
 )
