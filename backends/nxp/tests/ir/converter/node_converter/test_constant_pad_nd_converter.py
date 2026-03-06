@@ -1,4 +1,4 @@
-# Copyright 2024-2025 NXP
+# Copyright 2024-2026 NXP
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
@@ -160,6 +160,7 @@ def test_constant_pad_nd__delegation__formatless__unsupported_padding(use_qat):
     )
 
 
+@pytest.mark.xfail(reason="Regression in Neutron SW 3.0.1 (AIR-14264)", strict=True)
 def test_constant_pad_nd__delegation__channels_first__supported_padding(use_qat):
     input_shape = (2, 4, 6, 8)  # Channels first -> the second dim (4) will be padded.
     paddings = [1, 2, 3, 4, 0, 0]  # The second dim is padded using the paddings[4:6].
