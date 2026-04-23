@@ -51,6 +51,7 @@ def to_quantized_edge_program(
     dataset_dir,
     delegate_to_npu=True,
     use_qat: bool = False,
+    use_new_flow_neutron_c: bool = False,
 ) -> EdgeProgramManager:
     assert isinstance(input_spec, list) and all(
         isinstance(spec, ModelInputSpec) for spec in input_spec
@@ -132,7 +133,9 @@ def to_quantized_edge_program(
         (
             [
                 NeutronPartitioner(
-                    generate_neutron_compile_spec("imxrt700"),
+                    generate_neutron_compile_spec(
+                        "imxrt700", use_new_flow_neutron_c=use_new_flow_neutron_c
+                    ),
                     neutron_target_spec=neutron_target_spec,
                     post_quantization_state_dict=exir_program_aten_quant.state_dict(),
                 )
@@ -158,9 +161,15 @@ def to_quantized_executorch_program(
     dataset_dir: str,
     delegate_to_npu=True,
     use_qat: bool = False,
+    use_new_flow_neutron_c: bool = False,
 ) -> ExecutorchProgramManager:
     edge_program_manager = to_quantized_edge_program(
-        model, input_spec, dataset_dir, delegate_to_npu, use_qat=use_qat
+        model,
+        input_spec,
+        dataset_dir,
+        delegate_to_npu,
+        use_qat=use_qat,
+        use_new_flow_neutron_c=use_new_flow_neutron_c,
     )
 
     return edge_program_manager.to_executorch(
