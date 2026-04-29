@@ -16,6 +16,9 @@ import numpy as np
 import torch
 
 from executorch.backends.nxp._passes.remove_getitem_pass import RemoveGetItemPass
+from executorch.backends.nxp.backend.custom_delegation_options import (
+    CustomDelegationOptions,
+)
 from executorch.backends.nxp.backend.data_format import DataFormat
 from executorch.backends.nxp.backend.edge_program_converter import (
     EdgeProgramToIRConverter,
@@ -243,6 +246,9 @@ class NeutronBackend(BackendDetails):
                 edge_program,
                 neutron_target_spec=NeutronTargetSpec(target),
                 conversion_config=conversion_config,
+                custom_delegation_options=CustomDelegationOptions(
+                    use_new_flow_neutron_c=use_new_flow_neutron_c
+                ),
             )
 
             neutron_model = NeutronConverterManager(dump_kernel_selection_code).convert(

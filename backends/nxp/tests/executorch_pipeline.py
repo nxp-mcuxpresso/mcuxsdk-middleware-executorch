@@ -129,6 +129,7 @@ def to_quantized_edge_program(
     use_new_flow_neutron_c: bool = False,
 ) -> EdgeProgramManager:
     _neutron_target_spec = NeutronTargetSpec(target)
+    custom_delegation_options.use_new_flow_neutron_c = use_new_flow_neutron_c
     if get_quantizer_fn is None:
         get_quantizer_fn = partial(
             _get_default_quantizer, _neutron_target_spec, use_qat
