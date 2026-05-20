@@ -44,10 +44,30 @@ class UpsampleNearestModule(torch.nn.Module):
 @pytest.mark.parametrize(
     "input_shape, size",
     [
-        pytest.param((1, 8, 2, 3), (4, 6), id="2x upscale, 8 channels, tuple size"),
-        pytest.param((1, 8, 3, 3), 6, id="2x upscale, 8 channels, scalar size"),
-        pytest.param((1, 8, 2, 3), (8, 12), id="4x upscale, 8 channels, tuple size"),
-        pytest.param((1, 8, 3, 3), 12, id="4x upscale, 8 channels, scalar size"),
+        pytest.param(
+            (1, 8, 2, 3),
+            (4, 6),
+            id="2x upscale, 8 channels, tuple size",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
+        pytest.param(
+            (1, 8, 3, 3),
+            6,
+            id="2x upscale, 8 channels, scalar size",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
+        pytest.param(
+            (1, 8, 2, 3),
+            (8, 12),
+            id="4x upscale, 8 channels, tuple size",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
+        pytest.param(
+            (1, 8, 3, 3),
+            12,
+            id="4x upscale, 8 channels, scalar size",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
     ],
 )
 def test_convert_upsample_nearest2d__size(mocker, input_shape, size):
@@ -85,11 +105,36 @@ def test_convert_upsample_nearest2d__size(mocker, input_shape, size):
 @pytest.mark.parametrize(
     "input_shape, scale_factor",
     [
-        pytest.param((1, 8, 2, 3), 2, id="2x upscale, 8 channels, scalar scale"),
-        pytest.param((1, 8, 3, 3), 2.0, id="2x upscale, 8 channels, float scale"),
-        pytest.param((1, 8, 4, 5), (2, 2), id="2x upscale, 8 channels, tuple scale"),
-        pytest.param((1, 8, 2, 3), 4, id="4x upscale, 8 channels, scalar scale"),
-        pytest.param((1, 8, 2, 3), (4, 4), id="4x upscale, 8 channels, tuple scale"),
+        pytest.param(
+            (1, 8, 2, 3),
+            2,
+            id="2x upscale, 8 channels, scalar scale",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
+        pytest.param(
+            (1, 8, 3, 3),
+            2.0,
+            id="2x upscale, 8 channels, float scale",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
+        pytest.param(
+            (1, 8, 4, 5),
+            (2, 2),
+            id="2x upscale, 8 channels, tuple scale",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
+        pytest.param(
+            (1, 8, 2, 3),
+            4,
+            id="4x upscale, 8 channels, scalar scale",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
+        pytest.param(
+            (1, 8, 2, 3),
+            (4, 4),
+            id="4x upscale, 8 channels, tuple scale",
+            marks=pytest.mark.xfail(reason="Not supported yet (EIEX-881)", strict=True),
+        ),
     ],
 )
 def test_convert_upsample_nearest2d__scale_factor(mocker, input_shape, scale_factor):
