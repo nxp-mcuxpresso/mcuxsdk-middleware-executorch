@@ -1,7 +1,7 @@
 /*
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  * All rights reserved.
- * Copyright 2025 Arm Limited and/or its affiliates.
+ * Copyright 2025-2026 Arm Limited and/or its affiliates.
  *
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
@@ -21,16 +21,16 @@ using KernelRuntimeContext = torch::executor::KernelRuntimeContext;
 Tensor& quantized_add_out(
     KernelRuntimeContext& context,
     const Tensor& input1_int8,
-    const Scalar& input1_zero_point,
-    const Scalar& input1_multiplier,
-    const Scalar& input1_shift,
+    const int64_t input1_zero_point,
+    const int64_t input1_multiplier,
+    const int64_t input1_shift,
     const Tensor& input2_int8,
-    const Scalar& input2_zero_point,
-    const Scalar& input2_multiplier,
-    const Scalar& input2_shift,
-    const Scalar& output_zero_point,
-    const Scalar& output_multiplier,
-    const Scalar& output_shift,
+    const int64_t input2_zero_point,
+    const int64_t input2_multiplier,
+    const int64_t input2_shift,
+    const int64_t output_zero_point,
+    const int64_t output_multiplier,
+    const int64_t output_shift,
     Tensor& out) {
   // Validate tensor types and dim order
   bool channel_broadcast = is_channel_broadcast(input1_int8, input2_int8);
@@ -56,19 +56,19 @@ Tensor& quantized_add_out(
       out);
 
   ET_LOG(
-      Info,
+      Debug,
       "quantized_add_out: input1_int8.sizes() = %zu",
       input1_int8.sizes().size());
 
-  int32_t zp1 = extractScalarToInt32(input1_zero_point);
-  int32_t input1_mult = extractScalarToInt32(input1_multiplier);
-  int input1_shift_val = extractScalarToInt(input1_shift);
-  int32_t zp2 = extractScalarToInt32(input2_zero_point);
-  int32_t input2_mult = extractScalarToInt32(input2_multiplier);
-  int input2_shift_val = extractScalarToInt(input2_shift);
-  int32_t out_zp = extractScalarToInt32(output_zero_point);
-  int32_t output_mult = extractScalarToInt32(output_multiplier);
-  int output_shift_val = extractScalarToInt(output_shift);
+  int32_t zp1 = static_cast<int32_t>(input1_zero_point);
+  int32_t input1_mult = static_cast<int32_t>(input1_multiplier);
+  int input1_shift_val = static_cast<int>(input1_shift);
+  int32_t zp2 = static_cast<int32_t>(input2_zero_point);
+  int32_t input2_mult = static_cast<int32_t>(input2_multiplier);
+  int input2_shift_val = static_cast<int>(input2_shift);
+  int32_t out_zp = static_cast<int32_t>(output_zero_point);
+  int32_t output_mult = static_cast<int32_t>(output_multiplier);
+  int output_shift_val = static_cast<int>(output_shift);
   int8_t* input1_ptr = input1_int8.data_ptr<int8_t>();
   int8_t* input2_ptr = input2_int8.data_ptr<int8_t>();
 
@@ -78,7 +78,7 @@ Tensor& quantized_add_out(
   const int32_t activation_max = std::numeric_limits<int8_t>::max();
 
   ET_LOG(
-      Info,
+      Debug,
       "Using AoT-computed parameters: input1[mult=%d, shift=%d], input2[mult=%d, shift=%d], output[mult=%d, shift=%d]",
       input1_mult,
       input1_shift_val,
@@ -141,7 +141,7 @@ Tensor& quantized_add_out(
     }
   }
   ET_LOG(
-      Info,
+      Debug,
       "quantized_add_out: Successfully completed with AoT-computed parameters!");
 
   return out;

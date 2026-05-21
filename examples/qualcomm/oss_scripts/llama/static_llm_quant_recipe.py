@@ -29,9 +29,6 @@ class StaticLLMQuantRecipe:
         if self.default_quant_dtype is None:
             raise ValueError("default_quant_dtype must be defined in the recipe.")
 
-    def annotate(self, graph_module: torch.fx.GraphModule):
-        self.recipe.annotate(graph_module)
-
     def get_kv_io_bit_width(self) -> int:
         if self.default_quant_dtype is None:
             return 32
@@ -110,6 +107,7 @@ class LlamaStories110MQuantRecipe(StaticLLMQuantRecipe):
                 QuantDtype.use_8a4w,
                 False,
                 act_observer=MinMaxObserver,
+                act_symmetric=True,
                 granularity=QuantGranularity.PER_CHANNEL,
             )
             .add_regex(
@@ -461,6 +459,7 @@ class Phi4MiniQuantRecipe(StaticLLMQuantRecipe):
                 QuantDtype.use_8a4w,
                 False,
                 act_observer=MinMaxObserver,
+                act_symmetric=True,
                 granularity=QuantGranularity.PER_CHANNEL,
             )
             .add_regex(

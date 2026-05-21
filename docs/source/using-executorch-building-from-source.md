@@ -43,7 +43,7 @@ portability details.
 ## Environment Setup
  Clone the ExecuTorch repository from GitHub and create a conda environment. Venv can be used in place of conda.
    ```bash
-   git clone -b release/1.1 https://github.com/pytorch/executorch.git
+   git clone -b release/1.2 https://github.com/pytorch/executorch.git
    cd executorch
    conda create -yn executorch python=3.10.0
    conda activate executorch
@@ -99,15 +99,6 @@ python -m executorch.examples.xnnpack.aot_compiler --model_name="mv2" --delegate
    # either via a previous invocation of `./install_executorch.sh` or by explicitly installing requirements via `./install_requirements.sh` first.
    pip install -e . --no-build-isolation
    ```
-
-> **_WARNING:_**
-> Some modules can't be imported directly in editable mode. This is a known [issue](https://github.com/pytorch/executorch/issues/9558) and we are actively working on a fix for this. To work around this:
-> ```bash
-> # This will fail
-> python -c "from executorch.exir import CaptureConfig"
-> # But this will succeed
-> python -c "from executorch.exir.capture import CaptureConfig"
-> ```
 
 > **_NOTE:_**  Cleaning the build system
 >

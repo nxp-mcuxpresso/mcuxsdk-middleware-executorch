@@ -13,7 +13,7 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import torch
 from executorch.backends.arm.constants import DISALLOW_TFA_META_KEY
@@ -25,7 +25,7 @@ from executorch.backends.arm.common.arm_compile_spec import (
     ArmCompileSpec,
 )  # isort: skip
 from executorch.backends.arm.vgf import VgfCompileSpec
-from executorch.exir.graph_module import get_cond_while_submodules
+from executorch.exir.graph_module import _get_control_flow_submodules
 
 from torch.fx import GraphModule, Node
 from torchao.quantization.pt2e import (
@@ -92,7 +92,7 @@ def get_symmetric_quantization_config(
         bias.
 
     """
-    extra_args: Dict[str, Any] = {"eps": 2**-12}
+    extra_args: Dict[str, Any] = {"eps": 2**-16}
     if is_qat:
         if is_dynamic:
             act_observer_or_fake_quant_ctr = FakeQuantize
@@ -342,27 +342,13 @@ def _get_not_module_type_or_name_filter(
     return not_module_type_or_name_filter
 
 
-def _get_composite_filter(
-    filters: List[NodeFilterType], reduce_func: Callable[[Iterable[bool]], bool]
+def _for_each_filtered_node(
+    model: GraphModule,
+    filter_fn: Callable[[Node], bool],
 ):
-    """Get a composite filter function given a list of filters, the composite
-    filter accepts a node and checks it with every filter in the list. The
-    filters' outputs are reduced into a single bool output using reduce_func.
-
-    Example:
-        >>> filters = [
-        ...     _get_module_name_filter("blocks.sub"),
-        ...     _get_module_type_filter(torch.nn.Linear),
-        ... ]
-        >>> composite = _get_composite_filter(filters, any)
-        >>> composite(node)  # True if any individual filter matches
-        True
-    """
-
-    def composite_filter(n: Node) -> bool:
-        return reduce_func((f(n) for f in filters))
-
-    return composite_filter
+    for node in model.graph.nodes:
+        if filter_fn(node):
+            yield node
 
 
 class TOSAQuantizer(Quantizer):
@@ -393,7 +379,9 @@ class TOSAQuantizer(Quantizer):
         self.module_type_config: Dict[Callable, Optional[QuantizationConfig]] = {}
         self.module_name_config: Dict[str, Optional[QuantizationConfig]] = {}
 
-    def set_global(self, quantization_config: QuantizationConfig) -> TOSAQuantizer:
+    def set_global(
+        self, quantization_config: QuantizationConfig | None
+    ) -> TOSAQuantizer:
         """Set quantization_config for submodules not matched by other filters.
 
         Args:
@@ -405,7 +393,7 @@ class TOSAQuantizer(Quantizer):
         return self
 
     def set_module_type(
-        self, module_type: Callable, quantization_config: QuantizationConfig
+        self, module_type: Callable, quantization_config: Optional[QuantizationConfig]
     ) -> TOSAQuantizer:
         """Set quantization_config for submodules with a given module type.
 
@@ -454,27 +442,28 @@ class TOSAQuantizer(Quantizer):
     def _set_disallow_tfa_for_nodes(self, model: GraphModule) -> None:
         """Populate `disallow_tfa` metadata for each FX node.
 
-        Transform-for-annotation passes inspect this flag to decide whether
-        they may transform a node. Typically, a node should not be transformed
-        in case it is not to be quantized, which is relevant for partially
+        Transform-for-annotation passes inspect this flag to decide whether they
+        may transform a node. Typically, a node should not be transformed in
+        case it is not to be quantized, which is relevant for partially
         quantized models.
+
         """
 
-        unquantized_modules_types = [
-            m
-            for m in self.module_type_config.keys()
-            if self.module_type_config[m] is None
-        ]
-        module_filters = [
-            _get_module_type_filter(module_type)
-            for module_type in unquantized_modules_types
-        ]
-        # Create a composite filter that returns True if any of the
-        # "unquantized" modules contains the node.
-        composite_filter = _get_composite_filter(module_filters, any)
-
+        # First, set all nodes according to global config
         for node in model.graph.nodes:
-            node.meta[DISALLOW_TFA_META_KEY] = composite_filter(node)
+            node.meta[DISALLOW_TFA_META_KEY] = self.global_config is None
+
+        # Next, override using module type config to take precedence over global config
+        for module_type, config in self.module_type_config.items():
+            mod_type_filter = _get_module_type_filter(module_type)
+            for node in _for_each_filtered_node(model, mod_type_filter):
+                node.meta[DISALLOW_TFA_META_KEY] = config is None
+
+        # Finally, override using module name config to take precedence over both global and type configs
+        for module_name, config in self.module_name_config.items():
+            mod_name_filter = get_module_name_filter(module_name)
+            for node in _for_each_filtered_node(model, mod_name_filter):
+                node.meta[DISALLOW_TFA_META_KEY] = config is None
 
     def transform_for_annotation(self, model: GraphModule) -> GraphModule:
         """Transform the graph to prepare it for quantization annotation.
@@ -650,13 +639,40 @@ class TOSAQuantizer(Quantizer):
                         f"Quantizer detected operator {node.name} with different device inputs: {devices}."
                     )
 
+    @staticmethod
+    def _get_submodules_not_handled_by_torchao(
+        graph_module: GraphModule,
+    ):
+        """Returns control flow submodules that torchao's
+        prepare_pt2e/convert_pt2e do not handle natively. torchao now
+        recursively handles while_loop body_fn.
+
+        (arg 1), so we only need to manually handle:
+          - cond true/false branches (args 1, 2)
+          - while_loop cond_fn (arg 0)
+
+        """
+        return _get_control_flow_submodules(
+            graph_module,
+            {
+                torch.ops.higher_order.cond: [1, 2],
+                torch.ops.higher_order.while_loop: [0],
+            },
+        )
+
     def quantize_with_submodules(
         self,
         model: GraphModule,
         calibration_samples: list[tuple],
         is_qat: bool = False,
+        fold_quantize: bool = True,
     ):
-        """Quantizes a GraphModule in a way such that conditional submodules are handled properly.
+        """Quantizes a GraphModule in a way such that conditional submodules are
+        handled properly.
+
+        Note: torchao's prepare_pt2e and convert_pt2e natively handle
+        while_loop body_fn submodules, so we only manually process cond
+        branches and while_loop cond_fn here.
 
         Args:
             model (GraphModule): The model to quantize.
@@ -665,6 +681,8 @@ class TOSAQuantizer(Quantizer):
                 model with submodules, at least one sample per code path is
                 needed.
             is_qat (bool): Whether to do quantization aware training or not.
+            fold_quantize (bool): Enables or disables constant folding when quantization
+                is completed.
 
         Returns:
             GraphModule: The quantized model.
@@ -673,14 +691,17 @@ class TOSAQuantizer(Quantizer):
         prepare_fn = prepare_qat_pt2e if is_qat else prepare_pt2e
 
         prepared = prepare_fn(model, self)
-        for name, submodule, _ in get_cond_while_submodules(prepared):
+        for name, submodule, _ in self._get_submodules_not_handled_by_torchao(prepared):
             prepared.set_submodule(name, prepare_fn(submodule, self), strict=True)
         for inp in calibration_samples:
             prepared(*inp)
 
-        for name, submodule, _ in get_cond_while_submodules(prepared):
-            prepared.set_submodule(name, convert_pt2e(submodule), strict=True)
-        converted = convert_pt2e(prepared)
+        for name, submodule, _ in self._get_submodules_not_handled_by_torchao(prepared):
+            prepared.set_submodule(
+                name, convert_pt2e(submodule, fold_quantize=fold_quantize), strict=True
+            )
+        converted = convert_pt2e(prepared, fold_quantize=fold_quantize)
+
         return converted
 
 
