@@ -16,15 +16,6 @@ from install_utils import determine_torch_url, is_intel_mac_os, python_is_compat
 # This will be dynamically set based on CUDA availability and CUDA backend enabled/disabled.
 TORCH_URL_BASE = "https://download.pytorch.org/whl"
 
-# Supported CUDA versions - modify this to add/remove supported versions
-# Format: tuple of (major, minor) version numbers
-SUPPORTED_CUDA_VERSIONS = (
-    (12, 6),
-    (12, 8),
-    (12, 9),
-    (13, 0),
-)
-
 # Since ExecuTorch often uses main-branch features of pytorch, only the nightly
 # pip versions will have the required features.
 #
@@ -37,7 +28,7 @@ SUPPORTED_CUDA_VERSIONS = (
 # https://hud.pytorch.org/hud/pytorch/pytorch/nightly/ @lint-ignore
 #
 # NOTE: If you're changing, make the corresponding supported CUDA versions in
-# SUPPORTED_CUDA_VERSIONS above if needed.
+# SUPPORTED_CUDA_VERSIONS in install_utils.py if needed.
 
 
 def install_requirements(use_pytorch_nightly):
@@ -51,25 +42,27 @@ def install_requirements(use_pytorch_nightly):
         sys.exit(1)
 
     # Determine the appropriate PyTorch URL based on CUDA delegate status
-    torch_url = determine_torch_url(TORCH_URL_BASE, SUPPORTED_CUDA_VERSIONS)
+    torch_url = determine_torch_url(TORCH_URL_BASE)
 
     # pip packages needed by exir.
     TORCH_PACKAGE = [
         # Setting use_pytorch_nightly to false to test the pinned PyTorch commit. Note
         # that we don't need to set any version number there because they have already
         # been installed on CI before this step, so pip won't reinstall them
-        ("torch==2.10.0" if use_pytorch_nightly else "torch"),
+        ("torch==2.11.0" if use_pytorch_nightly else "torch"),
     ]
 
     # Install the requirements for core ExecuTorch package.
     # `--extra-index-url` tells pip to look for package
     # versions on the provided URL if they aren't available on the default URL.
+    # Use --no-cache-dir to avoid stale cache issues with mutable test wheels.
     subprocess.run(
         [
             sys.executable,
             "-m",
             "pip",
             "install",
+            "--no-cache-dir",
             "-r",
             "requirements-dev.txt",
             *TORCH_PACKAGE,
@@ -117,7 +110,7 @@ def install_requirements(use_pytorch_nightly):
 
 def install_optional_example_requirements(use_pytorch_nightly):
     # Determine the appropriate PyTorch URL based on CUDA delegate status
-    torch_url = determine_torch_url(TORCH_URL_BASE, SUPPORTED_CUDA_VERSIONS)
+    torch_url = determine_torch_url(TORCH_URL_BASE)
 
     print("Installing packages in requirements-examples.txt")
     subprocess.run(

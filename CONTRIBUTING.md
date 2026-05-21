@@ -327,7 +327,7 @@ for their help in the PR comments.
 
 See https://hud.pytorch.org/hud/pytorch/executorch/main for the current state of <!-- @lint-ignore -->
 the CI (continuous integration) jobs. If `main` is broken, consider rebasing
-your PR onto the `release/1.1` branch, which points to the most recent
+your PR onto the `release/1.2` branch, which points to the most recent
 all-green commit.
 
 &nbsp;
@@ -384,7 +384,7 @@ for basics.
      - `Release notes: quantization`: changes to quantization.
      - `Release notes: ops & kernels`: changes to the opset and any new / changed kernel implementations.
      - `Release notes: api`: changes to public facing apis (any interfaces, pybinded runtime methods, etc.).
-     - `Release notes: backends`: changes to any of the backend delegates.
+     - `Release notes: <backend>`: changes to any of the backend delegates (e.g: `Release notes: apple`, `Release notes: arm`, etc).
      - `Release notes: build`: changes related to the build system, including major dependency upgrades, notable build flags, optimizations, etc.
      - `Release notes: devtools`: changes to any of ExecuTorch's developer tools, for example the debugger & profiler.
      - `Release notes: examples`: changes to any code under `examples/`.

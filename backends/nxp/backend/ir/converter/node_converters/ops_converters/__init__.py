@@ -21,6 +21,9 @@ from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.cat_converter import (
     CatConverter,
 )
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.clamp_converter import (
+    ClampConverter,
+)
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.clone_converter import (
     CloneConverter,
 )
@@ -32,6 +35,9 @@ from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters
 )
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.hardtanh_converter import (
     HardTanhConverter,
+)
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.leaky_relu_converter import (
+    LeakyReluConverter,
 )
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.max_pool_2d_converter import (
     MaxPool2dConverter,
@@ -45,8 +51,14 @@ from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.mul_tensor_converter import (
     MulTensorConverter,
 )
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.neg_converter import (
+    NegConverter,
+)
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.permute_copy_converter import (
     PermuteCopyConverter,
+)
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.prelu_converter import (
+    PReLUConverter,
 )
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.qdq_dequantize_converter import (
     QDQPerChannelDequantizeConverter,
@@ -73,6 +85,12 @@ from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.tanh_converter import (
     TanhConverter,
 )
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.upsample_bilinear2d_converter import (
+    UpsampleBilinear2DConverter,
+)
+from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.upsample_nearest2d_converter import (
+    UpsampleNearest2DConverter,
+)
 from executorch.backends.nxp.backend.ir.converter.node_converters.ops_converters.view_copy_converter import (
     ViewCopyConverter,
 )
@@ -84,15 +102,19 @@ __all__ = [
     "AddTensorConverter",
     "AvgPool2dConverter",
     "CatConverter",
+    "ClampConverter",
     "CloneConverter",
     "ConstantPadNDConverter",
     "ConvolutionConverter",
     "HardTanhConverter",
+    "LeakyReluConverter",
     "MaxPool2dConverter",
     "MeanDimConverter",
     "MMConverter",
     "MulTensorConverter",
+    "NegConverter",
     "PermuteCopyConverter",
+    "PReLUConverter",
     "QDQPerChannelDequantizeConverter",
     "QDQPerTensorDequantizeConverter",
     "QDQQuantizeConverter",
@@ -102,5 +124,7 @@ __all__ = [
     "SoftmaxConverter",
     "SubTensorConverter",
     "TanhConverter",
+    "UpsampleBilinear2DConverter",
+    "UpsampleNearest2DConverter",
     "ViewCopyConverter",
 ]

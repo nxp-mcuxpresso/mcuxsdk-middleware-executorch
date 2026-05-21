@@ -53,7 +53,7 @@ dedupe_macos_loader_path_rpaths() {
   pushd ..
   torch_lib_dir=$(python -c "import importlib.util; print(importlib.util.find_spec('torch').submodule_search_locations[0])")/lib
   popd
-  
+
   if [[ -z "${torch_lib_dir}" || ! -d "${torch_lib_dir}" ]]; then
     return
   fi
@@ -84,12 +84,11 @@ dedupe_macos_loader_path_rpaths() {
 
 install_domains() {
   echo "Install torchvision and torchaudio"
-  pip install --no-build-isolation --user "git+https://github.com/pytorch/audio.git@${TORCHAUDIO_VERSION}"
-  pip install --no-build-isolation --user "git+https://github.com/pytorch/vision.git@${TORCHVISION_VERSION}"
+  pip install --force-reinstall --no-cache-dir torchvision==0.26.0 torchaudio==2.11.0 --index-url https://download.pytorch.org/whl/cpu
 }
 
 install_pytorch_and_domains() {
-  pip install --force-reinstall torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0 --index-url https://download.pytorch.org/whl/test/cpu
+  pip install --force-reinstall --no-cache-dir torch==2.11.0 torchvision==0.26.0 torchaudio==2.11.0 --index-url https://download.pytorch.org/whl/cpu
 }
 
 build_executorch_runner_buck2() {
@@ -103,14 +102,18 @@ build_executorch_runner_cmake() {
   clean_executorch_install_folders
   mkdir "${CMAKE_OUTPUT_DIR}"
 
-  if [[ $1 == "Debug" ]]; then
-      CXXFLAGS="-fsanitize=address,undefined"
-  else
-      CXXFLAGS=""
+  local build_type="${1:-Release}"
+  local sanitizer_flag=""
+
+  if [[ "${EXECUTORCH_USE_SANITIZER:-OFF}" == "ON" ]]; then
+      sanitizer_flag="-DEXECUTORCH_USE_SANITIZER=ON"
   fi
-  CXXFLAGS="$CXXFLAGS" retry cmake \
+
+  retry cmake \
     -DPYTHON_EXECUTABLE="${PYTHON_EXECUTABLE}" \
-    -DCMAKE_BUILD_TYPE="${1:-Release}" \
+    -DCMAKE_BUILD_TYPE="${build_type}" \
+    ${sanitizer_flag} \
+    ${CMAKE_ARGS:-} \
     -B${CMAKE_OUTPUT_DIR} .
 
   if [ "$(uname)" == "Darwin" ]; then

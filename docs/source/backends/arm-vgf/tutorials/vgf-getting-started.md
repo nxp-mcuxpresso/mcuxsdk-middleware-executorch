@@ -73,7 +73,7 @@ Make sure the executable is located where you expect, in the `examples/arm` tree
 
 The ExecuTorch Ahead-of-Time (AOT) pipeline takes a PyTorch Model (a `torch.nn.Module`) and produces a `.pte` binary file, which is then typically consumed by the ExecuTorch Runtime. This [document](https://github.com/pytorch/executorch/blob/main/docs/source/getting-started-architecture.md) goes in much more depth about the ExecuTorch software stack for both AoT as well as Runtime.
 
-The example below shows how to quantize a model consisting of a single addition, and export it it through the AOT flow using the VGF backend. For more details, se `examples/arm/vgf_minimal_example.ipynb`.
+The example below shows how to quantize a model consisting of a single addition, and export it through the AOT flow using the VGF backend. For more details, see `examples/arm/vgf_minimal_example.ipynb`.
 
 ```python
 import torch
@@ -108,11 +108,13 @@ compile_spec = VgfCompileSpec()
 quantizer = VgfQuantizer(compile_spec)
 operator_config = get_symmetric_quantization_config(is_per_channel=False)
 
-# Set default quantization config for the layers in the models.
+# Set global (default) quantization config for the layers in the models.
 # Can also be set to `None` to let layers run in FP as default.
 quantizer.set_global(operator_config)
 
-# OPTIONAL: skip quantizing all sigmoid ops (only one for this model); let it run in FP
+# Skip quantizing all sigmoid ops (only one for this model); let it run in FP.
+# This step is optional; selecting which layers to include/exclude for
+# quantization is part of optimizing the model's performance.
 quantizer.set_module_type(torch.nn.Sigmoid, None)
 
 # Post training quantization
@@ -189,7 +191,7 @@ cmake \
   -DPYTHON_EXECUTABLE=python \
   -Bcmake-out .
 
-cmake --build cmake-out --target executor_runner`
+cmake --build cmake-out --target executor_runner
 ```
 
 

@@ -5,9 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 set -u
+EIQ_PYPI_URL="${EIQ_PYPI_URL:-https://eiq.nxp.com/repository}"
 
-# Install neutron-converter
-pip install --index-url https://eiq.nxp.com/repository neutron_converter_SDK_26_03
+# Install eIQ Neutron dependencies - SDK and simulator
+pip install --index-url ${EIQ_PYPI_URL} eiq-neutron-sdk==3.0.0 eiq_nsys
 
 # Get the directory of the current script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

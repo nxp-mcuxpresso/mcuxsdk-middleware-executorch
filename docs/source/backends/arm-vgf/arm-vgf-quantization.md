@@ -46,7 +46,12 @@ Args:
 ```python
 def VgfQuantizer.quantize_with_submodules(self, model: 'GraphModule', calibration_samples: 'list[tuple]', is_qat: 'bool' = False):
 ```
-Quantizes a GraphModule in a way such that conditional submodules are handled properly.
+Quantizes a GraphModule in a way such that conditional submodules are
+handled properly.
+
+Note: torchao's prepare_pt2e and convert_pt2e natively handle
+while_loop body_fn submodules, so we only manually process cond
+branches and while_loop cond_fn here.
 
 Args:
 - **model (GraphModule)**: The model to quantize.
@@ -60,7 +65,7 @@ Returns:
 - **GraphModule**: The quantized model.
 
 ```python
-def VgfQuantizer.set_global(self, quantization_config: 'QuantizationConfig') -> 'TOSAQuantizer':
+def VgfQuantizer.set_global(self, quantization_config: 'QuantizationConfig | None') -> 'TOSAQuantizer':
 ```
 Set quantization_config for submodules not matched by other filters.
 
@@ -87,11 +92,11 @@ patterns for that submodule with the provided quantization_config.
 
 Args:
 - **module_name (str)**: Fully qualified module name to configure.
-- **quantization_config (QuantizationConfig)**: Configuration to apply to
+- **quantization_config (QuantizationConfig)**: Configuration applied to
         the named submodule.
 
 ```python
-def VgfQuantizer.set_module_type(self, module_type: 'Callable', quantization_config: 'QuantizationConfig') -> 'TOSAQuantizer':
+def VgfQuantizer.set_module_type(self, module_type: 'Callable', quantization_config: 'Optional[QuantizationConfig]') -> 'TOSAQuantizer':
 ```
 Set quantization_config for submodules with a given module type.
 

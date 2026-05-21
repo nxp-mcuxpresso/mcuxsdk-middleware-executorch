@@ -21,13 +21,13 @@ jobs:
     environment: ${{ (github.event_name == 'schedule') && 'update-commit-hash' || '' }}
     steps:
       - name: update-pytorch-commit-hash
-        uses: pytorch/test-infra/.github/actions/update-commit-hash@release/2.10
+        uses: pytorch/test-infra/.github/actions/update-commit-hash@release/2.11
         if: ${{ github.event_name == 'schedule' }}
         with:
           repo-name: pytorch
           branch: main
           pin-folder: .ci/docker/ci_commit_pins
-          test-infra-ref: release/2.10
+          test-infra-ref: release/2.11
           updatebot-token: ${{ secrets.UPDATEBOT_TOKEN }}
           pytorchbot-token: ${{ secrets.GH_PYTORCHBOT_TOKEN }}
 
@@ -39,7 +39,7 @@ jobs:
     
   test-static-hf-llm-qnn-linux:
     name: test-static-hf-llm-qnn-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -69,4 +69,4 @@ jobs:
         # Setup install_requirements for llama
         PYTHON_EXECUTABLE=python bash examples/models/llama/install_requirements.sh
 
-        PYTHON_EXECUTABLE=python bash .ci/scripts/test_qnn_static_llm.sh ${{ matrix.task }}
+        PYTHON_EXECUTABLE=python bash .ci/scripts/test_qnn_static_llm.sh ${{ matrix.task }} wikitext_ppl

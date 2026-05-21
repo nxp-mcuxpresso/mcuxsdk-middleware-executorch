@@ -1313,7 +1313,7 @@ class InstanceNorm2d(torch.nn.Module):
 class LargeTensorLinear(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        hidden_dim = 4096
+        hidden_dim = 8192
         self.linear1_1 = torch.nn.Linear(512, hidden_dim)
         self.linear1_2 = torch.nn.Linear(512, hidden_dim)
         self.linear1_3 = torch.nn.Linear(512, hidden_dim)
@@ -1630,6 +1630,14 @@ class MultiheadAttention(torch.nn.Module):
     def forward(self, x):
         attn_output, _ = self.multi_head_attention(x, x, x, need_weights=False)
         return attn_output
+
+
+class Narrow(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, x):
+        return (x.narrow(1, 4, 32),)
 
 
 class Neg(torch.nn.Module):

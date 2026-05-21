@@ -15,8 +15,7 @@ concurrency:
 jobs:
   test-qnn-wheel-packages-linux:
     name: test-qnn-wheel-packages-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
-    if: false
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -43,7 +42,7 @@ jobs:
 
   test-setup-linux-gcc:
     name: test-setup-linux-gcc
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -68,7 +67,7 @@ jobs:
 
   test-models-linux-basic:
     name: test-models-linux-basic
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -112,7 +111,7 @@ jobs:
 
   test-models-linux:
     name: test-models-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -163,10 +162,79 @@ jobs:
         # Build and test ExecuTorch
         PYTHON_EXECUTABLE=python bash .ci/scripts/test_model.sh "${MODEL_NAME}" "${BUILD_TOOL}" "${BACKEND}"
 
+  test-parakeet-xnnpack-linux:
+    name: test-parakeet-xnnpack-linux
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    with:
+      runner: linux.4xlarge.memory
+      docker-image: ci-image:executorch-ubuntu-22.04-clang12
+      submodules: 'recursive'
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      timeout: 120
+      script: |
+        set -eux
+
+        # The generic Linux job chooses to use base env, not the one setup by the image
+        CONDA_ENV=$(conda env list --json | jq -r ".envs | .[-1]")
+        conda activate "${CONDA_ENV}"
+
+        echo "::group::Setup ExecuTorch"
+        ./install_executorch.sh
+        echo "::endgroup::"
+
+        echo "::group::Export Parakeet with XNNPACK"
+        bash .ci/scripts/export_model_artifact.sh xnnpack "nvidia/parakeet-tdt" "quantized-8da4w" "./parakeet_output"
+        echo "::endgroup::"
+
+        echo "::group::Test Parakeet with XNNPACK"
+        bash .ci/scripts/test_model_e2e.sh xnnpack "nvidia/parakeet-tdt" "quantized-8da4w" "./parakeet_output"
+        echo "::endgroup::"
+
+  test-voxtral-realtime-xnnpack-linux:
+    name: test-voxtral-realtime-xnnpack-linux
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    with:
+      runner: linux.4xlarge.memory
+      docker-image: ci-image:executorch-ubuntu-22.04-clang12
+      submodules: 'recursive'
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      timeout: 120
+      secrets-env: VOXTRAL_REALTIME_HF_TOKEN
+      script: |
+        set -eux
+
+        # The generic Linux job chooses to use base env, not the one setup by the image
+        CONDA_ENV=$(conda env list --json | jq -r ".envs | .[-1]")
+        conda activate "${CONDA_ENV}"
+
+        export HF_TOKEN="${SECRET_VOXTRAL_REALTIME_HF_TOKEN}"
+
+        echo "::group::Setup ExecuTorch"
+        ./install_executorch.sh
+        echo "::endgroup::"
+
+        echo "::group::Export Voxtral Realtime with XNNPACK"
+        bash .ci/scripts/export_model_artifact.sh xnnpack "mistralai/Voxtral-Mini-4B-Realtime-2602" "quantized-8da4w" "./voxtral_realtime_output"
+        echo "::endgroup::"
+
+        echo "::group::Test Voxtral Realtime with XNNPACK"
+        bash .ci/scripts/test_model_e2e.sh xnnpack "mistralai/Voxtral-Mini-4B-Realtime-2602" "quantized-8da4w" "./voxtral_realtime_output"
+        echo "::endgroup::"
+
   test-llama-runner-linux:
     # Test Both linux x86 and linux aarch64
     name: test-llama-runner-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -216,7 +284,7 @@ jobs:
 
   test-llama-runner-linux-android:
     name: test-llama-runner-linux-android
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -241,7 +309,7 @@ jobs:
 
   test-custom-ops-linux:
     name: test-custom-ops-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -265,7 +333,7 @@ jobs:
 
   test-selective-build-linux:
     name: test-selective-build-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -290,7 +358,7 @@ jobs:
   test-multimodal-linux:
     if: ${{ !github.event.pull_request.head.repo.fork }}
     name: test-multimodal-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -301,7 +369,7 @@ jobs:
         model: ["gemma3-4b"]  # llava gives segfault so not covering.
     with:
       secrets-env: EXECUTORCH_HF_TOKEN
-      runner: linux.24xlarge
+      runner: linux.24xlarge.memory
       docker-image: ci-image:executorch-ubuntu-22.04-clang12
       submodules: 'recursive'
       ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
@@ -328,7 +396,7 @@ jobs:
 
   test-moshi-linux:
     name: test-moshi-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -360,7 +428,7 @@ jobs:
 
   test-quantized-aot-lib-linux:
     name: test-quantized-aot-lib-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -383,7 +451,7 @@ jobs:
 
   test-binary-size-linux-gcc:
     name: test-binary-size-linux-gcc
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -407,10 +475,8 @@ jobs:
         output=$(ls -la cmake-out/test/size_test)
         arr=($output)
         size=${arr[4]}
-        # threshold=48120 on devserver with gcc9
-        # todo(lfq): update once binary size is below 50kb.
-        # Note: using gcc9-nopytorch container with pinned nightly PyTorch
-        threshold="63776"
+        # Current CI size: 48008 (gcc9-nopytorch, 2026-03-06)
+        threshold="48500"
         if [[ "$size" -le "$threshold" ]]; then
           echo "Success $size <= $threshold"
         else
@@ -420,7 +486,7 @@ jobs:
 
   test-binary-size-linux:
     name: test-binary-size-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -445,7 +511,8 @@ jobs:
         output=$(ls -la cmake-out/test/size_test)
         arr=($output)
         size=${arr[4]}
-        threshold="51752"
+        # Current CI size: 44160 (clang12, 2026-03-06)
+        threshold="45000"
         if [[ "$size" -le "$threshold" ]]; then
           echo "Success $size <= $threshold"
         else
@@ -492,7 +559,7 @@ jobs:
 
   unittest-arm-backend-with-no-deps:
     name: unittest-arm-backend-with-no-deps
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -527,7 +594,7 @@ jobs:
 
   test-llama-runner-qnn-linux:
     name: test-llama-runner-qnn-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -566,7 +633,7 @@ jobs:
 
   test-static-llama-qnn-linux:
     name: test-static-llama-qnn-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -598,9 +665,43 @@ jobs:
 
         PYTHON_EXECUTABLE=python bash .ci/scripts/test_qnn_static_llm.sh ${{ matrix.task }}
 
+  test-sqnr-static-llm-qnn-linux:
+    name: test-sqnr-static-llm-qnn-linux
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        task: [smollm2_135m]
+      fail-fast: false
+    with:
+      runner: linux.2xlarge
+      docker-image: ci-image:executorch-ubuntu-22.04-qnn-sdk
+      submodules: 'recursive'
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      timeout: 180
+      script: |
+        # The generic Linux job chooses to use base env, not the one setup by the image
+        CONDA_ENV=$(conda env list --json | jq -r ".envs | .[-1]")
+        conda activate "${CONDA_ENV}"
+
+        BUILD_TOOL="cmake"
+
+        PYTHON_EXECUTABLE=python bash .ci/scripts/setup-qnn-deps.sh
+        PYTHON_EXECUTABLE=python bash .ci/scripts/build-qnn-sdk.sh
+
+        # Setup executorch
+        PYTHON_EXECUTABLE=python bash .ci/scripts/setup-linux.sh --build-tool "${BUILD_TOOL}"
+
+        # Setup install_requirements for llama
+        PYTHON_EXECUTABLE=python bash examples/models/llama/install_requirements.sh
+
+        PYTHON_EXECUTABLE=python bash .ci/scripts/test_qnn_static_llm.sh ${{ matrix.task }} sqnr
+
   test-qnn-models-linux:
     name: test-qnn-models-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -622,7 +723,7 @@ jobs:
 
   test-phi-3-mini-runner-linux:
     name: test-phi-3-mini-runner-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -652,7 +753,7 @@ jobs:
 
   test-eval_llama-wikitext-linux:
     name: test-eval_llama-wikitext-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -680,7 +781,7 @@ jobs:
   # TODO(larryliu0820): Fix this issue before reenabling it: https://gist.github.com/larryliu0820/7377ecd0d79dbc06076cec8d9f2b85d2
   # test-eval_llama-mmlu-linux:
   #   name: test-eval_llama-mmlu-linux
-  #   uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+  #   uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
   #   permissions:
   #     id-token: write
   #     contents: read
@@ -707,7 +808,7 @@ jobs:
 
   test-llama_runner_eager-linux:
     name: test-llama_runner_eager-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -734,7 +835,7 @@ jobs:
 
   test-lora-linux:
     name: test-lora-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -759,9 +860,36 @@ jobs:
         # run llama runner in eager mode
         PYTHON_EXECUTABLE=python bash .ci/scripts/test_lora.sh
 
+  test-lora-multimethod-linux:
+    name: test-lora-multimethod-linux
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+    with:
+      runner: linux.24xlarge
+      docker-image: ci-image:executorch-ubuntu-22.04-clang12
+      submodules: 'recursive'
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+      timeout: 90
+      script: |
+        # The generic Linux job chooses to use base env, not the one setup by the image
+        CONDA_ENV=$(conda env list --json | jq -r ".envs | .[-1]")
+        conda activate "${CONDA_ENV}"
+
+        PYTHON_EXECUTABLE=python bash .ci/scripts/setup-linux.sh --build-tool "cmake"
+
+        # Install llama requirements
+        bash examples/models/llama/install_requirements.sh
+
+        # run llama runner in eager mode
+        PYTHON_EXECUTABLE=python bash .ci/scripts/test_lora_multimethod.sh
+
   test-mediatek-models-linux:
     name: test-mediatek-models-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -788,7 +916,8 @@ jobs:
 
   test-openvino-linux:
     name: test-openvino-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    if: false # TODO: fix https://github.com/pytorch/executorch/issues/17684
     permissions:
       id-token: write
       contents: read
@@ -810,7 +939,7 @@ jobs:
 
   test-build-wasm-linux:
     name: test-build-wasm-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -838,7 +967,7 @@ jobs:
 
   unittest-wasm-bindings:
     name: unittest-wasm-bindings
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -883,7 +1012,7 @@ jobs:
         pnpm test
 
   unittest-nxp-neutron:
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -899,15 +1028,17 @@ jobs:
         # The generic Linux job chooses to use base env, not the one setup by the image
         CONDA_ENV=$(conda env list --json | jq -r ".envs | .[-1]")
         conda activate "${CONDA_ENV}"
+        
+        # Install eIQ packages
+        pip install -r backends/nxp/requirements-eiq.txt
 
         # Build and install Executorch
         PYTHON_EXECUTABLE=python \
-        CMAKE_ARGS="-DEXECUTORCH_BUILD_NXP_NEUTRON=ON" \
+        CMAKE_ARGS="-DEXECUTORCH_BUILD_NXP_NEUTRON=ON -DEXECUTORCH_BUILD_NXP_NEUTRON_RUNNER=ON " \
         .ci/scripts/setup-linux.sh --build-tool "cmake"
 
         # Install test requirements
         pip install -r backends/nxp/requirements-tests-pypi.txt
-        pip install -r backends/nxp/requirements-tests-eiq.txt
         PYTHON_EXECUTABLE=python bash examples/nxp/setup.sh
 
         # Run pytest
@@ -916,12 +1047,19 @@ jobs:
         # Run aot examples:
         PYTHON_EXECUTABLE=python bash examples/nxp/run_aot_example.sh cifar10
         PYTHON_EXECUTABLE=python bash examples/nxp/run_aot_example.sh mobilenetv2
+        
+        # Run e2e example with Simulator:
+        PYTHON_EXECUTABLE=python bash examples/nxp/run.sh cifar10
+        
+        # Run lightweight model tests: 
+        PYTHON_EXECUTABLE=python pytest -c /dev/null backends/nxp/tests_models/ \
+        --nxp_runner_path "./examples/nxp/executor_runner/build/nxp_executor_runner" 
 
   test-samsung-quantmodels-linux:
     name: test-samsung-quantmodels-linux
     # Skip this job if the pull request is from a fork (secrets are not available)
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -945,13 +1083,9 @@ jobs:
 
         # Setup Samsung SDK (AI Lite Core) and install enn backend
         export SAMSUNG_AI_LITECORE_KEY=$SECRET_SAMSUNG_AI_LITECORE_KEY
-        source .ci/scripts/setup-samsung-linux-deps.sh
 
-        # Check if device was reserved
-        if [[ "${DEVICE_RESERVED:-0}" != "1" ]]; then
-          echo "::warning::Skipping tests - no Samsung device available"
-          exit 0
-        fi
+        trap 'bash .ci/scripts/cleanup-samsung-linux-deps.sh' EXIT TERM INT
+        source .ci/scripts/setup-samsung-linux-deps.sh --skip-device-connect
 
         # Test quant models
         model_scripts="deeplab_v3 edsr inception_v3 inception_v4 mobilenet_v2 mobilenet_v3 resnet18 resnet50 vit wav2letter"
@@ -961,11 +1095,9 @@ jobs:
 
   test-samsung-models-linux:
     name: test-samsung-models-linux
-    # Temporarily disabled - edb (Exynos device bridge) failures and device reservation issues
-    # See: https://github.com/pytorch/executorch/issues/16678
-    if: false
-    # if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    # Skip this job if the pull request is from a fork (secrets are not available)
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -989,10 +1121,11 @@ jobs:
 
         # Setup Samsung SDK (AI Lite Core) and install enn backend
         export SAMSUNG_AI_LITECORE_KEY=$SECRET_SAMSUNG_AI_LITECORE_KEY
+        trap 'bash .ci/scripts/cleanup-samsung-linux-deps.sh' EXIT TERM INT
         source .ci/scripts/setup-samsung-linux-deps.sh
 
         # Check if device was reserved
-        if [[ "${DEVICE_RESERVED:-0}" != "1" ]]; then
+        if [[ "${DEVICE_ACQUIRED:-0}" != "1" ]]; then
           echo "::warning::Skipping tests - no Samsung device available"
           exit 0
         fi
@@ -1002,7 +1135,7 @@ jobs:
 
   test-vulkan-models-linux:
     name: test-vulkan-models-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -1043,7 +1176,7 @@ jobs:
 
   test-vulkan-operators-linux:
     name: test-vulkan-operators-linux
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -1074,8 +1207,9 @@ jobs:
         ./cmake-out/backends/vulkan/test/custom_ops/q8csw_conv2d
         ./cmake-out/backends/vulkan/test/custom_ops/q4gsw_linear
         ./cmake-out/backends/vulkan/test/custom_ops/choose_qparams_per_row
-        ./cmake-out/backends/vulkan/test/custom_ops/qdq8ta_conv2d_activations
-        ./cmake-out/backends/vulkan/test/custom_ops/q8ta_q8ta_q8to_add
+        ./cmake-out/backends/vulkan/test/custom_ops/test_q8ta_qdq
+        ./cmake-out/backends/vulkan/test/custom_ops/test_q8ta_clone
+        ./cmake-out/backends/vulkan/test/custom_ops/test_q8ta_binary
 
         # "Classic" Operator tests
         PYTHON_EXECUTABLE=python bash backends/vulkan/test/scripts/test_op.sh --build
@@ -1091,7 +1225,7 @@ jobs:
 
   test-coreml-bc-macos:
     name: test-coreml-bc-macos (${{ matrix.runner }})
-    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.11
     permissions:
       id-token: write
       contents: read
@@ -1122,7 +1256,7 @@ jobs:
 
   nxp-build-test:
     name: nxp-build-test
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.10
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
     permissions:
       id-token: write
       contents: read
