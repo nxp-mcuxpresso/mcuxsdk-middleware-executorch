@@ -43,4 +43,4 @@ The steps are expected to be executed from the `executorch` root folder.
 project, presented [here](https://mcuxpresso.nxp.com/mcuxsdk/latest/html/middleware/eiq/executorch/docs/nxp/topics/example_applications.html#how-to-build-and-run-executorch-cifarnet-example).
 This project will guide you through the process of deploying your PTE model to the device.
 To get the MCUXpresso SDK follow this [guide](https://mcuxpresso.nxp.com/mcuxsdk/latest/html/middleware/eiq/executorch/docs/nxp/topics/getting_mcuxpresso.html),
-use the MCUXpresso SDK v25.12.00. 
+use the MCUXpresso SDK v26.06.00. 
