@@ -1,0 +1,115 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "creationInfo": {
+    "created": "2026-06-04T11:37:45Z",
+    "creators": [
+      "Organization: NXP"
+    ],
+    "licenseListVersion": "3.26"
+  },
+  "name": "mcuxsdk-middleware-executorch-v26.06.00",
+  "dataLicense": "CC0-1.0",
+  "documentNamespace": "https://nxp.com/spdx/7ae08d1f-ef85-4694-b793-7765693489d9",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9",
+      "name": "mcuxsdk-middleware-executorch",
+      "versionInfo": "v26.06.00",
+      "licenseConcluded": "(BSD-3-Clause)",
+      "licenseDeclared": "(BSD-3-Clause)",
+      "downloadLocation": "https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-executorch",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9---3f96694c-c4bb-4344-a0a6-98923223c58e",
+      "name": "Apache License 2.0",
+      "versionInfo": "2.0",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "http://www.apache.org",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: Apache License 2.0",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9---bd5bff3b-4ae8-4775-9a8b-50ba9f9d10d3",
+      "name": "executorch",
+      "versionInfo": "1.2.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: pypi",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "OTHER",
+          "referenceLocator": "52a179e0-00b7-41eb-a8b8-5deb773c5495",
+          "referenceType": "BlackDuck-ComponentOrigin"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:pypi_package:executorch:1.2.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:pypi/executorch@1.2.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9---ea42da12-a79c-4daf-a2fd-3290fee26c5c",
+      "name": "FlatBuffers",
+      "versionInfo": "24.3.25",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "http://google.github.io/flatbuffers/",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: FlatBuffers",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:crates_package:flatbuffers:24.3.25:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:google:flatbuffers:24.3.25:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9---3f96694c-c4bb-4344-a0a6-98923223c58e"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9---bd5bff3b-4ae8-4775-9a8b-50ba9f9d10d3"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-7ae08d1f-ef85-4694-b793-7765693489d9---ea42da12-a79c-4daf-a2fd-3290fee26c5c"
+    }
+  ]
+}
