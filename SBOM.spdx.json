@@ -1,0 +1,691 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "creationInfo": {
+    "created": "2026-06-12T12:47:00Z",
+    "creators": [
+      "Organization: NXP"
+    ],
+    "licenseListVersion": "3.28"
+  },
+  "name": "ExecuTorch-mcux-26.03",
+  "dataLicense": "CC0-1.0",
+  "hasExtractedLicensingInfos": [
+    {
+      "name": "Public Domain",
+      "licenseId": "LicenseRef-d26bcb7d-5bc8-4f05-8942-a3a42728a2e4",
+      "extractedText": "NONE"
+    }
+  ],
+  "documentNamespace": "https://nxp.com/spdx/5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "name": "ExecuTorch",
+      "versionInfo": "mcux-26.03",
+      "licenseConcluded": "(BSD-3-Clause)",
+      "licenseDeclared": "(BSD-3-Clause)",
+      "downloadLocation": "https://github.com/nxp-mcuxpresso/mcuxsdk-middleware-executorch",
+      "originator": "Organization: NXP",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---986eb4eb-c012-4d61-9f95-ac8920392044",
+      "name": "Abseil",
+      "versionInfo": "20250127.rc1",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "https://abseil.io/",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: Abseil",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:abseil:common_libraries:20250127:rc1:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---e59cbe33-47ee-4ba7-a5d1-a3f016b021df",
+      "name": "dvidelabs/flatcc",
+      "versionInfo": "v0.6.1",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "https://github.com/dvidelabs/flatcc",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: dvidelabs/flatcc",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:flatcc_project:flatcc:0.6.1:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---1c742ecb-e822-4740-9278-be0136bc6022",
+      "name": "Eigen",
+      "versionInfo": "3.4.1",
+      "licenseConcluded": "MPL-2.0",
+      "licenseDeclared": "MPL-2.0",
+      "homepage": "http://eigen.tuxfamily.org",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: Eigen",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---8b189ed0-e4db-45a1-9021-c4fe377937e0",
+      "name": "ethos-u-vela",
+      "versionInfo": "4.3.0",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "https://git.mlplatform.org/ml/ethos-u/ethos-u-vela.git/",
+      "downloadLocation": "https://github.com/meta-pytorch/ethos-u-core-driver-mirror",
+      "originator": "Organization: ethos-u-vela",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---d7808488-fb1a-4f56-8b14-76b1d69b6f7a",
+      "name": "executorch",
+      "versionInfo": "1.1.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: unknown",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:pypi_package:executorch:1.1.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---341b0de3-2258-4fbe-8dcd-1a5aaaf9a8f6",
+      "name": "ExecuTorch Android",
+      "versionInfo": "1.1.0-rc1",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: org.pytorch",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "OTHER",
+          "referenceLocator": "ce03bafb-0700-4edc-9750-4d3547242f2b",
+          "referenceType": "BlackDuck-ComponentOrigin"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:maven_package:org.pytorch\\:executorch-android:1.1.0:rc1:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:maven/org.pytorch/executorch-android@1.1.0-rc1",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---914670ff-bb95-48ab-8aa8-b36c5fc9e7bf",
+      "name": "facebook/buck2",
+      "versionInfo": "latest",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: facebook/buck2",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---ea42da12-a79c-4daf-a2fd-3290fee26c5c",
+      "name": "FlatBuffers",
+      "versionInfo": "24.3.25",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "http://google.github.io/flatbuffers/",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: FlatBuffers",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:crates_package:flatbuffers:24.3.25:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:google:flatbuffers:24.3.25:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---e12e3d23-8477-441f-b05f-12c565432165",
+      "name": "FP16",
+      "versionInfo": "1.0^git20210317.0a92994",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/Maratyszcza/FP16",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: FP16",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---eb526d89-d646-41bb-ad8d-c3d2c1e5f0c8",
+      "name": "fxdiv",
+      "versionInfo": "1.0^git20201208.63058ef",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/Maratyszcza/FXDiv",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: fxdiv",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---a36cae46-9a25-48e3-a493-422ee1319a4b",
+      "name": "gflags",
+      "versionInfo": "2.2.2",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://code.google.com/p/gflags/",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: gflags",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---07181dee-dd37-4c03-9d76-218bf90131d0",
+      "name": "google-re2",
+      "versionInfo": "2024-07-02",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/google/re2",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: google-re2",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---527dd84b-497c-4784-8285-b37e59fd07e0",
+      "name": "google/sentencepiece",
+      "versionInfo": "0.2.0",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "https://github.com/google/sentencepiece",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: google/sentencepiece",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:google:sentencepiece:0.2.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---929d9eef-7534-4d61-b15f-dac9a28b5b3c",
+      "name": "google/XNNPACK",
+      "versionInfo": "0.0~git20241108.4ea82e5",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/google/XNNPACK",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: google/XNNPACK",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---4db1d374-23d3-4c7f-a00f-2d126e44f7dd",
+      "name": "GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator",
+      "versionInfo": "v2.1.0",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---5ba15c08-f5ef-466d-a7a3-8dcd096fb38b",
+      "name": "Gradle",
+      "versionInfo": "8.6.0",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "https://gradle.org",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: Gradle",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:gradle:gradle:8.6.0:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---dc7599ba-886a-4dc6-b61d-05fc434d9a6d",
+      "name": "gtest",
+      "versionInfo": "1.8.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "http://code.google.com/p/googletest/",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: gtest",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---9d624f94-c22a-485b-bd11-5150107799af",
+      "name": "JSON for Modern Cpp",
+      "versionInfo": "3.11.3",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://json.nlohmann.me",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: JSON for Modern Cpp",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---6024b7b1-5f71-4ac9-9a56-5926f0c5c3eb",
+      "name": "leetal/ios-cmake",
+      "versionInfo": "4.4.1",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/leetal/ios-cmake",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: leetal/ios-cmake",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---9563b688-4ba4-4385-b8c1-49dcd2cc34fc",
+      "name": "NVIDIA/cutlass",
+      "versionInfo": "v4.1.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/NVIDIA/cutlass",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: NVIDIA/cutlass",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---fe309f7f-60b1-468d-b87b-bb05cf621a66",
+      "name": "nvidia/transformerengine",
+      "versionInfo": "v2.0",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "https://github.com/NVIDIA/TransformerEngine",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: nvidia",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "OTHER",
+          "referenceLocator": "86b280d9-9485-492b-9f02-aabc1e7b873e",
+          "referenceType": "BlackDuck-ComponentOrigin"
+        },
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceLocator": "pkg:github/nvidia/transformerengine@v2.0",
+          "referenceType": "purl"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---7dd35137-ce5a-405b-9279-bdc71b8f793b",
+      "name": "PCRE2",
+      "versionInfo": "10.40",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "(BSD-3-Clause OR LicenseRef-d26bcb7d-5bc8-4f05-8942-a3a42728a2e4)",
+      "homepage": "https://github.com/PCRE2Project/pcre2",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: unknown",
+      "supplier": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:almalinux_package:pcre2-devel:10.40:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:almalinux_package:pcre2-tools:10.40:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:almalinux_package:pcre2-utf16:10.40:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:almalinux_package:pcre2-utf32:10.40:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        },
+        {
+          "referenceCategory": "SECURITY",
+          "referenceLocator": "cpe:2.3:a:almalinux_package:pcre2:10.40:*:*:*:*:*:*:*",
+          "referenceType": "cpe23Type"
+        }
+      ],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---7f1b0dae-99b4-4065-971d-c1b48b32bd39",
+      "name": "pocketfft",
+      "versionInfo": "release_for_eigen",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/mreineck/pocketfft",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: pocketfft",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---bff00e21-26c0-4a94-a2f2-a04179921a37",
+      "name": "pthreadpool",
+      "versionInfo": "0.0~git20251020.0e6ca13",
+      "licenseConcluded": "BSD-2-Clause",
+      "licenseDeclared": "NOASSERTION",
+      "homepage": "https://github.com/Maratyszcza/pthreadpool",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: pthreadpool",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---ee894eed-87f0-48aa-ac2a-fff87f2fd0a4",
+      "name": "pybind11",
+      "versionInfo": "2.11.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/pybind/pybind11",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: pybind11",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---14d30a3c-e424-40a1-ba84-1e74227b191f",
+      "name": "pytorch-tokenizers",
+      "versionInfo": "1.0.1",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/meta-pytorch/tokenizers",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: unknown",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---591e7fb6-1d75-4b14-bd3e-de97b77e27e0",
+      "name": "pytorch/cpuinfo",
+      "versionInfo": "24.09.26",
+      "licenseConcluded": "BSD-2-Clause",
+      "licenseDeclared": "BSD-2-Clause",
+      "homepage": "https://github.com/pytorch/cpuinfo",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: pytorch/cpuinfo",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---6508ba23-328f-44d9-8871-f07c83e770a3",
+      "name": "torchao",
+      "versionInfo": "0.15.0",
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "homepage": "https://github.com/pytorch-labs/ao",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: unknown",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---c3208ecf-972a-4e93-9d7f-c912e991dfba",
+      "name": "Vulkan-Headers",
+      "versionInfo": "1.4.319",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "homepage": "https://github.com/KhronosGroup/Vulkan-Headers",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: Vulkan-Headers",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---d5260578-ff65-4a1a-b7c5-2ac9a0c130db",
+      "name": "zeux/volk",
+      "versionInfo": "1.4.313",
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "homepage": "https://github.com/zeux/volk",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: zeux/volk",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    },
+    {
+      "SPDXID": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---ffc65bc6-ff9a-4c60-a224-0014bb6b91f1",
+      "name": "zherczeg/sljit",
+      "versionInfo": "20250306-snapshot-98802d93",
+      "licenseConcluded": "BSD-2-Clause",
+      "licenseDeclared": "NOASSERTION",
+      "homepage": "https://github.com/zherczeg/sljit",
+      "downloadLocation": "NOASSERTION",
+      "originator": "Organization: zherczeg/sljit",
+      "supplier": "NOASSERTION",
+      "externalRefs": [],
+      "filesAnalyzed": false
+    }
+  ],
+  "relationships": [
+    {
+      "spdxElementId": "SPDXRef-DOCUMENT",
+      "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---07181dee-dd37-4c03-9d76-218bf90131d0"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---14d30a3c-e424-40a1-ba84-1e74227b191f"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---1c742ecb-e822-4740-9278-be0136bc6022"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---341b0de3-2258-4fbe-8dcd-1a5aaaf9a8f6"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---4db1d374-23d3-4c7f-a00f-2d126e44f7dd"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---527dd84b-497c-4784-8285-b37e59fd07e0"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---591e7fb6-1d75-4b14-bd3e-de97b77e27e0"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---5ba15c08-f5ef-466d-a7a3-8dcd096fb38b"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---6024b7b1-5f71-4ac9-9a56-5926f0c5c3eb"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---6508ba23-328f-44d9-8871-f07c83e770a3"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---7dd35137-ce5a-405b-9279-bdc71b8f793b"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---7f1b0dae-99b4-4065-971d-c1b48b32bd39"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---8b189ed0-e4db-45a1-9021-c4fe377937e0"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---914670ff-bb95-48ab-8aa8-b36c5fc9e7bf"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---929d9eef-7534-4d61-b15f-dac9a28b5b3c"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---9563b688-4ba4-4385-b8c1-49dcd2cc34fc"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---986eb4eb-c012-4d61-9f95-ac8920392044"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---9d624f94-c22a-485b-bd11-5150107799af"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---a36cae46-9a25-48e3-a493-422ee1319a4b"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---bff00e21-26c0-4a94-a2f2-a04179921a37"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---c3208ecf-972a-4e93-9d7f-c912e991dfba"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---d5260578-ff65-4a1a-b7c5-2ac9a0c130db"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "DYNAMIC_LINK",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---d7808488-fb1a-4f56-8b14-76b1d69b6f7a"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---dc7599ba-886a-4dc6-b61d-05fc434d9a6d"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---e12e3d23-8477-441f-b05f-12c565432165"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---e59cbe33-47ee-4ba7-a5d1-a3f016b021df"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---ea42da12-a79c-4daf-a2fd-3290fee26c5c"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---eb526d89-d646-41bb-ad8d-c3d2c1e5f0c8"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---ee894eed-87f0-48aa-ac2a-fff87f2fd0a4"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---fe309f7f-60b1-468d-b87b-bb05cf621a66"
+    },
+    {
+      "spdxElementId": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-package-5f5f010a-0a01-4225-b0b0-5a2c6aa9deef---ffc65bc6-ff9a-4c60-a224-0014bb6b91f1"
+    }
+  ]
+}
