@@ -70,7 +70,7 @@ jobs:
       API_LEVEL: 34
     steps:
       - name: Setup SSH (Click me for login details)
-        uses: pytorch/test-infra/.github/actions/setup-ssh@release/2.11
+        uses: pytorch/test-infra/.github/actions/setup-ssh@release/2.13
         with:
           github-secret: ${{ secrets.GITHUB_TOKEN }}
           instructions: |
@@ -109,6 +109,9 @@ jobs:
           ram-size: 16384M
           heap-size: 12288M
           force-avd-creation: false
-          disable-animations: true
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # The action's built-in animation disabling runs immediately after
+          # boot and is not retried. Software-emulated boots can briefly drop
+          # adb there, so scripts/run_android_emulator.sh handles it instead.
+          disable-animations: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
           emulator-boot-timeout: 900

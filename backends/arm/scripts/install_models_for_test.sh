@@ -8,7 +8,8 @@ set -e
 pip install -r backends/arm/requirements-arm-models-test.txt
 
 # Install model gym repository
-git clone --branch v0.2.0 --depth 1 https://github.com/arm/neural-graphics-model-gym.git
+MODEL_GYM_REF="${MODEL_GYM_REF:-v0.3.0}"
+git clone --depth 1 --branch "$MODEL_GYM_REF" https://github.com/arm/neural-graphics-model-gym.git
 cd neural-graphics-model-gym
 # Remove model-converter installation from model-gym repository (to prevent overwriting executorch version)
 if [[ "$(uname)" == "Darwin" ]]; then

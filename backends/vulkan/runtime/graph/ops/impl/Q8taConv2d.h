@@ -9,6 +9,7 @@
 #pragma once
 
 #include <executorch/backends/vulkan/runtime/graph/ComputeGraph.h>
+#include <executorch/backends/vulkan/runtime/graph/ops/ExecuteNode.h>
 #include <executorch/backends/vulkan/runtime/graph/ops/impl/QuantizeDequantize.h>
 
 namespace vkcompute {
@@ -122,7 +123,12 @@ void add_q8ta_conv2d_pw_node(
     const ValueRef packed_bias,
     const uint32_t activation_type,
     const ValueRef packed_int8_output,
-    const int32_t groups = 1);
+    const int32_t groups = 1,
+    const ValueRef conv_input = kDummyValueRef,
+    const ValueRef kernel_size = kDummyValueRef,
+    const ValueRef stride = kDummyValueRef,
+    const ValueRef padding = kDummyValueRef,
+    const ValueRef dilation = kDummyValueRef);
 
 std::vector<int64_t> calculate_q8ta_im2col_sizes(
     ComputeGraph* graph,
@@ -144,5 +150,11 @@ void add_q8ta_im2col_node(
     const int32_t zp);
 
 void q8ta_conv2d_im2col(ComputeGraph& graph, const std::vector<ValueRef>& args);
+
+// Transposed convolution
+
+void q8ta_conv2d_transposed(
+    ComputeGraph& graph,
+    const std::vector<ValueRef>& args);
 
 } // namespace vkcompute

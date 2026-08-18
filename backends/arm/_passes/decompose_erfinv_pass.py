@@ -5,7 +5,7 @@
 
 from typing import Set, Type
 
-from executorch.backends.arm._passes import ArmPass
+from executorch.backends.arm._passes import ArmOpTargetedPass
 from executorch.backends.arm._passes.convert_full_like_to_full_pass import (
     ConvertFullLikeToFullPass,
 )
@@ -26,7 +26,6 @@ def get_erfinv_decomposition(op) -> tuple:
     if op in edge_erfinv_ops:
         # Ordered by first use in call_operator below.
         return (
-            exir_ops.edge.aten.full_like.default,
             exir_ops.edge.aten.lt.Tensor,
             exir_ops.edge.aten.where.self,
             exir_ops.edge.aten.abs.default,
@@ -49,7 +48,7 @@ def get_erfinv_decomposition(op) -> tuple:
     raise RuntimeError(f"Can't get erfinv decomposition for op {op}")
 
 
-class DecomposeErfinvPass(ArmPass):
+class DecomposeErfinvPass(ArmOpTargetedPass):
     """Decomposes `aten.erfinv` using the same *initial-guess* approximation as
     the PyTorch CPU scalar `calc_erfinv`, with a guarded Newton refinement step
     to improve numerical accuracy (especially for fp16).
@@ -128,9 +127,10 @@ class DecomposeErfinvPass(ArmPass):
         MatchArgDtypePass,
         ReplaceScalarWithTensorByProfilePass,
     }
+    target_ops = edge_erfinv_ops
 
     def call_operator(self, op, args, kwargs, meta):
-        if op not in edge_erfinv_ops:
+        if op not in self.target_ops:
             return super().call_operator(op, args, kwargs, meta, updated=False)
 
         if self._is_quantized_meta(meta):
@@ -140,7 +140,6 @@ class DecomposeErfinvPass(ArmPass):
         x = args[0]
 
         (
-            op_full_like,
             op_lt_t,
             op_where,
             op_abs,
@@ -179,12 +178,10 @@ class DecomposeErfinvPass(ArmPass):
         CORR_MAX = 0.5
         TWO_OVER_SQRT_PI = 1.1283791670955126
 
-        # ---- zeros / ones (tensor-shaped) ----
-        zeros = super().call_operator(op_full_like, (x, 0.0), {}, meta, updated=True)
-        ones = super().call_operator(op_full_like, (x, 1.0), {}, meta, updated=True)
-        neg_ones = super().call_operator(
-            op_full_like, (x, -1.0), {}, meta, updated=True
-        )
+        # ---- zeros / ones constants ----
+        zeros = super().call_scalar(0.0, meta)
+        ones = super().call_scalar(1.0, meta)
+        neg_ones = super().call_scalar(-1.0, meta)
 
         # ---- s = sign(x): -1 for x<0 else +1 ----
         x_lt0 = super().call_operator(op_lt_t, (x, zeros), {}, meta, updated=True)

@@ -58,38 +58,15 @@ Args:
 ```python
 def VgfCompileSpec.dump_intermediate_artifacts_to(self, output_path: str | None):
 ```
-Sets a path for dumping intermediate results during such as tosa and
-pte.
+Set a path for dumping TOSA and PTE intermediate results.
 
 Args:
 - **output_path**: Path to dump intermediate results to.
 
 ```python
-def VgfCompileSpec.get_intermediate_path(self) -> str | None:
-```
-Gets the path used for dumping intermediate results such as tosa and
-pte.
-
-Returns:
-    Path where intermediate results are saved.
-
-```python
-def VgfCompileSpec.get_output_format() -> str:
-```
-Return the artifact format emitted by this compile spec.
-
-```python
 def VgfCompileSpec.get_output_order_workaround(self) -> bool:
 ```
 Gets whether the output order workaround is being applied.
-
-```python
-def VgfCompileSpec.get_pass_pipeline_config(self) -> executorch.backends.arm.common.pipeline_config.ArmPassPipelineConfig:
-```
-Returns configuration that controls how the Arm pass pipeline should
-behave.
-
-Subclasses may override to tweak defaults for specific targets.
 
 ```python
 def VgfCompileSpec.set_output_order_workaround(self, output_order_workaround: bool):
@@ -102,11 +79,30 @@ Args:
 ```python
 def VgfCompileSpec.set_pass_pipeline_config(self, config: executorch.backends.arm.common.pipeline_config.ArmPassPipelineConfig) -> None:
 ```
-Sets the configuration that controls how the Arm pass pipeline should
-behave. Subclasses may override to tweak defaults for specific targets.
+Set the configuration for the Arm pass pipeline.
 
 Args:
 - **config**: The custom ArmPassPipelineConfig to set.
+
+```python
+def VgfCompileSpec.validate_environment(self, build_dir: str | None = None, *, require_runtime_build: bool = False) -> 'VgfEnvironmentReport':
+```
+Run VGF environment preflight checks.
+
+By default this validates only AoT/export prerequisites. Runtime and
+source-build diagnostics are intentionally explicit in check_env.py.
+
+Args:
+- **build_dir**: Optional source-build CMake build directory or
+        CMakeCache.txt path.
+- **require_runtime_build**: If true, run source-build diagnostics instead
+        of the default AoT check.
+
+Returns:
+- **VgfEnvironmentReport**: Structured check report.
+
+Raises:
+- **RuntimeError**: If any required check fails.
 
 
 
@@ -151,7 +147,7 @@ described in the rest of this guide but with a concrete end-to-end sample.
 
 **→{doc}`/backends/arm-vgf/arm-vgf-troubleshooting` — Debug common issues.**
 
-**→{doc}`/backends/arm-vgf/tutorials/arm-vgf-tutorials` — Tutorials.**
+**→{doc}`/backends/arm-vgf/tutorials/vgf-getting-started` — Getting started tutorial.**
 
 **→{doc}`/backends/arm-vgf/VGF_op_support` — VGF supported operators.**
 
@@ -164,6 +160,6 @@ described in the rest of this guide but with a concrete end-to-end sample.
 arm-vgf-partitioner
 arm-vgf-quantization
 arm-vgf-troubleshooting
-tutorials/arm-vgf-tutorials
+tutorials/vgf-getting-started
 VGF_op_support
 ```

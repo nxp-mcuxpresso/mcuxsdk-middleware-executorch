@@ -24,6 +24,7 @@ Arguments:
                 - google/gemma-3-4b-it
                 - Qwen/Qwen3-0.6B
                 - nvidia/parakeet-tdt
+                - facebook/dinov2-small-imagenet1k-1-layer
                 - mistralai/Voxtral-Mini-4B-Realtime-2602
 
   quant_name  Quantization type (required)
@@ -190,6 +191,19 @@ case "$HF_MODEL" in
     AUDIO_FILE="poem.wav"
     IMAGE_PATH=""
     ;;
+  facebook/dinov2-small-imagenet1k-1-layer)
+    MODEL_NAME="dinov2"
+    RUNNER_TARGET="dinov2_runner"
+    RUNNER_PATH="dinov2"
+    EXPECTED_OUTPUT="Samoyed"
+    PREPROCESSOR=""
+    TOKENIZER_URL=""
+    TOKENIZER_FILE=""
+    AUDIO_URL=""
+    AUDIO_FILE=""
+    IMAGE_URL="https://github.com/pytorch/hub/raw/master/images/dog.jpg"
+    IMAGE_PATH=""
+    ;;
   mistralai/Voxtral-Mini-4B-Realtime-2602)
     MODEL_NAME="voxtral_realtime"
     RUNNER_TARGET="voxtral_realtime_runner"
@@ -202,9 +216,33 @@ case "$HF_MODEL" in
     AUDIO_FILE="test_audio.wav"
     IMAGE_PATH=""
     ;;
+  SocialLocalMobile/Qwen3.5-35B-A3B-HQQ-INT4)
+    MODEL_NAME="qwen3_5_moe"
+    RUNNER_TARGET="qwen3_5_moe_runner"
+    RUNNER_PATH="qwen3_5_moe"
+    EXPECTED_OUTPUT="Paris"
+    PREPROCESSOR=""
+    TOKENIZER_URL=""
+    TOKENIZER_FILE="tokenizer.json"
+    AUDIO_URL=""
+    AUDIO_FILE=""
+    IMAGE_PATH=""
+    ;;
+  unsloth/gemma-4-31B-it-GGUF)
+    MODEL_NAME="gemma4_31b"
+    RUNNER_TARGET="gemma4_31b_runner"
+    RUNNER_PATH="gemma4_31b"
+    EXPECTED_OUTPUT="Paris"
+    PREPROCESSOR=""
+    TOKENIZER_URL=""
+    TOKENIZER_FILE="tokenizer.json"
+    AUDIO_URL=""
+    AUDIO_FILE=""
+    IMAGE_PATH=""
+    ;;
   *)
     echo "Error: Unsupported model '$HF_MODEL'"
-    echo "Supported models: mistralai/Voxtral-Mini-3B-2507, mistralai/Voxtral-Mini-4B-Realtime-2602, nvidia/diar_streaming_sortformer_4spk-v2, openai/whisper series (whisper-{small, medium, large, large-v2, large-v3, large-v3-turbo}), google/gemma-3-4b-it, Qwen/Qwen3-0.6B, nvidia/parakeet-tdt"
+    echo "Supported models: mistralai/Voxtral-Mini-3B-2507, mistralai/Voxtral-Mini-4B-Realtime-2602, nvidia/diar_streaming_sortformer_4spk-v2, openai/whisper series (whisper-{small, medium, large, large-v2, large-v3, large-v3-turbo}), google/gemma-3-4b-it, Qwen/Qwen3-0.6B, nvidia/parakeet-tdt, facebook/dinov2-small-imagenet1k-1-layer, SocialLocalMobile/Qwen3.5-35B-A3B-HQQ-INT4, unsloth/gemma-4-31B-it-GGUF"
     exit 1
     ;;
 esac
@@ -218,24 +256,41 @@ echo "::group::Prepare $MODEL_NAME Artifacts"
 
 
 # Download tokenizer files (skip for models that bundle tokenizer in export or do not use one)
-if [ "$MODEL_NAME" != "parakeet" ] && [ "$MODEL_NAME" != "voxtral_realtime" ] && [ "$MODEL_NAME" != "sortformer" ]; then
+if [ "$MODEL_NAME" != "parakeet" ] && [ "$MODEL_NAME" != "voxtral_realtime" ] && [ "$MODEL_NAME" != "sortformer" ] && [ "$MODEL_NAME" != "dinov2" ] && [ "$MODEL_NAME" != "qwen3_5_moe" ] && [ "$MODEL_NAME" != "gemma4_31b" ]; then
   if [ "$TOKENIZER_FILE" != "" ]; then
-    curl -L $TOKENIZER_URL/$TOKENIZER_FILE -o $MODEL_DIR/$TOKENIZER_FILE
+    curl -L --retry 3 --retry-all-errors $TOKENIZER_URL/$TOKENIZER_FILE -o $MODEL_DIR/$TOKENIZER_FILE
   else
-    curl -L $TOKENIZER_URL/tokenizer.json -o $MODEL_DIR/tokenizer.json
-    curl -L $TOKENIZER_URL/tokenizer_config.json -o $MODEL_DIR/tokenizer_config.json
-    curl -L $TOKENIZER_URL/special_tokens_map.json -o $MODEL_DIR/special_tokens_map.json
+    curl -L --retry 3 --retry-all-errors $TOKENIZER_URL/tokenizer.json -o $MODEL_DIR/tokenizer.json
+    curl -L --retry 3 --retry-all-errors $TOKENIZER_URL/tokenizer_config.json -o $MODEL_DIR/tokenizer_config.json
+    curl -L --retry 3 --retry-all-errors $TOKENIZER_URL/special_tokens_map.json -o $MODEL_DIR/special_tokens_map.json
   fi
 fi
 
 # Download test files
 if [ "$AUDIO_URL" != "" ]; then
-  curl -L $AUDIO_URL -o ${MODEL_DIR}/$AUDIO_FILE
+  curl -L --retry 3 --retry-all-errors $AUDIO_URL -o ${MODEL_DIR}/$AUDIO_FILE
 elif [[ "$MODEL_NAME" == *whisper* ]] || [ "$MODEL_NAME" = "voxtral_realtime" ]; then
-  conda install -y -c conda-forge "ffmpeg<8"
+  if ! command -v ffmpeg >/dev/null; then
+    if [ "$(uname -s)" = "Linux" ] && command -v apt-get >/dev/null; then
+      if [ "$(id -u)" -eq 0 ]; then
+        apt-get update
+        apt-get install -y --no-install-recommends ffmpeg
+      else
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends ffmpeg
+      fi
+    else
+      conda install -y -c conda-forge ffmpeg
+    fi
+  fi
   pip install datasets soundfile
-  pip install torchcodec==0.11.0 --index-url https://download.pytorch.org/whl/cpu
+  pip install torchcodec==0.15.0 --index-url https://download.pytorch.org/whl/cpu
   python -c "from datasets import load_dataset;import soundfile as sf;sample = load_dataset('distil-whisper/librispeech_long', 'clean', split='validation')[0]['audio'];sf.write('${MODEL_DIR}/$AUDIO_FILE', sample['array'][:sample['sampling_rate']*30], sample['sampling_rate'])"
+fi
+
+# Download test image for vision models
+if [ -n "${IMAGE_URL:-}" ]; then
+  curl -L --retry 3 --retry-all-errors "$IMAGE_URL" -o "${MODEL_DIR}/test_image.jpg"
 fi
 
 ls -al
@@ -316,6 +371,18 @@ EOF
       RUNNER_ARGS="$RUNNER_ARGS --data_path ${MODEL_DIR}/aoti_cuda_blob.ptd"
     fi
     ;;
+  dinov2)
+    RUNNER_ARGS="--model_path ${MODEL_DIR}/model.pte --image_path ${MODEL_DIR}/test_image.jpg"
+    if [ "$DEVICE" = "cuda" ]; then
+      RUNNER_ARGS="$RUNNER_ARGS --data_path ${MODEL_DIR}/aoti_cuda_blob.ptd"
+    fi
+    ;;
+  qwen3_5_moe)
+    RUNNER_ARGS="$RUNNER_ARGS --tokenizer_path ${MODEL_DIR}/$TOKENIZER_FILE --prompt 'What is the capital of France?' --max_new_tokens 128 --temperature 0 --cuda_graph"
+    ;;
+  gemma4_31b)
+    RUNNER_ARGS="$RUNNER_ARGS --tokenizer_path ${MODEL_DIR}/$TOKENIZER_FILE --prompt 'What is the capital of France?' --max_new_tokens 128 --temperature 0 --cuda_graph"
+    ;;
   voxtral_realtime)
     RUNNER_ARGS="--model_path ${MODEL_DIR}/model.pte --tokenizer_path ${MODEL_DIR}/$TOKENIZER_FILE --preprocessor_path ${MODEL_DIR}/$PREPROCESSOR --audio_path ${MODEL_DIR}/$AUDIO_FILE --temperature 0"
     # Add CUDA data path if present
@@ -334,7 +401,7 @@ EOF
     ;;
 esac
 
-OUTPUT=$($RUNNER_BIN $RUNNER_ARGS 2>&1)
+OUTPUT=$(eval $RUNNER_BIN $RUNNER_ARGS 2>&1)
 EXIT_CODE=$?
 set -e
 
@@ -357,6 +424,128 @@ if [ -n "$EXPECTED_OUTPUT" ]; then
 else
   echo "SUCCESS: Runner completed successfully"
 fi
+
+# Validate GPU peak memory usage for models with known memory budgets.
+# The runner prints "GPU peak memory usage: XXXX.X MiB" at the end.
+case "$MODEL_NAME" in
+  qwen3_5_moe)
+    MAX_MEMORY_MIB=20480  # 20 GB — must fit on a single GPU (e.g. 4090)
+    PEAK_MEM=$(echo "$OUTPUT" | grep -oP 'GPU peak memory usage: \K[0-9.]+' || true)
+    if [ -n "$PEAK_MEM" ]; then
+      # Compare as integers (truncate decimals)
+      PEAK_MEM_INT=${PEAK_MEM%%.*}
+      if [ "$PEAK_MEM_INT" -gt "$MAX_MEMORY_MIB" ]; then
+        echo "FAIL: GPU peak memory ${PEAK_MEM} MiB exceeds budget ${MAX_MEMORY_MIB} MiB"
+        exit 1
+      else
+        echo "Success: GPU peak memory ${PEAK_MEM} MiB within budget (max ${MAX_MEMORY_MIB} MiB)"
+      fi
+    else
+      echo "WARNING: GPU peak memory usage not found in output"
+    fi
+    ;;
+esac
 echo "::endgroup::"
+
+if [ "$DEVICE" = "cuda" ] && [ "$MODEL_NAME" = "qwen3_5_moe" ]; then
+  echo "::group::Run $MODEL_NAME OpenAI serving smoke"
+  pip install -r examples/llm_server/python/requirements.txt "transformers==5.0.0rc1"
+  python -m pip install --no-deps --no-build-isolation --editable . -v
+
+  PORT=$(python - <<'PY'
+import socket
+
+with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s.bind(("127.0.0.1", 0))
+    print(s.getsockname()[1])
+PY
+)
+  SERVER_LOG=$(mktemp)
+  WORKER_BIN="cmake-out/examples/models/qwen3_5_moe/qwen3_5_moe_worker"
+  python -u -m executorch.examples.models.qwen3_5_moe.serve \
+    --model-path "${MODEL_DIR}/model.pte" \
+    --data-path "${MODEL_DIR}/aoti_cuda_blob.ptd" \
+    --tokenizer-path "${MODEL_DIR}/tokenizer.json" \
+    --hf-tokenizer "${MODEL_DIR}" \
+    --model-id qwen3.5-moe \
+    --max-context 4096 \
+    --max-sessions 2 \
+    --no-think \
+    --worker-bin "$WORKER_BIN" \
+    --host 127.0.0.1 \
+    --port "$PORT" >"$SERVER_LOG" 2>&1 &
+  SERVER_PID=$!
+
+  cleanup_qwen_server() {
+    if kill -0 "$SERVER_PID" 2>/dev/null; then
+      kill "$SERVER_PID" 2>/dev/null || true
+      wait "$SERVER_PID" 2>/dev/null || true
+    fi
+    rm -f "$SERVER_LOG"
+  }
+  trap cleanup_qwen_server EXIT
+
+  if ! python - "$PORT" "$SERVER_LOG" <<'PY'
+import json
+import sys
+import time
+import urllib.request
+
+port = sys.argv[1]
+log_path = sys.argv[2]
+base = f"http://127.0.0.1:{port}"
+
+
+def request(path, payload=None):
+    data = None
+    headers = {}
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(base + path, data=data, headers=headers)
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+last = None
+for _ in range(180):
+    try:
+        request("/health")
+        break
+    except Exception as e:
+        last = e
+        time.sleep(1)
+else:
+    print(open(log_path, encoding="utf-8", errors="replace").read())
+    raise RuntimeError(f"server did not become healthy: {last}")
+
+models = request("/v1/models")
+ids = {m["id"] for m in models["data"]}
+if "qwen3.5-moe" not in ids:
+    raise AssertionError(f"qwen3.5-moe missing from /v1/models: {ids}")
+
+body = {
+    "model": "qwen3.5-moe",
+    "messages": [{"role": "user", "content": "What is the capital of France?"}],
+    "max_tokens": 32,
+    "temperature": 0,
+}
+resp = request("/v1/chat/completions", body)
+content = resp["choices"][0]["message"].get("content") or ""
+if "Paris" not in content:
+    raise AssertionError(f"expected Paris in serving response, got: {content!r}")
+
+print("Qwen3.5-MoE serving smoke passed")
+PY
+  then
+    echo "Qwen3.5-MoE serving smoke failed; server log:"
+    cat "$SERVER_LOG"
+    exit 1
+  fi
+
+  cleanup_qwen_server
+  trap - EXIT
+  echo "::endgroup::"
+fi
 
 popd

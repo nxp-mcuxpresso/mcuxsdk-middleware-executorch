@@ -31,7 +31,10 @@ from executorch.exir.dialects._ops import ops as exir_ops
 class ConvolutionSupported(SupportedTOSAOperatorCheck):
     """Provide TOSA support check for convolutions."""
 
-    targets = [exir_ops.edge.aten.convolution.default]
+    targets = [
+        exir_ops.edge.aten.convolution.default,
+        torch.ops.aten.conv_transpose2d.input,
+    ]
 
     def is_node_tosa_supported(
         self, node: fx.Node, tosa_spec: TosaSpecification
@@ -42,9 +45,7 @@ class ConvolutionSupported(SupportedTOSAOperatorCheck):
         padding. Apply additional hardware-specific constraints for U55.
 
         """
-        transposed = cast(bool, node.args[6])
-        output_padding = cast(list[int], node.args[7])
-        groups = cast(int, node.args[8])
+        transposed, output_padding, groups = self._get_conv_params(node)
 
         if transposed:
             if not self._check_transposed_support(node, groups, output_padding):
@@ -67,6 +68,13 @@ class ConvolutionSupported(SupportedTOSAOperatorCheck):
             return input_qparams[1]
         return None
 
+    def _has_per_channel_weight(self, node: fx.Node) -> bool:
+        weight_node = cast(fx.Node, node.args[1])
+        return weight_node.target in (
+            torch.ops.quantized_decomposed.dequantize_per_channel.default,
+            exir_ops.edge.quantized_decomposed.dequantize_per_channel.default,
+        )
+
     def _check_output_padding(self, output_padding: list[int], node: fx.Node) -> bool:
         for output_pad in output_padding:
             if output_pad != 0:
@@ -77,22 +85,44 @@ class ConvolutionSupported(SupportedTOSAOperatorCheck):
                 return False
         return True
 
+    def _get_conv_params(self, node: fx.Node) -> tuple[bool, list[int], int]:
+        """Return transposed, output_padding, and groups for supported conv
+        targets.
+        """
+
+        if node.target == torch.ops.aten.conv_transpose2d.input:
+            return True, cast(list[int], node.args[5]), cast(int, node.args[6])
+        return (
+            cast(bool, node.args[6]),
+            cast(list[int], node.args[7]),
+            cast(int, node.args[8]),
+        )
+
+    def _get_transposed_conv_dilation(self, node: fx.Node) -> list[int]:
+        if node.target == torch.ops.aten.conv_transpose2d.input:
+            return cast(list[int], node.args[7])
+        return cast(list[int], node.args[5])
+
     def _check_transposed_support(
         self, node: fx.Node, groups: int, output_padding: list[int]
     ) -> bool:
+        dilation = expand_around_channel(self._get_transposed_conv_dilation(node), 2)
+        if any(d != 1 for d in dilation):
+            self.reporter.report_reject(
+                node, "Transpose convolutions with dilation are not supported."
+            )
+            return False
+
         if groups != 1:
             weight_qargs = self._get_weight_qargs(node)
-            if isinstance(weight_qargs, QuantArgs) and weight_qargs.per_channel:
+            has_per_channel_qargs = (
+                isinstance(weight_qargs, QuantArgs) and weight_qargs.per_channel
+            )
+            if has_per_channel_qargs or self._has_per_channel_weight(node):
                 self.reporter.report_reject(
                     node,
                     "Grouped transpose convolutions with per-channel weight "
                     "quantization are not supported.",
-                )
-                return False
-            dilation = expand_around_channel(cast(list[int], node.args[5]), 2)
-            if any(d != 1 for d in dilation):
-                self.reporter.report_reject(
-                    node, "Transpose convolutions with dilation are not supported."
                 )
                 return False
 
@@ -124,8 +154,72 @@ class ConvolutionSupported(SupportedTOSAOperatorCheck):
             return False
         return True
 
+    def _check_transposed_conv_u55(self, node: fx.Node) -> bool:
+        """Implement the condition checks specified in
+        https://gitlab.arm.com/artificial-intelligence/ethos-u/ethos-u-vela/-/blob/main/SUPPORTED_OPS.md?ref_type=heads#ethos-u55-and-ethos-u65-tosa-transpose_conv2d-constraints
+        for the TransposeConv2D for Ethos-U55.
+        """
+        input_fake_tensor = get_first_fake_tensor(cast(fx.Node, node.args[0]))
+        if input_fake_tensor.dim() != 4:
+            self.reporter.report_reject(
+                node,
+                f"TransposeConv2d requires 4D input, got rank {input_fake_tensor.dim()}.",
+            )
+            return False
+        # For TransposeConv2D, the input tensor can only be 4D, hence we don't expect 3D input tensor.
+        # In case of a 3D input tensor, the user should first unsqueeze the tensor and then pass it
+        # to the TransposeConv2D, otherwise PyTorch throws an error.
+        input_C = input_fake_tensor.shape[1]
+        input_H = input_fake_tensor.shape[2]
+        input_W = input_fake_tensor.shape[3]
+
+        kernel = cast(fx.Node, node.args[1]).meta["val"].shape
+        kernel_h = kernel[2]
+        kernel_w = kernel[3] if len(kernel) > 3 else 1
+        if (
+            input_C > 65536
+            or input_C < 1
+            or input_H > 65536
+            or input_H < 1
+            or input_W > 65536
+            or input_W < 1
+        ):
+            self.reporter.report_reject(
+                node,
+                f"HWC must be in the range [1;65536] but got {input_C} {input_H} {input_W}",
+            )
+            return False
+
+        if (
+            kernel_h * kernel_w > 4096
+            or kernel_h * kernel_w < 1
+            or kernel_h > 64
+            or kernel_h < 1
+        ):
+            self.reporter.report_reject(
+                node,
+                f"Kernel Height * Kernel Width must be in the range [1;4096] but got {kernel_h * kernel_w}",
+            )
+            return False
+        strides = expand_around_channel(cast(list[int], node.args[3]), 2)
+        stride = (strides[0], strides[1])
+        ok = False
+        if stride in ((1, 1), (2, 2)):
+            ok = True
+        elif stride == (1, 2):
+            ok = input_H == 1 and kernel_h == 1
+        elif stride == (2, 1):
+            ok = input_W == 1 and kernel_w == 1
+        if not ok:
+            self.reporter.report_reject(
+                node,
+                f"Unsupported stride of {stride} for Ethos-U55. You can use stride of (1,1) or (2,2), stride (1,2) for IFM height kernel height of 1 and stride(2,1) for IFM width and kernel width of 1",
+            )
+            return False
+        return True
+
     def _is_node_supported_u55(self, node: fx.Node) -> bool:
-        """Enforce Ethos-U55-specific constraints (Vela 4.2.0).
+        """Enforce Ethos-U55-specific constraints (Vela 5.0.0).
 
         Check channel dimensions, kernel sizes, and stride/pad/dilation
         combinations permitted on U55.
@@ -139,23 +233,7 @@ class ConvolutionSupported(SupportedTOSAOperatorCheck):
         """
         transposed = cast(bool, node.args[6])
         if transposed:
-            kernel = cast(fx.Node, node.args[1]).meta["val"].shape
-            kernel_h = kernel[2]
-            kernel_w = kernel[3] if len(kernel) > 3 else 1
-            if kernel_h != kernel_w:
-                self.reporter.report_reject(
-                    node,
-                    f"Transpose convolution on U55 requires square kernels, got ({kernel_w}, {kernel_h}).",
-                )
-                return False
-
-            strides = expand_around_channel(cast(list[int], node.args[3]), 2)
-            if strides[0] != strides[1]:
-                self.reporter.report_reject(
-                    node,
-                    f"Transpose convolution on U55 requires equal strides, got {strides}.",
-                )
-                return False
+            return self._check_transposed_conv_u55(node)
 
         shape_in = cast(torch.Tensor, node.all_input_nodes[0].meta["val"]).shape
         shape_out = node.meta["val"].shape

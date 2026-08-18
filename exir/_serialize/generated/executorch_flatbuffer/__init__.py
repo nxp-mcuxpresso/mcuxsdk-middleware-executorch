@@ -13,6 +13,7 @@ from . import ContainerMetadata
 from . import DataLocation
 from . import DataSegment
 from . import DelegateCall
+from . import DeviceType
 from . import Double
 from . import DoubleList
 from . import EValue
@@ -30,6 +31,7 @@ from . import KernelCall
 from . import KernelTypes
 from . import MoveCall
 from . import NamedData
+from . import NonConstBufferDevice
 from . import Null
 from . import Operator
 from . import OptionalTensorList
@@ -56,6 +58,7 @@ __all__ = [
     "DataLocation",
     "DataSegment",
     "DelegateCall",
+    "DeviceType",
     "Double",
     "DoubleList",
     "EValue",
@@ -73,6 +76,7 @@ __all__ = [
     "KernelTypes",
     "MoveCall",
     "NamedData",
+    "NonConstBufferDevice",
     "Null",
     "Operator",
     "OptionalTensorList",

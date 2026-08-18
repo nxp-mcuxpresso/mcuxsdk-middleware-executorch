@@ -1,23 +1,35 @@
 #!/usr/bin/env python
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
+# Copyright 2026 Arm Limited and/or its affiliates.
 #
 # This source code is licensed under the BSD-style license found in the
 # LICENSE file in the root directory of this source tree.
+
+import sys
 
 import test_base
 from examples.models import Backend, Model
 
 if __name__ == "__main__":
-    test_base.run_tests(
-        model_tests=[
-            test_base.ModelTest(
-                model=Model.Mv3,
-                backend=Backend.XnnpackQuantizationDelegation,
-            ),
+    test_base.test_native_library_paths()
+    test_base.test_uv_wheel_install()
+    test_base.test_cmsis_nn_install()
+
+    model_tests = [
+        test_base.ModelTest(
+            model=Model.Mv3,
+            backend=Backend.XnnpackQuantizationDelegation,
+        ),
+    ]
+    if sys.version_info < (3, 14):
+        model_tests.append(
             test_base.ModelTest(
                 model=Model.Mv3,
                 backend=Backend.CoreMlExportAndTest,
-            ),
-        ]
-    )
+            )
+        )
+    else:
+        print("Skipping Core ML test: coremltools 9.0 does not support Python 3.14")
+
+    test_base.run_tests(model_tests=model_tests)

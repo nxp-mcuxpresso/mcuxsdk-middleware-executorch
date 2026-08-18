@@ -63,7 +63,11 @@ else()
   set(CMAKE_TOOLCHAIN_IOS OFF)
 endif()
 
-set(_common_compile_options -Wno-deprecated-declarations -fPIC)
+if(MSVC)
+  set(_common_compile_options /wd4996)
+else()
+  set(_common_compile_options -Wno-deprecated-declarations -fPIC)
+endif()
 
 # Let files say "include <executorch/path/to/header.h>".
 set(_common_include_directories ${EXECUTORCH_ROOT}/..)
@@ -107,8 +111,13 @@ else()
 endif()
 
 # quantized_ops_lib: Register quantized op kernels into the runtime
-executorch_target_link_options_shared_lib(quantized_ops_lib)
-list(APPEND link_libraries quantized_kernels quantized_ops_lib)
+if(TARGET quantized_ops_lib)
+  list(APPEND link_libraries quantized_kernels quantized_ops_lib)
+  get_target_property(_quantized_imported quantized_ops_lib IMPORTED)
+  if(NOT _quantized_imported)
+    executorch_target_link_options_shared_lib(quantized_ops_lib)
+  endif()
+endif()
 
 if(TARGET custom_ops)
   executorch_target_link_options_shared_lib(custom_ops)
@@ -181,7 +190,9 @@ endif()
 # Qnn backend
 if(TARGET qnn_executorch_backend)
   list(APPEND link_libraries qnn_executorch_backend)
-  executorch_target_link_options_shared_lib(qnn_executorch_backend)
+  if(NOT MSVC)
+    executorch_target_link_options_shared_lib(qnn_executorch_backend)
+  endif()
 endif()
 
 # MPS backend
@@ -196,6 +207,12 @@ if(TARGET mpsdelegate)
     "-weak_framework Metal"
   )
   executorch_target_link_options_shared_lib(mpsdelegate)
+endif()
+
+# MLX backend
+if(TARGET mlxdelegate)
+  list(APPEND link_libraries mlxdelegate mlx)
+  executorch_target_link_options_shared_lib(mlxdelegate)
 endif()
 
 # Openvino backend
@@ -225,6 +242,11 @@ if(ANDROID)
 endif()
 
 add_executable(llama_main ${_srcs})
+
+# Copy MLX metallib for runtime if MLX delegate is enabled
+if(TARGET mlxdelegate)
+  executorch_target_copy_mlx_metallib(llama_main)
+endif()
 
 # Only strip symbols for Release and MinSizeRel builds.
 if(CMAKE_BUILD_TYPE STREQUAL "Release" OR CMAKE_BUILD_TYPE STREQUAL

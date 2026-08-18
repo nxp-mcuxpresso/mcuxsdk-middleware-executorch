@@ -8,9 +8,8 @@ on:
       - .github/workflows/build-wheels-linux.yml
       - examples/**/*
       - pyproject.toml
+      - requirements-examples.txt
       - setup.py
-    tags:
-      - ciflow/binaries/*
   push:
     branches:
       - nightly
@@ -24,15 +23,15 @@ on:
 
 jobs:
   generate-matrix:
-    uses: pytorch/test-infra/.github/workflows/generate_binary_build_matrix.yml@release/2.11
+    uses: pytorch/test-infra/.github/workflows/generate_binary_build_matrix.yml@release/2.13
     with:
       package-type: wheel
       os: linux
       test-infra-repository: pytorch/test-infra
-      test-infra-ref: release/2.11
+      test-infra-ref: release/2.13
       with-cuda: disabled
       with-rocm: disabled
-      python-versions: '["3.10", "3.11", "3.12", "3.13"]'
+      python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
 
   build:
     needs: generate-matrix
@@ -49,12 +48,12 @@ jobs:
             smoke-test-script: .ci/scripts/wheel/test_linux.py
             package-name: executorch
     name: ${{ matrix.repository }}
-    uses: pytorch/test-infra/.github/workflows/build_wheels_linux.yml@release/2.11
+    uses: pytorch/test-infra/.github/workflows/build_wheels_linux.yml@release/2.13
     with:
       repository: ${{ matrix.repository }}
       ref: ""
       test-infra-repository: pytorch/test-infra
-      test-infra-ref: release/2.11
+      test-infra-ref: release/2.13
       build-matrix: ${{ needs.generate-matrix.outputs.matrix }}
       submodules: recursive
       env-var-script: .ci/scripts/wheel/envvar_linux.sh

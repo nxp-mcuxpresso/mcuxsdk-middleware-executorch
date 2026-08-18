@@ -9,6 +9,7 @@
 #include <executorch/kernels/test/FunctionHeaderWrapper.h> // Declares the operator
 #include <executorch/kernels/test/TestUtil.h>
 #include <executorch/kernels/test/supported_features.h>
+#include <executorch/kernels/test/supported_features_skip.h>
 #include <executorch/runtime/core/exec_aten/exec_aten.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_factory.h>
 #include <executorch/runtime/core/exec_aten/testing_util/tensor_util.h>
@@ -164,7 +165,7 @@ TEST_F(OpConvCorrectnessTest, GenericSmokeTest) {
   op_convolution_out(
       input,
       weight,
-      std::optional<Tensor>(bias),
+      bias,
       executorch::aten::ArrayRef<int64_t>{stride, 1},
       executorch::aten::ArrayRef<int64_t>{padding, 1},
       executorch::aten::ArrayRef<int64_t>{dilation, 1},
@@ -466,9 +467,9 @@ TEST_F(OpConvOutTest, DynamicShapeUpperBoundLargerThanExpected) {
 }
 
 TEST_F(OpConvOutTest, DynamicShapeUnbound) {
-  if (!torch::executor::testing::SupportedFeatures::get()->output_resize) {
-    GTEST_SKIP() << "Dynamic shape unbound not supported";
-  }
+  ET_SKIP_IF(
+      !torch::executor::testing::SupportedFeatures::get()->output_resize,
+      "Dynamic shape unbound not supported");
   test_dynamic_shape(
       {1, 1, 1}, torch::executor::TensorShapeDynamism::DYNAMIC_UNBOUND);
 }
@@ -492,7 +493,7 @@ TEST_F(OpConvCorrectnessTest, InvalidInputShape) {
       op_convolution_out(
           input,
           weight,
-          std::optional<Tensor>(bias),
+          bias,
           executorch::aten::ArrayRef<int64_t>{stride, 1},
           executorch::aten::ArrayRef<int64_t>{padding, 1},
           executorch::aten::ArrayRef<int64_t>{dilation, 1},
@@ -506,7 +507,7 @@ TEST_F(OpConvCorrectnessTest, InvalidInputShape) {
       op_convolution_out(
           input,
           weight,
-          std::optional<Tensor>(bias),
+          bias,
           executorch::aten::ArrayRef<int64_t>{stride, 1},
           executorch::aten::ArrayRef<int64_t>{padding, 1},
           executorch::aten::ArrayRef<int64_t>{dilation, 1},
@@ -538,7 +539,7 @@ TEST_F(OpConvCorrectnessTest, TransposedDefaultParams) {
   op_convolution_out(
       input,
       weight,
-      std::optional<Tensor>(bias),
+      bias,
       executorch::aten::ArrayRef<int64_t>{stride, 1},
       executorch::aten::ArrayRef<int64_t>{padding, 1},
       executorch::aten::ArrayRef<int64_t>{dilation, 1},
@@ -575,7 +576,7 @@ TEST_F(OpConvCorrectnessTest, TransposedNonDefaultParams) {
   op_convolution_out(
       input,
       weight,
-      std::optional<Tensor>(bias),
+      bias,
       executorch::aten::ArrayRef<int64_t>{stride, 1},
       executorch::aten::ArrayRef<int64_t>{padding, 1},
       executorch::aten::ArrayRef<int64_t>{dilation, 1},
@@ -643,7 +644,7 @@ TEST_F(OpConvCorrectnessTest, TransposedDefaultParamsChannelsLast) {
   op_convolution_out(
       input,
       weight,
-      std::optional<Tensor>(bias),
+      bias,
       executorch::aten::ArrayRef<int64_t>{stride, 1},
       executorch::aten::ArrayRef<int64_t>{padding, 1},
       executorch::aten::ArrayRef<int64_t>{dilation, 1},
@@ -687,7 +688,7 @@ TEST_F(OpConvCorrectnessTest, TransposedNonDefaultParamsChannelsLast) {
   op_convolution_out(
       input,
       weight,
-      std::optional<Tensor>(bias),
+      bias,
       executorch::aten::ArrayRef<int64_t>{stride, 1},
       executorch::aten::ArrayRef<int64_t>{padding, 1},
       executorch::aten::ArrayRef<int64_t>{dilation, 1},
@@ -719,7 +720,7 @@ TEST_F(OpConvCorrectnessTest, InvalidOutputPadding) {
       op_convolution_out(
           input,
           weight,
-          std::optional<Tensor>(bias),
+          bias,
           executorch::aten::ArrayRef<int64_t>{stride, 1},
           executorch::aten::ArrayRef<int64_t>{padding, 1},
           executorch::aten::ArrayRef<int64_t>{dilation, 1},

@@ -40,7 +40,7 @@ $if DYNAMIC_QUANT_VARIANT:
   ${layout_declare_tensor(B, "r", "t_packed_int8_input", "int", PACKED_INPUT_STORAGE, is_scalar_array=False)}
   ${layout_declare_tensor(B, "r", "t_int_input_sums", "int", "buffer", is_scalar_array=False)}
   ${layout_declare_tensor(B, "r", "t_input_scale", DTYPE, "texture3d")}
-  ${layout_declare_tensor(B, "r", "t_input_zp", "int", "texture3d")}
+  ${layout_declare_tensor(B, "r", "t_input_zp", "int8" if ZP_DTYPE_MODE == "zpint8" else DTYPE, "texture3d")}
   ${layout_declare_tensor(B, "r", "t_packed_int4_weight", "int", WEIGHT_STORAGE, is_scalar_array=False)}
   ${layout_declare_tensor(B, "r", "t_weight_sums", "int", "buffer", is_scalar_array=False)}
   ${layout_declare_tensor(B, "r", "t_weight_scales", DTYPE, "buffer", is_scalar_array=False)}
@@ -142,6 +142,11 @@ void main() {
   // Only the first thread will write out result
   if (lid == 0) {
     out_tile = partial_sums[0];
+    if (apply_bias > 0) {
+      FPPerOutChannelParams bias_tile;
+      load_bias_tile(bias_tile, n4);
+      add_bias_to_out_tile(out_tile, bias_tile);
+    }
     write_output_tile_with_checks(out_tile, n4, 0, N4, 1);
   }
 }

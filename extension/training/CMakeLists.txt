@@ -66,6 +66,7 @@ if(EXECUTORCH_BUILD_PYBIND)
     _training_lib SHARED
     ${CMAKE_CURRENT_SOURCE_DIR}/pybindings/_training_lib.cpp
   )
+  strip_python_lib(_training_lib)
   set_target_properties(_training_lib PROPERTIES CXX_STANDARD 20)
 
   target_include_directories(_training_lib PRIVATE ${TORCH_INCLUDE_DIRS})
@@ -81,6 +82,19 @@ if(EXECUTORCH_BUILD_PYBIND)
   )
   target_link_libraries(_training_lib PRIVATE ${_pybind_training_dep_libs})
 
+  if(APPLE)
+    set(_training_lib_rpath
+        "@loader_path/../../../../torch/lib;@loader_path/../../../../../.."
+    )
+  else()
+    set(_training_lib_rpath
+        "$ORIGIN/../../../../torch/lib:$ORIGIN/../../../../../.."
+    )
+  endif()
+  set_target_properties(
+    _training_lib PROPERTIES INSTALL_RPATH "${_training_lib_rpath}"
+  )
+
   install(TARGETS _training_lib
           LIBRARY DESTINATION executorch/extension/training/pybindings
   )
@@ -93,4 +107,19 @@ install(
   DESTINATION ${CMAKE_INSTALL_LIBDIR}
   INCLUDES
   DESTINATION ${_common_include_directories}
+)
+
+# Headers
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/executorch/extension/training
+  FILES_MATCHING
+  PATTERN "*.h"
+)
+
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/optimizer
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/executorch/extension/training
+  FILES_MATCHING
+  PATTERN "*.h"
 )

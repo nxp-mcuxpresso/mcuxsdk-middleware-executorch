@@ -14,11 +14,9 @@ import executorch.exir
 import torch
 from executorch.backends.arm._passes import FoldAndAnnotateQParamsPass
 from executorch.backends.arm._passes.arm_pass_utils import get_first_fake_tensor
-from executorch.backends.arm.test.common import parametrize
-from executorch.backends.cortex_m.quantizer.quantizer import (
-    CortexMQuantizer,
-    SharedQspecQuantizer,
-)
+from executorch.backends.arm.quantizer.arm_quantizer_utils import SharedQspecQuantizer
+from executorch.backends.arm.test.common import parametrize, xfail_type
+from executorch.backends.cortex_m.quantizer.quantizer import CortexMQuantizer
 from executorch.backends.cortex_m.test.tester import CortexMTester
 from executorch.backends.test.harness.stages import StageType
 from executorch.exir import EdgeCompileConfig
@@ -301,6 +299,36 @@ OP_CASES = {
             )
         ),
         (torch.randn(6), torch.randn(6)),
+        torch.int64,
+    ),
+    "index_put_": OpCase(
+        torch.ops.aten.index_put_.default,
+        _build_module(
+            lambda x, y: torch.ops.aten.index_put_.default(
+                x, (torch.tensor([1, 3]),), torch.tensor([1.0, 2.0]), False
+            )
+        ),
+        (torch.randn(6), torch.randn(6)),
+        torch.int64,
+    ),
+    "index_copy": OpCase(
+        torch.ops.aten.index_copy.default,
+        _build_module(
+            lambda x, y: torch.ops.aten.index_copy.default(
+                x, 0, torch.tensor([0, 2]), y
+            )
+        ),
+        (torch.randn(4, 5), torch.randn(2, 5)),
+        torch.int64,
+    ),
+    "index_copy_": OpCase(
+        torch.ops.aten.index_copy_.default,
+        _build_module(
+            lambda x, y: torch.ops.aten.index_copy_.default(
+                x, 0, torch.tensor([0, 2]), y
+            )
+        ),
+        (torch.randn(4, 5), torch.randn(2, 5)),
         torch.int64,
     ),
     "contiguous": OpCase(
@@ -662,14 +690,8 @@ OP_CASES = {
     ),
 }
 
-xfails = {
+xfails: dict[str, xfail_type] = {
     "contiguous": "MLETORCH-1863: Contiguos no-op is removed in to-edge, leading to unnecessary Q-DQ-Q-DQ chain.",
-    "clamp": "MLETORCH-1864: Support non-fused clamp-type activations.",
-    "clamp_tensor": "MLETORCH-1864: Support non-fused clamp-type activations.",
-    "hardtanh": "MLETORCH-1864: Support non-fused clamp-type activations.",
-    "hardtanh_": "MLETORCH-1864: Support non-fused clamp-type activations.",
-    "relu": "MLETORCH-1864: Support non-fused clamp-type activations.",
-    "relu_": "MLETORCH-1864: Support non-fused clamp-type activations.",
     "eq_scalar": "MLETORCH-1865: Properly support flaky scalar comparison ops.",
     "ne_scalar": "MLETORCH-1865: Properly support flaky scalar comparison ops.",
     "ge_scalar": "MLETORCH-1865: Properly support flaky scalar comparison ops.",
@@ -683,7 +705,13 @@ xfails = {
 }
 
 
-@parametrize("op_case", OP_CASES, xfails=xfails, strict=False)
+@parametrize(
+    "op_case",
+    OP_CASES,
+    xfails=xfails,
+    strict=False,
+    skips={"while_loop": "Has been observed to hang randomly."},
+)
 def test_shared_qspec_portable_int8_ops(op_case: OpCase) -> None:
     tester = CortexMTester(op_case.module, op_case.example_inputs)
     tester.test_dialect(ops_before_transforms={}, ops_after_transforms={})

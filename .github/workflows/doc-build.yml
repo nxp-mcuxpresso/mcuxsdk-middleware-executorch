@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.13
     permissions:
       id-token: write
       contents: read
@@ -28,6 +28,7 @@ jobs:
         include:
           - build-tool: buck2
     with:
+      test-infra-ref: release/2.13
       job-name: Build doc
       runner: linux.2xlarge
       docker-image: ci-image:executorch-ubuntu-22.04-clang12-android
@@ -98,13 +99,16 @@ jobs:
     permissions:
       id-token: write
       contents: write
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.13
     secrets: inherit
     with:
-      secrets-env: DOC_BUILD_GITHUB_TOKEN
+      test-infra-ref: release/2.13
       repository: pytorch/executorch
       download-artifact: docs
       ref: gh-pages
+      # Publish on the host so actions/checkout's persisted credentials are
+      # available to git push.
+      run-with-docker: false
       timeout: 90
       script: |
         set -euo pipefail
@@ -134,9 +138,6 @@ jobs:
         mkdir -p "${TARGET_FOLDER}"
         mv "${RUNNER_ARTIFACT_DIR}"/html/* "${TARGET_FOLDER}"
         git add "${TARGET_FOLDER}" || true
-
-        echo "::add-mask::$SECRET_DOC_BUILD_GITHUB_TOKEN" # Mask the secret in GH logs
-        git remote set-url origin https://x-access-token:$SECRET_DOC_BUILD_GITHUB_TOKEN@github.com/pytorch/executorch.git
 
         git config user.name 'pytorchbot'
         git config user.email 'soumith+bot@pytorch.org'

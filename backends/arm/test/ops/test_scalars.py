@@ -21,8 +21,6 @@ FP:
 
 from typing import Tuple
 
-import pytest
-
 import torch
 
 from executorch.backends.arm.test import common
@@ -168,13 +166,6 @@ xfails = {
     "float_r4_st": "MLETORCH-408: Arithmetic ops can't handle scalars first",
 }
 
-int_inplace_xfails = {
-    "int_r1_ts": "MLETORCH-1708: Numerical error in TFA/quantization",
-    "int_r4_ts": "MLETORCH-1708: Numerical error in TFA/quantization",
-    "float_r1_ts": "MLETORCH-1708: Numerical error in TFA/quantization",
-    "float_r4_ts": "MLETORCH-1708: Numerical error in TFA/quantization",
-}
-
 
 # ADD FP ------------------------------------------------------
 @common.parametrize("test_data", tensor_scalar_tests, xfails=xfails)
@@ -215,9 +206,7 @@ def test_add_tensor_tosa_INT_scalar(test_data):
     pipeline.run()
 
 
-@common.parametrize(
-    "test_data", tensor_scalar_tests, xfails=int_inplace_xfails, strict=False
-)
+@common.parametrize("test_data", tensor_scalar_tests)
 def test_add_tensor_tosa_INT_inplace(test_data):
     """Tests inplace add with one scalar input."""
     pipeline = TosaPipelineINT[input_t1](AddInplace(), test_data, aten_op=[])
@@ -238,17 +227,6 @@ def test_add_scalar_tosa_INT(test_data):
     """Tests a scalar add with one scalar input."""
     pipeline = TosaPipelineINT[input_t1](AddScalar(), test_data, aten_op=Add.aten_op)
     pipeline.run()
-
-
-# ADD ETHOS-U ------------------------------------------------------
-@pytest.mark.skip(reason="This is tested in test_add_scalar_tosa_INT")
-def test_add_scalar_u55_INT():
-    pass
-
-
-@pytest.mark.skip(reason="This is tested in test_add_scalar_tosa_INT")
-def test_add_scalar_u85_INT():
-    pass
 
 
 # SUB FP ------------------------------------------------------
@@ -285,9 +263,7 @@ def test_sub_tensor_tosa_INT_scalar(test_data):
     pipeline.run()
 
 
-@common.parametrize(
-    "test_data", tensor_scalar_tests, xfails=int_inplace_xfails, strict=False
-)
+@common.parametrize("test_data", tensor_scalar_tests)
 def test_sub_tensor_tosa_INT_inplace(test_data):
     """Tests inplace sub with one scalar input."""
     pipeline = TosaPipelineINT[input_t1](SubInplace(), test_data, aten_op=[])
@@ -299,17 +275,6 @@ def test_sub_scalar_tosa_INT(test_data):
     """Tests a scalar sub with one scalar input."""
     pipeline = TosaPipelineINT[input_t1](SubScalar(), test_data, aten_op=Sub.aten_op)
     pipeline.run()
-
-
-# SUB ETHOS-U ------------------------------------------------------
-@pytest.mark.skip(reason="This is tested in test_sub_scalar_tosa_INT")
-def test_sub_scalar_u55_INT():
-    pass
-
-
-@pytest.mark.skip(reason="This is tested in test_sub_scalar_tosa_INT")
-def test_sub_scalar_u85_INT():
-    pass
 
 
 # MUL FP ------------------------------------------------------
@@ -344,9 +309,7 @@ def test_mul_tensor_tosa_INT_scalar(test_data):
     pipeline.run()
 
 
-@common.parametrize(
-    "test_data", tensor_scalar_tests, xfails=int_inplace_xfails, strict=False
-)
+@common.parametrize("test_data", tensor_scalar_tests)
 def test_mul_tensor_tosa_INT_inplace(test_data):
     """Tests inplace mul with one scalar input."""
     pipeline = TosaPipelineINT[input_t1](MulInplace(), test_data, aten_op=[])
@@ -358,17 +321,6 @@ def test_mul_scalar_tosa_INT(test_data):
     """Tests a scalar mul with one scalar input."""
     pipeline = TosaPipelineINT[input_t1](MulScalar(), test_data, aten_op=Mul.aten_op)
     pipeline.run()
-
-
-# MUL ETHOS-U ------------------------------------------------------
-@pytest.mark.skip(reason="This is tested in test_mul_scalar_tosa_INT")
-def test_mul_scalar_u55_INT():
-    pass
-
-
-@pytest.mark.skip(reason="This is tested in test_mul_scalar_tosa_INT")
-def test_mul_scalar_u85_INT():
-    pass
 
 
 # DIV FP ------------------------------------------------------
@@ -425,21 +377,7 @@ def test_div_scalar_tosa_INT(test_data):
     pipeline.run()
 
 
-# DIV ETHOS-U ------------------------------------------------------
-@pytest.mark.skip(reason="This is tested in test_div_scalar_tosa_INT")
-def test_div_scalar_u55_INT():
-    pass
-
-
-@pytest.mark.skip(reason="This is tested in test_div_scalar_tosa_INT")
-def test_div_scalar_u85_INT():
-    pass
-
-
 # SHIFT ETHOS-U ------------------------------------------------------
-@pytest.mark.skip(
-    reason="integer operations (shift and sub) are not supported on FP profile"
-)
 def test_bitwise_right_shift_tensor_tosa_FP_inplace():
     pipeline = TosaPipelineFP[input_t1](
         ShiftInplaceSub(),

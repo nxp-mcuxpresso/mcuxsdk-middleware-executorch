@@ -12,9 +12,11 @@ import sys
 
 from install_utils import determine_torch_url, is_intel_mac_os, python_is_compatible
 
-# The pip repository that hosts torch packages.
+# The pip repository that hosts nightly torch packages.
 # This will be dynamically set based on CUDA availability and CUDA backend enabled/disabled.
-TORCH_URL_BASE = "https://download.pytorch.org/whl"
+TORCH_URL_BASE = "https://download.pytorch.org/whl/test"
+TORCHAO_URL_BASE = "https://download.pytorch.org/whl/nightly"
+TORCHAO_NIGHTLY_VERSION = "0.18.0"
 
 # Since ExecuTorch often uses main-branch features of pytorch, only the nightly
 # pip versions will have the required features.
@@ -43,74 +45,97 @@ def install_requirements(use_pytorch_nightly):
 
     # Determine the appropriate PyTorch URL based on CUDA delegate status
     torch_url = determine_torch_url(TORCH_URL_BASE)
+    torchao_url = determine_torch_url(TORCHAO_URL_BASE)
 
     # pip packages needed by exir.
     TORCH_PACKAGE = [
         # Setting use_pytorch_nightly to false to test the pinned PyTorch commit. Note
         # that we don't need to set any version number there because they have already
         # been installed on CI before this step, so pip won't reinstall them
-        ("torch==2.11.0" if use_pytorch_nightly else "torch"),
+        ("torch==2.13.0" if use_pytorch_nightly else "torch"),
+        f"torchao=={TORCHAO_NIGHTLY_VERSION}",
     ]
 
     # Install the requirements for core ExecuTorch package.
     # `--extra-index-url` tells pip to look for package
     # versions on the provided URL if they aren't available on the default URL.
-    # Use --no-cache-dir to avoid stale cache issues with mutable test wheels.
     subprocess.run(
         [
             sys.executable,
             "-m",
             "pip",
             "install",
-            "--no-cache-dir",
             "-r",
             "requirements-dev.txt",
             *TORCH_PACKAGE,
             "--extra-index-url",
             torch_url,
+            "--extra-index-url",
+            torchao_url,
         ],
         check=True,
     )
 
-    LOCAL_REQUIREMENTS = [
-        "third-party/ao",  # We need the latest kernels for fast iteration, so not relying on pypi.
-    ] + (
-        [
-            "extension/llm/tokenizers",  # TODO(larryliu0820): Setup a pypi package for this.
-        ]
-        if sys.platform != "win32"
-        else []
-    )  # TODO(gjcomer): Re-enable when buildable on Windows.
-
-    # Install packages directly from local copy instead of pypi.
-    # This is usually not recommended.
-    new_env = os.environ.copy()
-    if ("EXECUTORCH_BUILD_KERNELS_TORCHAO" not in new_env) or (
-        new_env["EXECUTORCH_BUILD_KERNELS_TORCHAO"] == "0"
+    LOCAL_REQUIREMENTS = []
+    if (
+        os.environ.get("EXECUTORCH_BUILD_KERNELS_TORCHAO") == "1"
+        or os.environ.get("TORCHAO_BUILD_EXPERIMENTAL_MPS") == "1"
     ):
-        new_env["USE_CPP"] = "0"
-    else:
-        assert new_env["EXECUTORCH_BUILD_KERNELS_TORCHAO"] == "1"
-        new_env["USE_CPP"] = "1"
-        new_env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
+        LOCAL_REQUIREMENTS.append("third-party/ao")
+    if sys.platform != "win32":
+        # TODO(larryliu0820): Setup a pypi package for this.
+        LOCAL_REQUIREMENTS.append("extension/llm/tokenizers")
+    # TODO(gjcomer): Re-enable when buildable on Windows.
+
+    if LOCAL_REQUIREMENTS:
+        # Install packages directly from local copy instead of pypi.
+        # This is usually not recommended.
+        new_env = os.environ.copy()
+        if ("EXECUTORCH_BUILD_KERNELS_TORCHAO" not in new_env) or (
+            new_env["EXECUTORCH_BUILD_KERNELS_TORCHAO"] == "0"
+        ):
+            new_env["USE_CPP"] = "0"
+        else:
+            assert new_env["EXECUTORCH_BUILD_KERNELS_TORCHAO"] == "1"
+            new_env["USE_CPP"] = "1"
+            new_env["CMAKE_POLICY_VERSION_MINIMUM"] = "3.5"
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                # Without --no-build-isolation, setup.py can't find the torch module.
+                "--no-build-isolation",
+                *LOCAL_REQUIREMENTS,
+            ],
+            env=new_env,
+            check=True,
+        )
+
+
+def install_optional_example_requirements(use_pytorch_nightly):
+    # Determine the appropriate PyTorch URL based on CUDA delegate status
+    torch_url = determine_torch_url(TORCH_URL_BASE)
+
+    print("Installing torch domain libraries")
+    DOMAIN_LIBRARIES = [
+        ("torchvision==0.28.0" if use_pytorch_nightly else "torchvision"),
+        ("torchaudio==2.11.0" if use_pytorch_nightly else "torchaudio"),
+    ]
+    # Then install domain libraries
     subprocess.run(
         [
             sys.executable,
             "-m",
             "pip",
             "install",
-            # Without --no-build-isolation, setup.py can't find the torch module.
-            "--no-build-isolation",
-            *LOCAL_REQUIREMENTS,
+            *DOMAIN_LIBRARIES,
+            "--extra-index-url",
+            torch_url,
         ],
-        env=new_env,
         check=True,
     )
-
-
-def install_optional_example_requirements(use_pytorch_nightly):
-    # Determine the appropriate PyTorch URL based on CUDA delegate status
-    torch_url = determine_torch_url(TORCH_URL_BASE)
 
     print("Installing packages in requirements-examples.txt")
     subprocess.run(

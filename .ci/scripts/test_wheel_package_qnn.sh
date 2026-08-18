@@ -158,9 +158,16 @@ print(module_vars["TORCH_VERSION"])
 PY
 )
 
+#   NIGHTLY_VERSION=$(
+#   "$PYBIN" - <<'PY'
+# import runpy
+# module_vars = runpy.run_path("torch_pin.py")
+# print(module_vars["NIGHTLY_VERSION"])
+# PY
+# )
   echo "=== [$LABEL] Install torch==${TORCH_VERSION} ==="
 
-  # Install torchao based on the pinned PyTorch version
+  # Install torch based on the pinned PyTorch version.
   "$PIPBIN" install --no-cache-dir torch=="${TORCH_VERSION}" --index-url "https://download.pytorch.org/whl/cpu"
   "$PIPBIN" install wheel
 
@@ -169,6 +176,9 @@ PY
   export USE_CPP=0
   "$PIPBIN" install . --no-build-isolation
   popd > /dev/null
+
+  # Install qualcomm backend dependencies  
+  "$PIPBIN" install -r "$REPO_ROOT/backends/qualcomm/requirements.txt"
 
   echo "=== [$LABEL] Import smoke tests ==="
   "$PYBIN" -c "import executorch; print('executorch imported successfully')"

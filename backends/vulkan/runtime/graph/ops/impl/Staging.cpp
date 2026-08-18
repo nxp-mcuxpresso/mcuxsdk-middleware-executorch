@@ -21,6 +21,26 @@
 
 namespace vkcompute {
 
+const std::string kBitw8PrefixStr = "bitw8_image_to_nchw_nobitw8buffer";
+const std::string kNchwToBitw8PrefixStr = "nchw_to_bitw8_image_nobitw8buffer";
+
+bool is_bitw8_shader(const vkapi::ShaderInfo& shader) {
+  const auto size = kBitw8PrefixStr.size();
+  const std::string& shader_prefix_str = shader.kernel_name.substr(0, size);
+  return shader_prefix_str == kBitw8PrefixStr;
+}
+
+bool is_nchw_to_bitw8_shader(const vkapi::ShaderInfo& shader) {
+  const auto size = kNchwToBitw8PrefixStr.size();
+  const std::string& shader_prefix_str = shader.kernel_name.substr(0, size);
+  return shader_prefix_str == kNchwToBitw8PrefixStr;
+}
+
+bool is_coalesced_image_to_nchw_shader(const vkapi::ShaderInfo& shader) {
+  return shader.kernel_name.find("image_to_nchw_coalesced") !=
+      std::string::npos;
+}
+
 void add_staging_to_tensor_node(
     ComputeGraph& graph,
     const ValueRef in_staging,
@@ -40,10 +60,12 @@ void add_staging_to_tensor_node(
   vkapi::ParamsBindList param_buffers = {};
   if (graph.is_buffer_storage(out_tensor)) {
     param_buffers.append(graph.buffer_meta_ubo(out_tensor));
+  } else if (!is_nchw_to_bitw8_shader(shader)) {
+    param_buffers.append(graph.texture_meta_ubo(out_tensor));
   }
 
   std::vector<PushConstantDataInfo> pcs;
-  if (graph.is_texture_storage(out_tensor)) {
+  if (is_nchw_to_bitw8_shader(shader)) {
     pcs = {graph.sizes_pc_of(out_tensor)};
   }
 
@@ -66,14 +88,6 @@ void add_staging_to_tensor_node(
       nullptr));
 }
 
-const std::string kBitw8PrefixStr = "bitw8_image_to_nchw_nobitw8buffer";
-
-bool is_bitw8_shader(const vkapi::ShaderInfo& shader) {
-  const auto size = kBitw8PrefixStr.size();
-  const std::string& shader_prefix_str = shader.kernel_name.substr(0, size);
-  return shader_prefix_str == kBitw8PrefixStr;
-}
-
 utils::uvec3 tensor_to_staging_global_wg_size(
     ComputeGraph* graph,
     const vkapi::ShaderInfo& shader,
@@ -85,19 +99,26 @@ utils::uvec3 tensor_to_staging_global_wg_size(
 
   utils::uvec3 global_wg_size = graph->create_global_wg_size(in_tensor);
 
-  // Normally, the image_to_nchw shader is structured so that each thread reads
-  // one texel from the input texture and writes each component of the texel
-  // into the corresponding location in the output buffer. However, this shader
-  // is structured slightly differently in that each thread writes out a
-  // complete 32 bit integer (containing 4 packed 8-bit integers) into the
-  // output buffer. Therefore, the global work group size for this shader will
-  // be the number of elements in the output buffer divided by 4, as opposed to
-  // the extents of the input texture.
+  // The bitw8 shader writes out a complete 32 bit integer (containing 4 packed
+  // 8-bit integers) per thread, so its global work group size is the number of
+  // elements in the output buffer divided by 4.
   if (is_bitw8_shader(shader)) {
     const uint32_t buffer_len = utils::safe_downcast<uint32_t>(
         graph->get_staging(out_staging)->numel() / 4);
     global_wg_size = {buffer_len, 1, 1};
+  } else if (is_coalesced_image_to_nchw_shader(shader)) {
+    // The coalesced (output-centric) image_to_nchw variant dispatches one
+    // thread per output (staging) element so that consecutive threads write
+    // consecutive NCHW offsets, keeping writes to the PCIe-backed staging
+    // buffer fully coalesced. This mirrors the buffer_to_nchw path, whose
+    // global size is already numel-based via create_global_wg_size.
+    const uint32_t buffer_len = utils::safe_downcast<uint32_t>(
+        graph->get_staging(out_staging)->numel());
+    global_wg_size = {buffer_len, 1, 1};
   }
+  // Otherwise (texel-centric image_to_nchw, used on unified-memory GPUs) keep
+  // the default texel-grid global size from create_global_wg_size: one thread
+  // per texture texel.
 
   return global_wg_size;
 }
@@ -121,14 +142,13 @@ void add_tensor_to_staging_node(
   vkapi::ParamsBindList param_buffers = {};
   if (graph.is_buffer_storage(in_tensor)) {
     param_buffers.append(graph.buffer_meta_ubo(in_tensor));
+  } else if (!is_bitw8_shader(shader)) {
+    param_buffers.append(graph.texture_meta_ubo(in_tensor));
   }
 
   std::vector<PushConstantDataInfo> pcs;
-  if (graph.is_texture_storage(in_tensor)) {
-    pcs = {graph.sizes_pc_of(in_tensor)};
-  }
-
   if (is_bitw8_shader(shader)) {
+    pcs.push_back(graph.sizes_pc_of(in_tensor));
     pcs.push_back(graph.numel_pc_of(in_tensor));
   }
 
@@ -155,7 +175,7 @@ void add_prepack_standard_node(
     ComputeGraph& graph,
     const ValueRef tensor_data,
     const ValueRef tensor,
-    const bool transpose_hw = false) {
+    const bool transpose_hw) {
   vkapi::ShaderInfo shader = get_nchw_to_tensor_shader(
       graph,
       tensor,
@@ -165,6 +185,8 @@ void add_prepack_standard_node(
   vkapi::ParamsBindList param_buffers = {};
   if (graph.is_buffer_storage(tensor)) {
     param_buffers.append(graph.buffer_meta_ubo(tensor));
+  } else if (!is_nchw_to_bitw8_shader(shader)) {
+    param_buffers.append(graph.texture_meta_ubo(tensor));
   }
 
   std::vector<PushConstantDataInfo> pcs;
@@ -173,7 +195,7 @@ void add_prepack_standard_node(
         graph.sizes_pc_of(tensor),
         graph.strides_pc_of(tensor),
         graph.numel_pc_of(tensor)};
-  } else {
+  } else if (is_nchw_to_bitw8_shader(shader)) {
     pcs = {graph.sizes_pc_of(tensor)};
   }
 

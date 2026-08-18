@@ -20,9 +20,6 @@
 
 namespace vkcompute {
 
-using utils::GPUMemoryLayout;
-using utils::StorageType;
-
 void resize_gather_node(
     ComputeGraph* graph,
     const std::vector<ArgGroup>& args,
@@ -64,7 +61,9 @@ void add_gather_node(
       // Push Constants
       {},
       // Specialization Constants
-      {static_cast<int32_t>(dim_whcn)},
+      {static_cast<int32_t>(dim_whcn),
+       graph.hashed_layout_of(out),
+       graph.hashed_layout_of(input)},
       // Resize Args
       {},
       // Resizing Logic

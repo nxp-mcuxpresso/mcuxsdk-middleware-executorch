@@ -123,6 +123,16 @@ def _patch_build_mode_flags(kwargs):
         # @oss-disable: "fbsource//xplat/assistant/oacr/native/scripts:compiler_flag_O2": ["-O2"],
     })
 
+    # Add pthread flags for Emscripten/WASM builds with threading support.
+    # Required when linking into WASM binaries that use -sUSE_PTHREADS=1.
+    # Without these flags, wasm-ld fails with:
+    #   "error: --shared-memory is disallowed by <file>.o because it was not
+    #    compiled with 'atomics' or 'bulk-memory' features."
+    kwargs["compiler_flags"] = kwargs["compiler_flags"] + select({
+        "DEFAULT": [],
+        # @oss-disable: "ovr_config//runtime:wasm-emscripten": ["-pthread", "-matomics", "-mbulk-memory"],
+    })
+
     return kwargs
 
 def _has_pytorch_dep(dep_list):
@@ -367,6 +377,21 @@ def _python_library(*args, **kwargs):
 
 def _python_binary(*args, **kwargs):
     _patch_kwargs_common(kwargs)
+
+    # In OSS, native.python_binary doesn't support fbcode-specific params.
+    # Convert main_src -> main, and move srcs entries into main if needed.
+    if env.is_oss:
+        main_src = kwargs.pop("main_src", None)
+        srcs = kwargs.pop("srcs", None)
+        if main_src:
+            kwargs.setdefault("main", main_src)
+        elif srcs:
+            # If srcs provided but no main/main_src, use first src as main
+            if "main" not in kwargs:
+                kwargs["main"] = srcs[0]
+        if srcs != None:
+            kwargs["srcs"] = srcs
+
     env.python_binary(*args, **kwargs)
 
 def _python_test(*args, **kwargs):

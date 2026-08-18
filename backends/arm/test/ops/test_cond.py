@@ -82,7 +82,7 @@ class CondOneArgTwoOutputs(torch.nn.Module):
             return arg + torch.sin(arg), arg - torch.sin(arg)
 
         def false_branch(arg: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-            return arg - arg.mean(), arg + arg.mean()
+            return arg - torch.cos(arg), arg + torch.cos(arg)
 
         predicate = x.flatten().sum() > 0
         return torch.cond(predicate, true_branch, false_branch, [x])
@@ -225,13 +225,7 @@ def _set_branch_calibration_samples(
     quant_stage.calibration_samples = calibration_samples
 
 
-@common.parametrize(
-    "case",
-    test_cases,
-    xfails={
-        "nested_one_arg_one_output": "Not fully delegated.",
-    },
-)
+@common.parametrize("case", test_cases)
 def test_cond_tosa_FP(case: Callable[[], tuple[torch.nn.Module, tuple]]):
     module, example_inputs = case()
     pipeline = TosaPipelineFP[tuple](
@@ -248,20 +242,16 @@ def test_cond_tosa_FP(case: Callable[[], tuple[torch.nn.Module, tuple]]):
     pipeline.run()
 
 
-@common.parametrize(
-    "case",
-    test_cases,
-    xfails={
-        "nested_one_arg_one_output": "Node submodule_0 target submodule_0 references nonexistent attribute submodule_0",
-    },
-)
+@common.parametrize("case", test_cases)
 def test_cond_tosa_INT(case: Callable[[], tuple[torch.nn.Module, tuple]]):
     module, example_inputs = case()
     pipeline = TosaPipelineINT[tuple](
-        module, example_inputs, aten_op, tosa_extensions=["cf"]
+        module,
+        example_inputs,
+        aten_op,
+        tosa_extensions=["cf"],
     )
     _set_branch_calibration_samples(pipeline, module, example_inputs)
-
     # Make sure no cond ops are left after partitioning.
     pipeline.add_stage_after(
         "to_edge_transform_and_lower",
@@ -272,10 +262,7 @@ def test_cond_tosa_INT(case: Callable[[], tuple[torch.nn.Module, tuple]]):
     pipeline.run()
 
 
-@common.parametrize(
-    "case",
-    test_cases,
-)
+@common.parametrize("case", test_cases)
 def test_cond_u55_INT(case: Callable[[], tuple[torch.nn.Module, tuple]]):
     module, example_inputs = case()
     pipeline = OpNotSupportedPipeline[tuple](module, example_inputs, {aten_op: 1})
@@ -283,13 +270,7 @@ def test_cond_u55_INT(case: Callable[[], tuple[torch.nn.Module, tuple]]):
     pipeline.run()
 
 
-@common.parametrize(
-    "case",
-    test_cases,
-    xfails={
-        "nested_one_arg_one_output": "Node submodule_0 target submodule_0 references nonexistent attribute submodule_0",
-    },
-)
+@common.parametrize("case", test_cases)
 @common.XfailIfNoCorstone320.with_args(raises=None)
 def test_cond_u85_INT(case: Callable[[], tuple[torch.nn.Module, tuple]]):
     module, example_inputs = case()

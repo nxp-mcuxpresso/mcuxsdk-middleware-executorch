@@ -96,8 +96,21 @@ switch ($HfModel) {
         $audioUrl = "https://github.com/voxserv/audio_quality_testing_samples/raw/refs/heads/master/testaudio/16000/test01_20s.wav"
         $audioFile = "poem.wav"
     }
+    "facebook/dinov2-small-imagenet1k-1-layer" {
+        $runnerTarget = "dinov2_runner"
+        $runnerPath = "dinov2"
+        $runnerPreset = "dinov2-cuda"
+        $expectedOutput = "Samoyed"
+        $preprocessor = ""
+        $tokenizerUrl = ""
+        $tokenizerFile = ""
+        $audioUrl = ""
+        $audioFile = ""
+        $imageUrl = "https://github.com/pytorch/hub/raw/master/images/dog.jpg"
+        $imageFile = "test_image.jpg"
+    }
     default {
-        throw "Unsupported model '$HfModel'. Supported: mistralai/Voxtral-Mini-3B-2507, mistralai/Voxtral-Mini-4B-Realtime-2602, nvidia/diar_streaming_sortformer_4spk-v2, nvidia/parakeet-tdt"
+        throw "Unsupported model '$HfModel'. Supported: mistralai/Voxtral-Mini-3B-2507, mistralai/Voxtral-Mini-4B-Realtime-2602, nvidia/diar_streaming_sortformer_4spk-v2, nvidia/parakeet-tdt, facebook/dinov2-small-imagenet1k-1-layer"
     }
 }
 
@@ -146,18 +159,47 @@ try {
         }
         Write-Host "CUDA version check passed: $actualCudaVersion"
     }
+    $cmakeCudaArgs = @()
+    if (-not [string]::IsNullOrWhiteSpace($env:CUDA_HOME)) {
+        $cudaNvcc = Join-Path -Path $env:CUDA_HOME -ChildPath "bin\nvcc.exe"
+        if (-not (Test-Path -Path $cudaNvcc -PathType Leaf)) {
+            throw "CUDA compiler not found at '$cudaNvcc'"
+        }
+        $env:CUDACXX = $cudaNvcc
+        $cmakeCudaArgs = @(
+            "-T", "cuda=$env:CUDA_HOME",
+            "-DCMAKE_CUDA_COMPILER=$cudaNvcc",
+            "-DCUDAToolkit_ROOT=$env:CUDA_HOME"
+        )
+    }
+    $cmakeCommonArgs = @("-DCMAKE_CXX_STANDARD=20")
     Write-Host "::endgroup::"
 
     Write-Host "::group::Build ExecuTorch (CUDA)"
     $numCores = [Math]::Max([Environment]::ProcessorCount - 1, 1)
-    cmake --preset llm-release-cuda
-    cmake --build cmake-out --target install --config Release -j $numCores
+    $cmakeOut = Join-Path -Path $executorchRoot -ChildPath "cmake-out"
+    $executorchCmakeDir = Join-Path -Path $cmakeOut -ChildPath "lib\cmake\ExecuTorch"
+    $executorchConfig = Join-Path -Path $executorchCmakeDir -ChildPath "executorch-config.cmake"
+    # EXECUTORCH_BUILD_EXTENSION_IMAGE defaults OFF in the preset, so it must be
+    # enabled explicitly here (matching the Makefile CUDA target used on Linux).
+    # The dinov2 runner links the installed extension_image.lib; without this the
+    # main install never builds it and dinov2_runner fails to link (LNK1181).
+    cmake --preset llm-release-cuda -DEXECUTORCH_BUILD_EXTENSION_IMAGE=ON @cmakeCommonArgs @cmakeCudaArgs
+    cmake --build $cmakeOut --target install --config Release -j $numCores
+    if (-not (Test-Path -Path $executorchConfig -PathType Leaf)) {
+        throw "ExecuTorch CMake package config not found after install: $executorchConfig"
+    }
     Write-Host "::endgroup::"
 
     Write-Host "::group::Build $runnerTarget"
+    $cmakePackageArgs = @(
+        "-DCMAKE_FIND_ROOT_PATH=$cmakeOut",
+        "-DCMAKE_PREFIX_PATH=$cmakeOut;$executorchCmakeDir",
+        "-Dexecutorch_DIR=$executorchCmakeDir"
+    )
     Push-Location (Join-Path -Path $executorchRoot -ChildPath "examples\models\$runnerPath")
     try {
-        cmake --preset $runnerPreset
+        cmake --preset $runnerPreset @cmakeCommonArgs @cmakePackageArgs @cmakeCudaArgs
         cmake --build (Join-Path -Path $executorchRoot -ChildPath "cmake-out\examples\models\$runnerPath") --target $runnerTarget --config Release -j $numCores
     }
     finally {
@@ -183,6 +225,9 @@ try {
     }
     if ($audioUrl -ne "") {
         Download-IfNeeded -Url $audioUrl -OutFile (Join-Path -Path $resolvedModelDir -ChildPath $audioFile)
+    }
+    if ((Get-Variable -Name imageUrl -ErrorAction SilentlyContinue) -and $imageUrl -ne "") {
+        Download-IfNeeded -Url $imageUrl -OutFile (Join-Path -Path $resolvedModelDir -ChildPath $imageFile)
     }
     Get-ChildItem -Path $resolvedModelDir
     Write-Host "::endgroup::"
@@ -232,6 +277,13 @@ try {
             if ($Mode -ne "vr-offline") {
                 $runnerArgs += "--streaming"
             }
+        }
+        "facebook/dinov2-small-imagenet1k-1-layer" {
+            $runnerArgs = @(
+                "--model_path", $modelPte,
+                "--data_path", $cudaBlob,
+                "--image_path", (Join-Path -Path $resolvedModelDir -ChildPath $imageFile)
+            )
         }
     }
 

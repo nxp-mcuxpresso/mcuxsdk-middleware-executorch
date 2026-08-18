@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       backend:
-        description: 'Backend to test (xnnpack, coreml, vulkan, qnn)'
+        description: 'Backend to test (xnnpack, coreml, vulkan, qnn, openvino)'
         required: true
         type: string
       flows:
@@ -36,6 +36,11 @@ on:
         required: false
         type: string
         default: linux.4xlarge.memory
+      docker-image:
+        description: 'Docker image for Linux jobs'
+        required: false
+        type: string
+        default: ci-image:executorch-ubuntu-22.04-clang12
 
 jobs:
   test-backend-linux:
@@ -46,11 +51,12 @@ jobs:
         flow: ${{ fromJSON(inputs.flows) }}
         suite: [models, operators]
 
-    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.11
+    uses: pytorch/test-infra/.github/workflows/linux_job_v2.yml@release/2.13
     with:
+      test-infra-ref: release/2.13
       ref: ${{ inputs.ref }}
       runner: ${{ inputs.runner-linux }}
-      docker-image: ci-image:executorch-ubuntu-22.04-clang12
+      docker-image: ${{ inputs.docker-image }}
       submodules: recursive
       timeout: ${{ inputs.timeout }}
       upload-artifact: test-report-${{ matrix.flow }}-${{ matrix.suite }}
@@ -122,8 +128,10 @@ jobs:
         flow: ${{ fromJSON(inputs.flows) }}
         suite: [models, operators]
 
-    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.11
+    uses: pytorch/test-infra/.github/workflows/macos_job.yml@release/2.13
     with:
+      test-infra-ref: release/2.13
+      default-packages: ""
       ref: ${{ inputs.ref }}
       runner: macos-m1-stable
       python-version: "3.12"
