@@ -70,7 +70,7 @@ The eIQ Neutron Backend uses the Neutron Converter from eIQ Neutron SDK to conve
 #### Installation
 The Neutron Converter and the Neutron Simulator are available as Python packages and can be installed by the `pip` command from eiq.nxp.com/repository:
 ```commandline
-pip install --index-url https://eiq.nxp.com/repository eiq-neutron-sdk==3.2.1 eiq_nsys
+pip install --index-url https://eiq.nxp.com/repository eiq-neutron-sdk==3.2.2 eiq_nsys
 ```
 Or you can use the prepared setup script: 
 ```commandline
